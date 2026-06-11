@@ -235,6 +235,7 @@
         :state="state"
         :size="iconSize"
         :perfometer="gadgetPerfometer"
+        :metric-units="gadgetMetricUnits"
       />
     </div>
     <div
@@ -485,6 +486,7 @@ import {
   fmtValueWithUnit,
   normalizeMetricValue
 } from '@/composables/useMetricChart'
+import { useMetricUnits } from '@/composables/useMetricUnits'
 import { usePerfometer } from '@/composables/usePerfometer'
 import { useIsDark } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/auth'
@@ -539,7 +541,7 @@ const effectiveGadgetType = computed(() => {
 
 // CMK perfometer behind gauge/bar gadgets — fills the dial when the raw
 // perf_data has no max and supplies the CMK-formatted caption.
-const gadgetPerfometer = usePerfometer({
+const gadgetBinding = {
   connectionId: () => props.connectionId,
   hostName: () => props.object.host_name,
   serviceDescription: () => props.object.service_description,
@@ -547,7 +549,10 @@ const gadgetPerfometer = usePerfometer({
   enabled: () =>
     props.object.display?.mode === 'gadget' &&
     (props.object.display?.gadget_type || 'gauge') !== 'trafficlight'
-})
+}
+const gadgetPerfometer = usePerfometer(gadgetBinding)
+// Registered display units so the readout matches the Checkmk GUI.
+const gadgetMetricUnits = useMetricUnits(gadgetBinding)
 
 const GRAPH_DATA_TIMEOUT_MS = 15_000
 const dataTimedOut = ref(false)

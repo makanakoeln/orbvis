@@ -25,6 +25,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import { useMetricUnits } from '@/composables/useMetricUnits'
 import { splitPerfometerLabel, usePerfometer } from '@/composables/usePerfometer'
 import type { ObjectState, ShapeElement } from '@/types/api'
 import { connectorLabelVisible, flowVisual } from '@/utils/connectorFlow'
@@ -43,9 +44,11 @@ const props = defineProps<{
   connectionId?: string | null
 }>()
 
-const visForward = computed(() => flowVisual(props.element, props.state))
+const visForward = computed(() =>
+  flowVisual(props.element, props.state, props.element.flow_metric ?? null, metricUnits.value)
+)
 const visBack = computed(() =>
-  flowVisual(props.element, props.state, props.element.flow_metric_back ?? null)
+  flowVisual(props.element, props.state, props.element.flow_metric_back ?? null, metricUnits.value)
 )
 const twoWay = computed(() => !!props.element.flow && !!props.element.flow_metric_back)
 
@@ -59,7 +62,7 @@ const pillBg = computed(() => props.element.label?.background || 'rgb(0 0 0 / 65
 // interface perfometer renders "in / out" — split into the two direction
 // halves. A one-way link with an explicit label text never reads the result,
 // so it doesn't fetch either.
-const perfometer = usePerfometer({
+const labelBinding = {
   connectionId: () => props.connectionId,
   hostName: () => props.element.host_name,
   serviceDescription: () => props.element.service_description,
@@ -70,7 +73,10 @@ const perfometer = usePerfometer({
     !isMetriclessBinding(props.element) &&
     !!props.element.service_description &&
     (twoWay.value || !props.element.label?.text)
-})
+}
+const perfometer = usePerfometer(labelBinding)
+// Registered display units for the raw-metric fallback pills.
+const metricUnits = useMetricUnits(labelBinding)
 
 const cmkSplit = computed(() => splitPerfometerLabel(perfometer.value?.label))
 

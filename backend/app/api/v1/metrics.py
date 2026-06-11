@@ -9,9 +9,27 @@ from app.api.v1.deps import get_current_user
 from app.connections.livestatus import LivestatusConnection
 from app.models.user import User
 from app.services import state_service
-from app.services.perfometer_service import PerfometerResult, compute_perfometer
+from app.services.perfometer_service import (
+    PerfometerResult,
+    compute_perfometer,
+    metric_unit_formats,
+)
 
 router = APIRouter()
+
+
+class MetricUnitPrecisionOut(BaseModel):
+    type: str  # "auto" | "strict"
+    digits: int
+
+
+class MetricUnitOut(BaseModel):
+    """cmk-shared-typing UnitFormat plus the perfdata→registry scale factor."""
+
+    notation: str  # decimal|si|iec|standard_scientific|engineering_scientific|time
+    symbol: str
+    precision: MetricUnitPrecisionOut
+    scale: float
 
 
 class PerfometerSegmentOut(BaseModel):
@@ -61,3 +79,39 @@ async def get_perfometer(
         ],
         pcts=result.pcts,
     )
+
+
+@router.get("/metrics/units", response_model=dict[str, MetricUnitOut])
+async def get_metric_units(
+    connection_id: str,
+    host: str,
+    service: str,
+    _current_user: User = Depends(get_current_user),
+) -> dict[str, MetricUnitOut]:
+    """Display units for a service's perfdata metrics, straight from the CMK
+    metric registry — so clients render values exactly like the Checkmk GUI
+    (IEC for memory, SI for bandwidth, auto-scaled time, …). Keys are the raw
+    perfdata labels; metrics without a registry entry are omitted and fall
+    back to client-side heuristics."""
+    connection = state_service.get_connection(connection_id)
+    if connection is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Connection not found",
+        )
+    if not isinstance(connection, LivestatusConnection):
+        return {}
+
+    perf_data, check_command = await connection.get_service_perf_and_cmd(host, service)
+    if not perf_data:
+        return {}
+
+    return {
+        label: MetricUnitOut(
+            notation=fmt.notation,
+            symbol=fmt.symbol,
+            precision=MetricUnitPrecisionOut(type=fmt.precision_type, digits=fmt.precision_digits),
+            scale=fmt.scale,
+        )
+        for label, fmt in metric_unit_formats(perf_data, check_command).items()
+    }

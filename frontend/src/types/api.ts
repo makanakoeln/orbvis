@@ -549,6 +549,17 @@ export interface PerfometerResult {
   pcts: number[]
 }
 
+// cmk-shared-typing UnitFormat plus the perfdata→registry scale factor —
+// what GET /metrics/units returns per raw perfdata label.
+export interface MetricUnitSpec {
+  notation: 'decimal' | 'si' | 'iec' | 'standard_scientific' | 'engineering_scientific' | 'time'
+  symbol: string
+  precision: { type: 'auto' | 'strict'; digits: number }
+  scale: number
+}
+
+export type MetricUnitMap = Record<string, MetricUnitSpec>
+
 export interface DowntimeEntry {
   id: string
   site_id: string

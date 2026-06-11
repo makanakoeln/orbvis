@@ -95,6 +95,7 @@
         :state="effectiveState"
         :size="gadgetSize"
         :perfometer="perfometer"
+        :metric-units="metricUnits"
       />
       <div
         v-else-if="element.display.mode === 'text'"
@@ -137,6 +138,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 
+import { useMetricUnits } from '@/composables/useMetricUnits'
 import { usePerfometer } from '@/composables/usePerfometer'
 import type { ObjectState, PresentationElement } from '@/types/api'
 import { resolveImageRef } from '@/utils/presentationElements'
@@ -183,7 +185,7 @@ const effectiveGadgetType = computed(() => {
 // CMK perfometer behind gauge/bar gadgets — fills the dial when the raw
 // perf_data has no max and supplies the CMK-formatted caption. Only plain
 // host/service bindings have one; groups, BI and traffic lights don't.
-const perfometer = usePerfometer({
+const gadgetBinding = {
   connectionId: () => props.connectionId,
   hostName: () => (props.element.kind === 'data' ? props.element.host_name : null),
   serviceDescription: () =>
@@ -193,7 +195,10 @@ const perfometer = usePerfometer({
     props.element.kind === 'data' &&
     props.element.display.mode === 'gadget' &&
     effectiveGadgetType.value !== 'trafficlight'
-})
+}
+const perfometer = usePerfometer(gadgetBinding)
+// Registered display units so the readout matches the Checkmk GUI.
+const metricUnits = useMetricUnits(gadgetBinding)
 // The sample perf_data always carries exactly one metric; hand its name to the
 // gadget so an unbound preview renders a value instead of an empty dial.
 const sampleMetric = computed(() => {

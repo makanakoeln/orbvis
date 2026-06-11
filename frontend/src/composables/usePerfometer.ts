@@ -63,7 +63,15 @@ export function usePerfometer(opts: {
   }
 
   watch(
-    [opts.enabled, opts.connectionId, opts.hostName, opts.serviceDescription, opts.perfData],
+    [
+      opts.enabled,
+      opts.connectionId,
+      opts.hostName,
+      opts.serviceDescription,
+      opts.perfData,
+      // Token hydration/rotation must re-trigger a fetch that bailed without one.
+      () => authStore.accessToken
+    ],
     () => void fetchNow(),
     { immediate: true }
   )

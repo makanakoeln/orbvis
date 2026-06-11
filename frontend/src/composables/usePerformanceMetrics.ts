@@ -1,7 +1,8 @@
 import { type Ref, computed } from 'vue'
 
 import { fmtValueWithUnit } from '@/composables/useMetricChart'
-import type { ObjectDetails, ObjectState, PerfometerResult } from '@/types/api'
+import type { MetricUnitMap, ObjectDetails, ObjectState, PerfometerResult } from '@/types/api'
+import { renderMetricValue } from '@/utils/metricFormat'
 import { type PerfMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
 
 interface PerfRow {
@@ -31,6 +32,9 @@ interface PerformanceMetricsOptions {
   state: () => ObjectState | undefined
   details: Ref<ObjectDetails | null>
   perfometer: Ref<PerfometerResult | null>
+  // Registered display units per raw perfdata label — value labels then match
+  // the Checkmk GUI exactly; omitted metrics fall back to the SI heuristic.
+  metricUnits?: Ref<MetricUnitMap>
 }
 
 /**
@@ -40,9 +44,11 @@ interface PerformanceMetricsOptions {
  * structured long-output rows. Pure derivation — no fetching.
  */
 export function usePerformanceMetrics(options: PerformanceMetricsOptions) {
-  const { state, details, perfometer } = options
+  const { state, details, perfometer, metricUnits } = options
 
-  function fmtNum(n: number, unit: string): string {
+  function fmtNum(n: number, unit: string, label?: string): string {
+    const spec = label ? metricUnits?.value[label] : undefined
+    if (spec) return renderMetricValue(n, spec, unit)
     return fmtValueWithUnit(n, unit)
   }
 
@@ -74,9 +80,9 @@ export function usePerformanceMetrics(options: PerformanceMetricsOptions) {
       color: utilColor(pct),
       warnPct,
       critPct,
-      warnLabel: m.warn !== null ? fmtNum(m.warn, m.unit) : '',
-      critLabel: m.crit !== null ? fmtNum(m.crit, m.unit) : '',
-      valueLabel: fmtNum(m.value, m.unit)
+      warnLabel: m.warn !== null ? fmtNum(m.warn, m.unit, m.label) : '',
+      critLabel: m.crit !== null ? fmtNum(m.crit, m.unit, m.label) : '',
+      valueLabel: fmtNum(m.value, m.unit, m.label)
     }
   }
 

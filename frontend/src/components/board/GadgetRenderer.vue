@@ -109,9 +109,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { ObjectState, PerfometerResult } from '@/types/api'
+import type { MetricUnitMap, ObjectState, PerfometerResult } from '@/types/api'
+import { renderMetricValue } from '@/utils/metricFormat'
 import {
-  fmtSI,
   getMetric,
   hasFillScale,
   hasPercentScale,
@@ -130,6 +130,9 @@ const props = defineProps<{
   // the raw perf_data carries no scale (no max/crit and not a % unit) and the
   // CMK-formatted value for the caption.
   perfometer?: PerfometerResult | null
+  // Registered display units per raw perfdata label (CMK metric registry) —
+  // the readout then matches the Checkmk GUI exactly.
+  metricUnits?: MetricUnitMap | null
 }>()
 
 const metrics = computed(() => parsePerfData(props.state?.perf_data ?? ''))
@@ -146,7 +149,9 @@ const fillPct = computed(() => {
 })
 const color = computed(() => (scaled.value ? utilColor(pct.value) : stateColor(props.state?.state)))
 
-const valueLabel = computed(() => (m.value ? fmtSI(m.value.value, m.value.unit) : '—'))
+const valueLabel = computed(() =>
+  m.value ? renderMetricValue(m.value.value, props.metricUnits?.[m.value.label], m.value.unit) : '—'
+)
 
 // Primary readout inside the gauge/bar: a percentage only when one is
 // meaningful, otherwise the absolute value (the caption below is then redundant).

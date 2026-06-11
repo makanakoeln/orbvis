@@ -781,6 +781,7 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 
 import { useAggregationDetail } from '@/composables/useAggregationDetail'
 import { useGroupMembers } from '@/composables/useGroupMembers'
+import { useMetricUnits } from '@/composables/useMetricUnits'
 import { useObjectDetailsFetch } from '@/composables/useObjectDetailsFetch'
 import { usePerformanceHistory } from '@/composables/usePerformanceHistory'
 import { usePerformanceMetrics } from '@/composables/usePerformanceMetrics'
@@ -886,6 +887,16 @@ const { details, perfometer } = useObjectDetailsFetch({
   object: () => props.object,
   connectionId: () => props.connectionId,
   accessToken: () => auth.accessToken
+})
+
+// Registered display units so the Performance tab's value labels match the
+// Checkmk GUI (IEC for memory, auto-scaled time, …).
+const drawerMetricUnits = useMetricUnits({
+  connectionId: () => props.object?.connection_id ?? props.connectionId,
+  hostName: () => props.object?.host_name,
+  serviceDescription: () => props.object?.service_description,
+  perfData: () => props.state?.perf_data,
+  enabled: () => !!props.object?.host_name && !!props.object?.service_description
 })
 
 // Hostgroup / Servicegroup / dyngroup member-list — drives the Members tab.
@@ -1016,7 +1027,8 @@ const {
 } = usePerformanceMetrics({
   state: () => props.state,
   details,
-  perfometer
+  perfometer,
+  metricUnits: drawerMetricUnits
 })
 
 interface MetaRow {

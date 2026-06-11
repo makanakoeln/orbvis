@@ -245,9 +245,11 @@
 <script setup lang="ts">
 import { type Ref, computed, inject, ref } from 'vue'
 
+import { useMetricUnits } from '@/composables/useMetricUnits'
 import { splitPerfometerLabel, usePerfometer } from '@/composables/usePerfometer'
 import type { BoardObject, ObjectState } from '@/types/api'
-import { fmtSI, getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
+import { renderMetricValue } from '@/utils/metricFormat'
+import { getMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
 import { stateColor } from '@/utils/stateColors'
 
 const props = defineProps<{
@@ -609,20 +611,23 @@ const showsPerfdataLabels = computed(
 
 function _fmtMetric(m: ReturnType<typeof getMetric>): string {
   if (!m) return ''
-  return fmtSI(m.value, m.unit)
+  return renderMetricValue(m.value, lineMetricUnits.value[m.label], m.unit)
 }
 
 // CMK-formatted bandwidth strings & utilization via /metrics/perfometer (when
 // host+service set). The endpoint applies the proper Metric.unit (kbit/s, …)
 // and computes percentages from the plugin's focus_range — which the raw
 // perfdata's max field often doesn't carry for interface checks.
-const cmkPerfData = usePerfometer({
+const lineBinding = {
   connectionId: () => props.connectionId,
   hostName: () => props.object.host_name,
   serviceDescription: () => props.object.service_description,
   perfData: () => props.state?.perf_data,
   enabled: () => showsPerfdataLabels.value
-})
+}
+const cmkPerfData = usePerfometer(lineBinding)
+// Registered display units for the raw-metric fallback labels.
+const lineMetricUnits = useMetricUnits(lineBinding)
 
 // Split the perfometer label "in / out" into the two halves for separate
 // rendering on each side of the midpoint arrows.

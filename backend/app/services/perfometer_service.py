@@ -83,6 +83,16 @@ def _parse_perf_data(raw: str) -> dict[str, _RawMetric]:
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class RegisteredUnit:
+    """Display unit of a metric as declared in its Metric() plugin definition."""
+
+    notation: str  # cmk.graphing.v1 notation class name, e.g. "SINotation"
+    symbol: str
+    precision_type: str  # "auto" | "strict"
+    precision_digits: int
+
+
 @dataclass
 class _PluginData:
     # Perfometer / Bidirectional / Stacked instances from cmk.graphing.v1 (untyped from mypy's view)
@@ -91,8 +101,14 @@ class _PluginData:
     renames: dict[str, dict[str, str]] = field(default_factory=dict)
     # check_plugin_name → {raw_metric_name → scale_factor}
     scales: dict[str, dict[str, float]] = field(default_factory=dict)
-    # metric_name → (notation_type_name, symbol) for formatting
-    units: dict[str, tuple[str, str]] = field(default_factory=dict)
+    # check_plugin_name → [(compiled "~"-pattern, canonical_name|None, scale)]
+    # in declaration order — CMK matches exact entries first, then the first
+    # regex whose anchored .match() hits (find_matching_translation).
+    regex_translations: dict[str, list[tuple[re.Pattern[str], str | None, float]]] = field(
+        default_factory=dict
+    )
+    # metric_name → registered display unit for formatting
+    units: dict[str, RegisteredUnit] = field(default_factory=dict)
     # metric_name → Color enum member name (e.g. "GREEN", "BLUE")
     colors: dict[str, str] = field(default_factory=dict)
 
@@ -163,9 +179,16 @@ def _load_plugins() -> _PluginData:
                 and hasattr(obj.unit, "notation")
             ):
                 notation = obj.unit.notation
-                data.units[obj.name] = (
-                    type(notation).__name__,
-                    getattr(notation, "symbol", ""),
+                precision = getattr(obj.unit, "precision", None)
+                data.units[obj.name] = RegisteredUnit(
+                    notation=type(notation).__name__,
+                    # TimeNotation carries no symbol — time is always seconds.
+                    symbol=getattr(notation, "symbol", "")
+                    or ("s" if type(notation).__name__ == "TimeNotation" else ""),
+                    precision_type=(
+                        "strict" if type(precision).__name__ == "StrictPrecision" else "auto"
+                    ),
+                    precision_digits=int(getattr(precision, "digits", 2)),
                 )
                 color = getattr(obj, "color", None)
                 if color is not None and hasattr(color, "name"):
@@ -181,12 +204,17 @@ def _load_plugins() -> _PluginData:
                         continue
                     rn = data.renames.setdefault(name, {})
                     sc = data.scales.setdefault(name, {})
+                    rx = data.regex_translations.setdefault(name, [])
                     for src, rule in obj.translations.items():
-                        if src.startswith("~"):
-                            continue
-                        target = getattr(rule, "metric_name", src)
+                        target = getattr(rule, "metric_name", None)
                         factor = float(getattr(rule, "factor", 1.0))
-                        if target != src:
+                        if src.startswith("~"):
+                            try:
+                                rx.append((re.compile(src[1:]), target, factor))
+                            except re.error:
+                                logger.debug("Invalid translation pattern %r in %s", src, name)
+                            continue
+                        if target is not None and target != src:
                             rn[src] = target
                         if factor != 1.0:
                             sc[src] = factor
@@ -218,6 +246,27 @@ def _check_plugin_name(check_command: str) -> str:
     return ""
 
 
+def _find_translation(
+    label: str,
+    plugin_name: str,
+    plugins: _PluginData,
+) -> tuple[str, float]:
+    """Canonical metric name + scale for a raw perfdata label.
+
+    Mirrors cmk.gui.graphing find_matching_translation: an exact entry wins,
+    otherwise the first "~"-regex entry whose anchored match hits; no entry
+    means the label is already canonical with scale 1.0.
+    """
+    renamed = plugins.renames.get(plugin_name, {}).get(label)
+    scaled = plugins.scales.get(plugin_name, {}).get(label)
+    if renamed is not None or scaled is not None:
+        return (renamed or label, scaled if scaled is not None else 1.0)
+    for pattern, target, factor in plugins.regex_translations.get(plugin_name, []):
+        if pattern.match(label):
+            return (target or label, factor)
+    return (label, 1.0)
+
+
 def _apply_translations(
     raw: dict[str, _RawMetric],
     check_command: str,
@@ -226,14 +275,9 @@ def _apply_translations(
     plugin_name = _check_plugin_name(check_command)
     if not plugin_name:
         return raw
-    renames = plugins.renames.get(plugin_name, {})
-    scales = plugins.scales.get(plugin_name, {})
-    if not renames and not scales:
-        return raw
     result: dict[str, _RawMetric] = {}
     for src_name, metric in raw.items():
-        target_name = renames.get(src_name, src_name)
-        factor = scales.get(src_name, 1.0)
+        target_name, factor = _find_translation(src_name, plugin_name, plugins)
         if factor != 1.0:
             metric = _RawMetric(
                 value=metric.value * factor,
@@ -458,17 +502,16 @@ def _trim(s: str) -> str:
     return s.rstrip("0").rstrip(".") if "." in s else s
 
 
-def _fmt_value(name: str, m: _RawMetric, units: dict[str, tuple[str, str]]) -> str:
+def _fmt_value(name: str, m: _RawMetric, units: dict[str, RegisteredUnit]) -> str:
     unit_info = units.get(name)
     if unit_info:
-        notation_type, symbol = unit_info
-        if notation_type == "SINotation":
-            return _format_si(m.value, symbol)
-        if notation_type == "IECNotation":
-            return _format_iec(m.value, symbol)
-        if notation_type == "TimeNotation":
+        if unit_info.notation == "SINotation":
+            return _format_si(m.value, unit_info.symbol)
+        if unit_info.notation == "IECNotation":
+            return _format_iec(m.value, unit_info.symbol)
+        if unit_info.notation == "TimeNotation":
             return _format_si(m.value, "s")
-        return _trim(f"{m.value:.2f}") + (f" {symbol}" if symbol else "")
+        return _trim(f"{m.value:.2f}") + (f" {unit_info.symbol}" if unit_info.symbol else "")
 
     v = m.value
     unit = m.unit
@@ -487,7 +530,7 @@ def _fmt_value(name: str, m: _RawMetric, units: dict[str, tuple[str, str]]) -> s
 def _label_from_segments(
     perf: object,
     metrics: dict[str, _RawMetric],
-    units: dict[str, tuple[str, str]],
+    units: dict[str, RegisteredUnit],
 ) -> str:
     names = _get_segment_names(getattr(perf, "segments", ()))
     present = [n for n in names if n in metrics]
@@ -611,3 +654,68 @@ def compute_perfometer(perf_data_str: str, check_command: str) -> PerfometerResu
                 )
 
     return None
+
+
+# Notation class name → wire enum of cmk-shared-typing's UnitFormat schema —
+# the same shape cmk-frontend-vue's unit-format library consumes.
+_NOTATION_WIRE: dict[str, str] = {
+    "DecimalNotation": "decimal",
+    "SINotation": "si",
+    "IECNotation": "iec",
+    "StandardScientificNotation": "standard_scientific",
+    "EngineeringScientificNotation": "engineering_scientific",
+    "TimeNotation": "time",
+}
+
+
+@dataclass(frozen=True)
+class MetricUnitFormat:
+    """Wire-ready display unit for one raw perfdata metric.
+
+    ``scale`` converts the raw perfdata value into the registry's canonical
+    unit (translation factor, e.g. ms → s) before formatting.
+    """
+
+    notation: str  # UnitFormat wire enum: decimal|si|iec|…|time
+    symbol: str
+    precision_type: str  # "auto" | "strict"
+    precision_digits: int
+    scale: float
+
+
+def metric_unit_formats(perf_data_str: str, check_command: str) -> dict[str, MetricUnitFormat]:
+    """Resolve each raw perfdata label to its CMK metric-registry display unit.
+
+    Keys are the RAW perfdata labels (what clients parse from perf_data);
+    translation renames and scale factors of the check plugin are applied so a
+    client can format ``raw_value * scale`` with the returned unit and get the
+    exact rendering Checkmk's GUI shows. Metrics without a registry entry are
+    omitted — the client falls back to its own heuristic for those.
+    """
+    if not perf_data_str.strip():
+        return {}
+    plugins = _load_plugins()
+    if not plugins.units:
+        return {}
+    raw = _parse_perf_data(perf_data_str)
+    if not raw:
+        return {}
+    plugin_name = _check_plugin_name(check_command)
+
+    out: dict[str, MetricUnitFormat] = {}
+    for label in raw:
+        canonical, scale = _find_translation(label, plugin_name, plugins)
+        unit = plugins.units.get(canonical)
+        if unit is None:
+            continue
+        wire = _NOTATION_WIRE.get(unit.notation)
+        if wire is None:
+            continue
+        out[label] = MetricUnitFormat(
+            notation=wire,
+            symbol=unit.symbol,
+            precision_type=unit.precision_type,
+            precision_digits=unit.precision_digits,
+            scale=scale,
+        )
+    return out

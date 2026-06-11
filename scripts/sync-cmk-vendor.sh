@@ -131,6 +131,11 @@ missing_paths=()
 while IFS= read -r -d '' vendor_file; do
   rel="${vendor_file#"$VENDOR_DIR/"}"
   upstream_file="$CMK_FRONTEND/$rel"
+  if [[ ! -f "$upstream_file" && "$rel" == tests/* ]]; then
+    # Vendored upstream test suites mirror cmk-frontend-vue/tests/ (a sibling
+    # of src/) so the fixtures pin byte-identical formatter behaviour.
+    upstream_file="$CMK_FRONTEND/../$rel"
+  fi
   if [[ ! -f "$upstream_file" ]]; then
     upstream_missing=$((upstream_missing + 1))
     missing_paths+=("$rel")

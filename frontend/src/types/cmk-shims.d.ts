@@ -503,3 +503,23 @@ declare module '@cmk/components/user-input/CmkLabelRequired.vue' {
   const component: DefineComponent<CmkLabelRequiredProps>
   export default component
 }
+
+declare module '@cmk/lib/unit-format/unitFormatter' {
+  import type { UnitFormat } from 'cmk-shared-typing/typescript/unit_format'
+
+  export type TemperatureUnit = 'celsius' | 'fahrenheit'
+  // Shim covers the slice OrbVis consumes; the full NotationFormatter class
+  // (renderYLabels etc.) lives in the vendored implementation.
+  export interface NotationFormatter {
+    render(value: number): string
+  }
+  export type UserSpecificUnit = {
+    formatter: NotationFormatter
+    convert: (rawValue: number) => number
+  }
+  export function userSpecificUnit(
+    spec: UnitFormat,
+    temperatureUnit: TemperatureUnit
+  ): UserSpecificUnit
+  export type { UnitFormat }
+}

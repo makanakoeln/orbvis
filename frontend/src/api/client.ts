@@ -23,6 +23,7 @@ import type {
   MapStates,
   MetricGraphGroup,
   MetricHistoryResponse,
+  MetricUnitMap,
   ObjectDetails,
   PerfometerResult,
   PermissionRead,
@@ -873,6 +874,16 @@ export const metricsApi = {
   ): Promise<PerfometerResult | null> {
     const params = new URLSearchParams({ connection_id: connectionId, host, service })
     return request<PerfometerResult | null>(`/metrics/perfometer?${params}`, {}, token)
+  },
+
+  getUnits(
+    connectionId: string,
+    host: string,
+    service: string,
+    token: string
+  ): Promise<MetricUnitMap> {
+    const params = new URLSearchParams({ connection_id: connectionId, host, service })
+    return request<MetricUnitMap>(`/metrics/units?${params}`, {}, token)
   }
 }
 
