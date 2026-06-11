@@ -2598,3 +2598,39 @@ msgstr "Ein Element auf dem Slide auswählen"
 
 msgid "Site"
 msgstr "Standort"
+
+msgid "Drag an entry onto the slide"
+msgstr "Eintrag auf das Slide ziehen"
+
+msgid "Groups"
+msgstr "Gruppen"
+
+msgid "Host / service"
+msgstr "Host / Service"
+
+msgid "Hosts"
+msgstr "Hosts"
+
+msgid "No aggregations available"
+msgstr "Keine Aggregationen verfügbar"
+
+msgid "Nothing available"
+msgstr "Nichts verfügbar"
+
+msgid "Nothing matches your search"
+msgstr "Nichts entspricht der Suche"
+
+msgid "Object type"
+msgstr "Objekttyp"
+
+msgid "Pick a group…"
+msgstr "Gruppe wählen…"
+
+msgid "Pick an aggregation…"
+msgstr "Aggregation wählen…"
+
+msgid "Search aggregations…"
+msgstr "Aggregationen durchsuchen…"
+
+msgid "Search groups…"
+msgstr "Gruppen durchsuchen…"

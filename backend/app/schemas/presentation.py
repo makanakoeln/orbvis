@@ -46,6 +46,11 @@ def _validate_color(value: str | None) -> str | None:
 # fields are guarded against.
 _FONT_RE = re.compile(r"^[a-zA-Z0-9 ,_'\"\-.]{1,128}$")
 
+# Monitoring object types a presentation element can bind to. ``None`` keeps
+# the legacy derivation (service when a service_description is set, else host)
+# so pre-existing boards stay wire-compatible.
+PresentationObjectType = Literal["host", "service", "hostgroup", "servicegroup", "aggregation"]
+
 
 def _validate_font_family(value: str | None) -> str | None:
     if value is None or value == "":
@@ -115,8 +120,11 @@ class ShapeElement(_ElementBase):
     # bound object's state (fill for rect/ellipse, stroke for line/arrow) and
     # can show a state label — the foundation weathermap links build on.
     connection_id: str | None = None
+    object_type: PresentationObjectType | None = None
     host_name: str | None = None
     service_description: str | None = None
+    group_name: str | None = None
+    aggregation_id: str | None = None
     only_hard_states: bool = False
     label: ElementLabel | None = None
     # Endpoint docking (line/arrow only): the start/end follows the referenced
@@ -183,8 +191,11 @@ class DataElement(_ElementBase):
 
     kind: Literal["data"] = "data"
     connection_id: str | None = None
+    object_type: PresentationObjectType | None = None
     host_name: str | None = None
     service_description: str | None = None
+    group_name: str | None = None
+    aggregation_id: str | None = None
     only_hard_states: bool = False
     display: ElementDisplay = Field(default_factory=ElementDisplay)
     label: ElementLabel | None = Field(default_factory=ElementLabel)

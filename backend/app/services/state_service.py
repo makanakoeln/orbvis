@@ -19,6 +19,7 @@ from app.schemas.board import (
     BoardConfig,
     BoardObject,
     FolderTreeView,
+    ObjectType,
     RadarView,
     WorldmapView,
 )
@@ -806,16 +807,30 @@ async def _get_presentation_states(
     """
     pv = cfg.view if isinstance(cfg.view, PresentationView) else PresentationView()
     bound = [
-        el for el in pv.elements if isinstance(el, DataElement | ShapeElement) and el.host_name
+        el
+        for el in pv.elements
+        if isinstance(el, DataElement | ShapeElement)
+        and (el.host_name or el.group_name or el.aggregation_id)
     ]
+
+    def _object_type(el: DataElement | ShapeElement) -> ObjectType:
+        # Explicit object_type wins; legacy elements without one keep the
+        # original host/service derivation.
+        if el.object_type:
+            return el.object_type
+        if el.aggregation_id:
+            return "aggregation"
+        return "service" if el.service_description else "host"
 
     objects = [
         BoardObject(
             id=el.id,
-            type="service" if el.service_description else "host",
+            type=_object_type(el),
             connection_id=el.connection_id,
             host_name=el.host_name,
             service_description=el.service_description,
+            group_name=el.group_name,
+            aggregation_id=el.aggregation_id,
             only_hard_states=el.only_hard_states,
         )
         for el in bound

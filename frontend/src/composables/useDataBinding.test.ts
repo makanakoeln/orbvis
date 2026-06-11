@@ -8,7 +8,8 @@ import { clearDataBindingCache, useDataBinding } from './useDataBinding'
 const { mockConnectionsApi } = vi.hoisted(() => ({
   mockConnectionsApi: {
     objects: vi.fn(),
-    perfMetrics: vi.fn()
+    perfMetrics: vi.fn(),
+    aggregations: vi.fn()
   }
 }))
 
@@ -57,6 +58,22 @@ describe('useDataBinding', () => {
     const b = useDataBinding(() => 'live_1')
     expect(await b.hosts()).toEqual([])
     expect(await b.hosts()).toEqual(['web01'])
+  })
+
+  it('serves groups and BI aggregations from their own cached sources', async () => {
+    mockConnectionsApi.objects.mockResolvedValue(['linux'])
+    mockConnectionsApi.aggregations.mockResolvedValue([
+      { id: 'aggr1', title: 'Web shop', pack_id: 'default' }
+    ])
+    const b = useDataBinding(() => 'live_1')
+    expect(await b.hostgroups()).toEqual(['linux'])
+    expect(mockConnectionsApi.objects).toHaveBeenCalledWith('live_1', 'hostgroup', 'tok')
+    await b.servicegroups()
+    expect(mockConnectionsApi.objects).toHaveBeenCalledWith('live_1', 'servicegroup', 'tok')
+    const aggs = await b.aggregations()
+    expect(aggs[0]!.title).toBe('Web shop')
+    await b.aggregations()
+    expect(mockConnectionsApi.aggregations).toHaveBeenCalledTimes(1)
   })
 
   it('short-circuits without a connection or host', async () => {

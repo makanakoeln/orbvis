@@ -402,7 +402,12 @@ import {
   newElementId,
   resolveImageRef
 } from '@/utils/presentationElements'
-import { isUnboundSlot, sampleStateFor, slotBounds } from '@/utils/presentationSampleState'
+import {
+  bindingLabel,
+  isUnboundSlot,
+  sampleStateFor,
+  slotBounds
+} from '@/utils/presentationSampleState'
 import type { PresentationTemplate } from '@/utils/presentationTemplates'
 import { themeTokens } from '@/utils/presentationThemes'
 import usei18n from '@/vendor/cmk/lib/i18n'
@@ -1150,7 +1155,7 @@ function onLayerClick(id: string, e: MouseEvent): void {
 function layerName(el: PresentationElement): string {
   if (el.name) return el.name
   if (el.kind === 'text') return el.text.slice(0, 18) || _t('Text')
-  if (el.kind === 'data') return el.label?.text || el.host_name || _t('Data')
+  if (el.kind === 'data') return el.label?.text || bindingLabel(el) || _t('Data')
   if (el.kind === 'group') return _t('Group')
   if (el.kind === 'shape') return el.shape.charAt(0).toUpperCase() + el.shape.slice(1)
   return el.kind

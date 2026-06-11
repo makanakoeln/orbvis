@@ -4,68 +4,107 @@
       <span class="pdp__title">{{ _t('Data browser') }}</span>
       <button class="pdp__x" :title="_t('Close')" @click="emit('close')">×</button>
     </div>
+    <div class="pdp__tabs">
+      <CmkToggleButtonGroup :model-value="tab" :options="tabOptions" @update:model-value="setTab" />
+    </div>
     <input
       v-model="query"
       class="orb-field pdp__search"
-      :placeholder="_t('Search hosts…')"
-      :aria-label="_t('Search hosts…')"
+      :placeholder="searchPlaceholder"
+      :aria-label="searchPlaceholder"
     />
-    <div class="pdp__hint">{{ _t('Drag a host or service onto the slide') }}</div>
+    <div class="pdp__hint">{{ _t('Drag an entry onto the slide') }}</div>
     <CmkScrollContainer class="pdp__list-wrap">
       <div class="pdp__list">
-        <CmkLoading v-if="loadingHosts" />
-        <div v-else-if="!filteredHosts.length" class="pdp__empty">
-          {{ query ? _t('No hosts match your search') : _t('No hosts available') }}
+        <CmkLoading v-if="loading" />
+        <div v-else-if="!filteredRows.length" class="pdp__empty">
+          {{ query ? _t('Nothing matches your search') : _t('Nothing available') }}
         </div>
-        <template v-for="host in filteredHosts" :key="host">
-          <div
-            class="pdp__row pdp__row--host"
-            draggable="true"
-            @dragstart="onDragStart($event, host, null)"
-          >
-            <button
-              class="pdp__chev"
-              :class="{ 'pdp__chev--open': expanded.has(host) }"
-              :title="expanded.has(host) ? _t('Collapse') : _t('Show services')"
-              @click.stop="toggleHost(host)"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M9 6l6 6-6 6" />
-              </svg>
-            </button>
-            <span
-              v-if="stateDotFor(host, null)"
-              class="pdp__dot"
-              :style="{ background: stateDotFor(host, null) ?? undefined }"
-            />
-            <span class="pdp__name" :title="host">{{ host }}</span>
-            <span v-if="onSlide(host, null)" class="pdp__chip">{{ _t('On slide') }}</span>
-          </div>
-          <template v-if="expanded.has(host)">
-            <CmkLoading v-if="loadingServices.has(host)" />
+
+        <!-- Hosts with lazily expanded services -->
+        <template v-if="tab === 'hosts'">
+          <template v-for="row in filteredRows" :key="row.name">
             <div
-              v-for="svc in servicesByHost[host] ?? []"
-              :key="`${host}|${svc}`"
-              class="pdp__row pdp__row--svc"
+              class="pdp__row pdp__row--host"
               draggable="true"
-              @dragstart="onDragStart($event, host, svc)"
+              @dragstart="onDragStart($event, { kind: 'host', name: row.name })"
             >
+              <button
+                class="pdp__chev"
+                :class="{ 'pdp__chev--open': expanded.has(row.name) }"
+                :title="expanded.has(row.name) ? _t('Collapse') : _t('Show services')"
+                @click.stop="toggleHost(row.name)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+              </button>
               <span
-                v-if="stateDotFor(host, svc)"
+                v-if="stateDotFor({ kind: 'host', name: row.name })"
                 class="pdp__dot"
-                :style="{ background: stateDotFor(host, svc) ?? undefined }"
+                :style="{ background: stateDotFor({ kind: 'host', name: row.name }) ?? undefined }"
               />
-              <span class="pdp__name" :title="svc">{{ svc }}</span>
-              <span v-if="onSlide(host, svc)" class="pdp__chip">{{ _t('On slide') }}</span>
+              <span class="pdp__name" :title="row.name">{{ row.name }}</span>
+              <span v-if="onSlide({ kind: 'host', name: row.name })" class="pdp__chip">
+                {{ _t('On slide') }}
+              </span>
             </div>
-            <div
-              v-if="!loadingServices.has(host) && (servicesByHost[host] ?? []).length === 0"
-              class="pdp__empty pdp__empty--svc"
-            >
-              {{ _t('No services') }}
-            </div>
+            <template v-if="expanded.has(row.name)">
+              <CmkLoading v-if="loadingServices.has(row.name)" />
+              <div
+                v-for="svc in servicesByHost[row.name] ?? []"
+                :key="`${row.name}|${svc}`"
+                class="pdp__row pdp__row--svc"
+                draggable="true"
+                @dragstart="onDragStart($event, { kind: 'host', name: row.name, service: svc })"
+              >
+                <span
+                  v-if="stateDotFor({ kind: 'host', name: row.name, service: svc })"
+                  class="pdp__dot"
+                  :style="{
+                    background:
+                      stateDotFor({ kind: 'host', name: row.name, service: svc }) ?? undefined
+                  }"
+                />
+                <span class="pdp__name" :title="svc">{{ svc }}</span>
+                <span
+                  v-if="onSlide({ kind: 'host', name: row.name, service: svc })"
+                  class="pdp__chip"
+                >
+                  {{ _t('On slide') }}
+                </span>
+              </div>
+              <div
+                v-if="
+                  !loadingServices.has(row.name) && (servicesByHost[row.name] ?? []).length === 0
+                "
+                class="pdp__empty pdp__empty--svc"
+              >
+                {{ _t('No services') }}
+              </div>
+            </template>
           </template>
         </template>
+
+        <!-- Host-/servicegroups and BI aggregations: flat draggable lists -->
+        <template v-else>
+          <div
+            v-for="row in filteredRows"
+            :key="`${row.kind}|${row.name}`"
+            class="pdp__row pdp__row--host"
+            draggable="true"
+            @dragstart="onDragStart($event, { kind: row.kind, name: row.name })"
+          >
+            <span
+              v-if="stateDotFor(row)"
+              class="pdp__dot"
+              :style="{ background: stateDotFor(row) ?? undefined }"
+            />
+            <span class="pdp__name" :title="row.title">{{ row.title }}</span>
+            <span v-if="onSlide(row)" class="pdp__chip">{{ _t('On slide') }}</span>
+          </div>
+        </template>
+
         <div v-if="truncated > 0" class="pdp__more">
           {{ _t('+%{n} more — keep typing to narrow results', { n: String(truncated) }) }}
         </div>
@@ -75,14 +114,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import CmkLoading from '@/components/cmk/CmkLoading'
 import CmkScrollContainer from '@/components/cmk/CmkScrollContainer'
+import CmkToggleButtonGroup from '@/components/cmk/CmkToggleButtonGroup'
 
 import { useDataBinding } from '@/composables/useDataBinding'
 import type { ObjectState, PresentationElement } from '@/types/api'
-import { BINDING_DROP_MIME } from '@/utils/presentationBindingDrop'
+import {
+  BINDING_DROP_MIME,
+  type BindingDropKind,
+  type BindingDropPayload
+} from '@/utils/presentationBindingDrop'
 import { isBindable } from '@/utils/presentationSampleState'
 import { stateColor } from '@/utils/stateColors'
 import usei18n from '@/vendor/cmk/lib/i18n'
@@ -97,30 +141,100 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
-const HOST_LIMIT = 200
+const ROW_LIMIT = 200
 
 const binding = useDataBinding(() => props.connectionId)
 
+type Tab = 'hosts' | 'groups' | 'bi'
+const tab = ref<Tab>('hosts')
+const tabOptions = computed(() => [
+  { label: _t('Hosts'), value: 'hosts' },
+  { label: _t('Groups'), value: 'groups' },
+  { label: 'BI', value: 'bi' }
+])
+function setTab(v: string): void {
+  tab.value = v as Tab
+}
+
+interface Row {
+  kind: BindingDropKind
+  name: string
+  title: string
+}
+
 const hosts = ref<string[]>([])
-const loadingHosts = ref(false)
+const hostgroups = ref<string[]>([])
+const servicegroups = ref<string[]>([])
+const aggregations = ref<Row[]>([])
+const loading = ref(false)
 const query = ref('')
 const expanded = reactive(new Set<string>())
 const loadingServices = reactive(new Set<string>())
 const servicesByHost = reactive<Record<string, string[]>>({})
 
-onMounted(async () => {
-  loadingHosts.value = true
-  hosts.value = await binding.hosts()
-  loadingHosts.value = false
+const loadedTabs = new Set<Tab>()
+
+// A connection switch invalidates every loaded tab — reload the visible one,
+// the rest refetch lazily on their next visit.
+watch(
+  () => props.connectionId,
+  () => {
+    loadedTabs.clear()
+    void loadTab(tab.value)
+  }
+)
+
+async function loadTab(t: Tab): Promise<void> {
+  if (loadedTabs.has(t)) return
+  loadedTabs.add(t)
+  loading.value = true
+  if (t === 'hosts') {
+    hosts.value = await binding.hosts()
+  } else if (t === 'groups') {
+    const [hg, sg] = await Promise.all([binding.hostgroups(), binding.servicegroups()])
+    hostgroups.value = hg
+    servicegroups.value = sg
+  } else {
+    aggregations.value = (await binding.aggregations()).map((a) => ({
+      kind: 'aggregation' as const,
+      name: a.id,
+      title: a.title || a.id
+    }))
+  }
+  loading.value = false
+}
+
+onMounted(() => void loadTab('hosts'))
+watch(tab, (t) => void loadTab(t))
+
+const searchPlaceholder = computed(() =>
+  tab.value === 'hosts'
+    ? _t('Search hosts…')
+    : tab.value === 'groups'
+      ? _t('Search groups…')
+      : _t('Search aggregations…')
+)
+
+const allRows = computed<Row[]>(() => {
+  if (tab.value === 'hosts') {
+    return hosts.value.map((h) => ({ kind: 'host' as const, name: h, title: h }))
+  }
+  if (tab.value === 'groups') {
+    return [
+      ...hostgroups.value.map((g) => ({ kind: 'hostgroup' as const, name: g, title: g })),
+      ...servicegroups.value.map((g) => ({ kind: 'servicegroup' as const, name: g, title: g }))
+    ]
+  }
+  return aggregations.value
 })
 
-const matchingHosts = computed(() => {
+const matchingRows = computed(() => {
   const q = query.value.toLowerCase()
-  const list = q ? hosts.value.filter((h) => h.toLowerCase().includes(q)) : hosts.value
-  return [...list].sort((a, b) => a.localeCompare(b))
+  const list = q ? allRows.value.filter((r) => r.title.toLowerCase().includes(q)) : allRows.value
+  return [...list].sort((a, b) => a.title.localeCompare(b.title))
 })
-const filteredHosts = computed(() => matchingHosts.value.slice(0, HOST_LIMIT))
-const truncated = computed(() => Math.max(0, matchingHosts.value.length - HOST_LIMIT))
+const filteredRows = computed(() => matchingRows.value.slice(0, ROW_LIMIT))
+const truncated = computed(() => Math.max(0, matchingRows.value.length - ROW_LIMIT))
 
 async function toggleHost(host: string): Promise<void> {
   if (expanded.has(host)) {
@@ -138,29 +252,44 @@ async function toggleHost(host: string): Promise<void> {
 // Live state is only known for objects already bound on the slide (states
 // arrive keyed by element id) — show a worst-state dot for exactly those, and
 // an "On slide" chip so the operator sees what's already wired up.
+function bindingKey(kind: BindingDropKind, name: string, service?: string | null): string {
+  return `${kind}|${name}|${service ?? ''}`
+}
+
 const boundStates = computed(() => {
   const map = new Map<string, string>()
   for (const el of props.elements) {
-    if (!isBindable(el) || !el.host_name) continue
-    const key = `${el.host_name}|${el.service_description ?? ''}`
+    if (!isBindable(el)) continue
+    let key: string | null = null
+    if (el.aggregation_id) key = bindingKey('aggregation', el.aggregation_id)
+    else if (el.group_name && el.object_type === 'hostgroup')
+      key = bindingKey('hostgroup', el.group_name)
+    else if (el.group_name && el.object_type === 'servicegroup') {
+      key = bindingKey('servicegroup', el.group_name)
+    } else if (el.host_name) key = bindingKey('host', el.host_name, el.service_description)
+    if (!key) continue
     const st = props.states[el.id]?.state
     if (st && !map.has(key)) map.set(key, st)
   }
   return map
 })
 
-function onSlide(host: string, service: string | null): boolean {
-  return boundStates.value.has(`${host}|${service ?? ''}`)
+function onSlide(p: { kind: BindingDropKind; name: string; service?: string | null }): boolean {
+  return boundStates.value.has(bindingKey(p.kind, p.name, p.service))
 }
 
-function stateDotFor(host: string, service: string | null): string | null {
-  const st = boundStates.value.get(`${host}|${service ?? ''}`)
+function stateDotFor(p: {
+  kind: BindingDropKind
+  name: string
+  service?: string | null
+}): string | null {
+  const st = boundStates.value.get(bindingKey(p.kind, p.name, p.service))
   return st ? stateColor(st) : null
 }
 
-function onDragStart(e: DragEvent, host: string, service: string | null): void {
+function onDragStart(e: DragEvent, payload: BindingDropPayload): void {
   if (!e.dataTransfer) return
-  e.dataTransfer.setData(BINDING_DROP_MIME, JSON.stringify({ host, service }))
+  e.dataTransfer.setData(BINDING_DROP_MIME, JSON.stringify(payload))
   e.dataTransfer.effectAllowed = 'copy'
 }
 </script>
@@ -198,6 +327,10 @@ function onDragStart(e: DragEvent, host: string, service: string | null): void {
   color: inherit;
   font-size: 18px;
   cursor: pointer;
+}
+
+.pdp__tabs {
+  padding: 10px 12px 0;
 }
 
 .pdp__search {

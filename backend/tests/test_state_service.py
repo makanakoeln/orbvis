@@ -1023,6 +1023,49 @@ def test_presentation_shape_rejects_css_injection_color():
         ShapeElement(id="x", kind="shape", fill="expression(alert(1))")
 
 
+@pytest.mark.asyncio
+async def test_presentation_board_resolves_group_and_aggregation_bindings(
+    mock_connection, monkeypatch
+):
+    """Group- and BI-bound presentation elements resolve through the same
+    per-type paths as static board objects; legacy host/service derivation
+    stays intact for elements without an explicit object_type."""
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    mock_connection.get_hosts_states = AsyncMock(
+        return_value={"web01": ObjectState(object_id="x", type="host", state="UP")}
+    )
+    mock_connection.get_hostgroup_states = AsyncMock(
+        return_value=ObjectState(object_id="x", type="hostgroup", state="WARNING")
+    )
+    mock_connection.get_servicegroup_states = AsyncMock(
+        return_value=ObjectState(object_id="x", type="servicegroup", state="CRITICAL")
+    )
+    mock_connection.get_aggregations_states = AsyncMock(
+        return_value={"aggr1": ObjectState(object_id="x", type="aggregation", state="OK")}
+    )
+
+    view = PresentationView(
+        elements=[
+            DataElement(id="legacy", kind="data", host_name="web01"),
+            DataElement(id="hg", kind="data", object_type="hostgroup", group_name="linux"),
+            DataElement(id="sg", kind="data", object_type="servicegroup", group_name="https"),
+            DataElement(id="bi", kind="data", object_type="aggregation", aggregation_id="aggr1"),
+        ]
+    )
+    board = BoardConfig(name="pres", alias="P", connection_id="mock", view=view)
+
+    result = await get_board_states(board)
+    by_id = {s.object_id: s for s in result.states}
+
+    assert by_id["legacy"].state == "UP"
+    assert by_id["hg"].state == "WARNING"
+    assert by_id["sg"].state == "CRITICAL"
+    assert by_id["bi"].state == "OK"
+    mock_connection.get_hostgroup_states.assert_awaited_once_with("linux")
+    mock_connection.get_servicegroup_states.assert_awaited_once_with("https")
+
+
 def test_presentation_shape_data_slot_roundtrip():
     """``data_slot`` defaults to False (old payloads stay valid) and survives a
     serialize/deserialize roundtrip; an unbound slot still yields no state

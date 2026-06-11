@@ -11,16 +11,28 @@ export function isBindable(el: PresentationElement): el is BindableElement {
   return el.kind === 'data' || el.kind === 'shape'
 }
 
+// Any of the binding fields counts: host/service, host-/servicegroup or a BI
+// aggregation make the element "bound".
+export function hasBinding(el: BindableElement): boolean {
+  return !!(el.host_name || el.group_name || el.aggregation_id)
+}
+
 // A data element is intrinsically a slot; a shape only when a template (or the
 // operator) marked it as one via ``data_slot``.
 export function isUnboundSlot(el: PresentationElement): el is BindableElement {
-  if (el.kind === 'data') return !el.host_name
-  if (el.kind === 'shape') return !!el.data_slot && !el.host_name
+  if (el.kind === 'data') return !hasBinding(el)
+  if (el.kind === 'shape') return !!el.data_slot && !hasBinding(el)
   return false
 }
 
 export function isBoundElement(el: PresentationElement): boolean {
-  return isBindable(el) && !!el.host_name
+  return isBindable(el) && hasBinding(el)
+}
+
+// Human-readable name of the bound object — group and aggregation bindings
+// fall back to their identifiers.
+export function bindingLabel(el: BindableElement): string {
+  return el.service_description || el.host_name || el.group_name || el.aggregation_id || ''
 }
 
 // The on-slide bounds of a slot. A connector's x/y/w/h box is vestigial (its

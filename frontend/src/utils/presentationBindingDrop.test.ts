@@ -22,10 +22,28 @@ function rect(x: number, y: number, over: Partial<ShapeElement> = {}): ShapeElem
 }
 
 describe('parseBindingDropPayload', () => {
-  it('accepts a host with optional service', () => {
-    expect(parseBindingDropPayload('{"host":"web01"}')).toEqual({ host: 'web01', service: null })
+  it('accepts every binding kind', () => {
+    expect(parseBindingDropPayload('{"kind":"host","name":"web01","service":"CPU"}')).toEqual({
+      kind: 'host',
+      name: 'web01',
+      service: 'CPU'
+    })
+    expect(parseBindingDropPayload('{"kind":"hostgroup","name":"linux"}')).toEqual({
+      kind: 'hostgroup',
+      name: 'linux',
+      service: null
+    })
+    expect(parseBindingDropPayload('{"kind":"aggregation","name":"aggr1"}')).toEqual({
+      kind: 'aggregation',
+      name: 'aggr1',
+      service: null
+    })
+  })
+
+  it('keeps accepting the legacy host payload shape', () => {
     expect(parseBindingDropPayload('{"host":"web01","service":"CPU"}')).toEqual({
-      host: 'web01',
+      kind: 'host',
+      name: 'web01',
       service: 'CPU'
     })
   })
@@ -55,17 +73,52 @@ describe('bindableElementAt', () => {
 })
 
 describe('applyBindingDrop', () => {
-  it('binds the hit element and clears a stale service when none is dropped', () => {
-    const target = rect(0, 0)
-    const result = applyBindingDrop([target], { x: 10, y: 10 }, { host: 'web01' }, 7)
+  it('binds the hit element and clears stale fields from other binding types', () => {
+    const target = rect(0, 0, {
+      object_type: 'hostgroup',
+      group_name: 'linux'
+    })
+    const result = applyBindingDrop([target], { x: 10, y: 10 }, { kind: 'host', name: 'web01' }, 7)
     expect(result.kind).toBe('bind')
     if (result.kind !== 'bind') return
     expect(result.id).toBe(target.id)
-    expect(result.patch).toEqual({ host_name: 'web01', service_description: null })
+    expect(result.patch).toEqual({
+      object_type: null,
+      host_name: 'web01',
+      service_description: null,
+      group_name: null,
+      aggregation_id: null
+    })
+  })
+
+  it('binds groups and aggregations with their explicit object type', () => {
+    const target = data(0, 0, { host_name: 'old', service_description: 'CPU' })
+    const group = applyBindingDrop(
+      [target],
+      { x: 10, y: 10 },
+      { kind: 'servicegroup', name: 'https' },
+      7
+    )
+    if (group.kind !== 'bind') throw new Error('expected bind')
+    expect(group.patch).toMatchObject({
+      object_type: 'servicegroup',
+      group_name: 'https',
+      host_name: null,
+      service_description: null
+    })
+
+    const bi = applyBindingDrop([target], { x: 10, y: 10 }, { kind: 'aggregation', name: 'a1' }, 7)
+    if (bi.kind !== 'bind') throw new Error('expected bind')
+    expect(bi.patch).toMatchObject({ object_type: 'aggregation', aggregation_id: 'a1' })
   })
 
   it('creates a bound data element on empty slide space', () => {
-    const result = applyBindingDrop([], { x: 500, y: 400 }, { host: 'web01', service: 'CPU' }, 7)
+    const result = applyBindingDrop(
+      [],
+      { x: 500, y: 400 },
+      { kind: 'host', name: 'web01', service: 'CPU' },
+      7
+    )
     expect(result.kind).toBe('create')
     if (result.kind !== 'create') return
     expect(result.element.kind).toBe('data')
@@ -74,5 +127,18 @@ describe('applyBindingDrop', () => {
     expect(result.element.z).toBe(7)
     expect(result.element.x).toBe(420)
     expect(result.element.y).toBe(340)
+  })
+
+  it('creates an aggregation-bound element on empty space', () => {
+    const result = applyBindingDrop(
+      [],
+      { x: 500, y: 400 },
+      { kind: 'aggregation', name: 'aggr1' },
+      3
+    )
+    if (result.kind !== 'create') throw new Error('expected create')
+    expect(result.element.object_type).toBe('aggregation')
+    expect(result.element.aggregation_id).toBe('aggr1')
+    expect(result.element.host_name).toBeNull()
   })
 })

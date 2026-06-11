@@ -127,6 +127,15 @@ export interface FolderTreeView {
 }
 export type PresentationTheme = 'midnight' | 'paper' | 'ops' | 'aurora'
 
+// Monitoring object types a presentation element can bind to. Absent/null
+// keeps the legacy host/service derivation.
+export type PresentationObjectType =
+  | 'host'
+  | 'service'
+  | 'hostgroup'
+  | 'servicegroup'
+  | 'aggregation'
+
 export interface ElementLabel {
   show: boolean
   text?: string | null
@@ -164,8 +173,11 @@ export interface ShapeElement extends PresentationElementBase {
   // Optional monitoring binding: when bound, the shape colours by state and can
   // show a state label.
   connection_id?: string | null
+  object_type?: PresentationObjectType | null
   host_name?: string | null
   service_description?: string | null
+  group_name?: string | null
+  aggregation_id?: string | null
   only_hard_states?: boolean
   label?: ElementLabel | null
   // Endpoint docking (line/arrow): start/end follows a referenced element's centre.
@@ -204,8 +216,11 @@ export interface ImageElement extends PresentationElementBase {
 export interface DataElement extends PresentationElementBase {
   kind: 'data'
   connection_id?: string | null
+  object_type?: PresentationObjectType | null
   host_name?: string | null
   service_description?: string | null
+  group_name?: string | null
+  aggregation_id?: string | null
   only_hard_states: boolean
   display: DisplayConfig
   label?: ElementLabel | null

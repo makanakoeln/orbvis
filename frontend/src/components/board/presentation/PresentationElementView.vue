@@ -85,11 +85,11 @@
     v-else
     class="pres-el__data"
     :style="dataBoxStyle"
-    :class="{ 'pres-el__data--unbound': !element.host_name }"
+    :class="{ 'pres-el__data--unbound': !isBoundElement(element) }"
   >
     <div class="pres-el__data-body">
       <GadgetRenderer
-        v-if="element.display.mode === 'gadget' && (element.host_name || sampleState)"
+        v-if="element.display.mode === 'gadget' && (isBoundElement(element) || sampleState)"
         :type="element.display.gadget_type ?? 'gauge'"
         :metric="element.display.gadget_metric ?? sampleMetric"
         :state="effectiveState"
@@ -127,7 +127,7 @@
     <div v-if="showLabel" class="pres-el__data-label" :style="labelStyle">
       {{ labelText }}
     </div>
-    <div v-if="sampleState && !element.host_name" class="pres-el__sample">
+    <div v-if="sampleState && !isBoundElement(element)" class="pres-el__sample">
       {{ _t('Sample') }}
     </div>
   </div>
@@ -138,6 +138,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 
 import type { ObjectState, PresentationElement } from '@/types/api'
 import { resolveImageRef } from '@/utils/presentationElements'
+import { bindingLabel, isBoundElement } from '@/utils/presentationSampleState'
 import { stateColor } from '@/utils/stateColors'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
@@ -176,7 +177,7 @@ const sampleMetric = computed(() => {
 // rect/ellipse, stroke for line/arrow — overriding the manual colour. An
 // unbound data-slot shape previews with its sample state the same way.
 const shapeStateColor = computed(() =>
-  props.element.kind === 'shape' && (props.element.host_name || props.sampleState)
+  props.element.kind === 'shape' && (isBoundElement(props.element) || props.sampleState)
     ? stateColor(effectiveState.value?.state)
     : null
 )
@@ -202,9 +203,7 @@ const shapeLabelShow = computed(
 const shapeLabelText = computed(() => {
   const el = props.element
   if (el.kind !== 'shape') return ''
-  return (
-    el.label?.text || effectiveState.value?.state || el.service_description || el.host_name || ''
-  )
+  return el.label?.text || effectiveState.value?.state || bindingLabel(el) || ''
 })
 const shapeLabelStyle = computed(() => {
   const el = props.element
@@ -294,10 +293,12 @@ const showLabel = computed(
 const labelText = computed(() => {
   const el = props.element
   if (el.kind !== 'data') return ''
+  // An explicit element name (e.g. the BI aggregation title stamped on bind)
+  // beats the raw binding identifier.
   return (
     el.label?.text ||
-    el.service_description ||
-    el.host_name ||
+    el.name ||
+    bindingLabel(el) ||
     (props.sampleState ? _t('Sample') : _t('Unbound'))
   )
 })
