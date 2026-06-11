@@ -12,7 +12,8 @@
       :stroke-width="16 / scale"
       @mouseenter="hoverable && $emit('hover', $event)"
       @mouseleave="hoverable && $emit('hover-leave')"
-      @click="hoverable && $emit('open')"
+      @click="hoverable && $emit('open', $event)"
+      @contextmenu="hoverable && $emit('context', $event)"
     />
     <!-- Selection halo. -->
     <line
@@ -94,7 +95,8 @@ defineEmits<{
   endpointDown: [which: 'start' | 'end', event: PointerEvent]
   hover: [MouseEvent]
   'hover-leave': []
-  open: []
+  open: [MouseEvent]
+  context: [MouseEvent]
 }>()
 
 const visForward = computed(() => flowVisual(props.element, props.state))

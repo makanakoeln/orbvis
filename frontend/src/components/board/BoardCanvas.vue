@@ -82,7 +82,7 @@
           @context-menu="(evt) => onObjectContextMenu(evt, line)"
           @line-click="onLineClick(line)"
           @hover="openHoverMenu($event, line)"
-          @hover-leave="hoverGrace.scheduleClose()"
+          @hover-leave="objectHover.scheduleClose()"
         />
       </g>
     </svg>
@@ -119,12 +119,12 @@
         :connection-id="config.connection_id"
         :render-mode="config.render_mode ?? 'default'"
         @hover="!editMode && openHoverMenu($event, obj)"
-        @hover-leave="!editMode && hoverGrace.scheduleClose()"
+        @hover-leave="!editMode && objectHover.scheduleClose()"
         @graph-resize-start="onGraphResizeStart($event, obj)"
         @subtree-enter="
           (subObj, subState, evt) => !editMode && openSubtreeHover(evt, subObj, subState)
         "
-        @subtree-leave="!editMode && hoverGrace.scheduleClose()"
+        @subtree-leave="!editMode && objectHover.scheduleClose()"
       />
     </div>
 
@@ -136,23 +136,23 @@
 
     <!-- Hover popup -->
     <HoverMenu
-      v-if="hoverMenu.visible && hoverMenu.object"
-      :object="hoverMenu.object"
-      :state="hoverMenu.stateOverride ?? states[hoverMenu.object.id]"
-      :x="hoverMenu.x"
-      :y="hoverMenu.y"
-      :anchor-rect="hoverMenu.anchorRect"
+      v-if="objectHover.hover.visible && objectHover.hover.object"
+      :object="objectHover.hover.object"
+      :state="objectHover.state.value"
+      :x="objectHover.hover.x"
+      :y="objectHover.hover.y"
+      :anchor-rect="objectHover.hover.anchorRect"
       :connection-id="props.config.connection_id"
       :checkmk-url="checkmkUrl ?? null"
       :template="
         resolveTemplate(
-          hoverMenu.object.hover_template,
+          objectHover.hover.object.hover_template,
           props.config.hover_template,
           settingsStore.settings.hover_template
         )
       "
-      @card-enter="hoverGrace.cancelClose()"
-      @card-leave="hoverGrace.scheduleClose()"
+      @card-enter="objectHover.cancelClose()"
+      @card-leave="objectHover.scheduleClose()"
     />
 
     <!-- Context menu -->
@@ -178,57 +178,15 @@
       @delete="onContextMenuDelete"
       @straighten="onContextMenuStraighten"
       @detach="onContextMenuDetach"
-      @acknowledge="onContextMenuAck"
-      @remove-ack="onContextMenuRemoveAck"
-      @schedule-downtime="onContextMenuDowntime"
-      @remove-downtime="onContextMenuRemoveDowntime"
-      @force-check="onContextMenuForceCheck"
-      @add-comment="onContextMenuAddComment"
-      @enable-notifications="onContextMenuToggleNotifications(true)"
-      @disable-notifications="onContextMenuToggleNotifications(false)"
     />
   </div>
-
-  <!-- ACK modal -->
-  <AckModal
-    v-if="ackModalObject && checkmkUrl"
-    :object="ackModalObject"
-    :checkmk-url="checkmkUrl"
-    @close="closeAckModal"
-  />
-
-  <!-- Comment modal -->
-  <CommentModal
-    v-if="commentModalObject && checkmkUrl"
-    :object="commentModalObject"
-    :checkmk-url="checkmkUrl"
-    @close="commentModalObject = null"
-  />
-
-  <!-- Downtime modal -->
-  <DowntimeModal
-    v-if="downtimeModalObject && checkmkUrl"
-    :object="downtimeModalObject"
-    :checkmk-url="checkmkUrl"
-    @close="closeDowntimeModal"
-  />
-
-  <!-- Remove downtime modal (multiple downtimes) -->
-  <RemoveDowntimeModal
-    v-if="removeDowntimeModal.visible && checkmkUrl"
-    :downtimes="removeDowntimeModal.downtimes"
-    :checkmk-url="checkmkUrl"
-    :object-name="removeDowntimeModal.objectName"
-    @close="closeRemoveDowntimeModal"
-  />
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
 
-import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useMarquee } from '@/composables/useMarquee'
-import { useObjectActions } from '@/composables/useObjectActions'
+import { useObjectHoverMenu } from '@/composables/useObjectHoverMenu'
 import { useBoardsStore } from '@/stores/boards'
 import { useSettingsStore } from '@/stores/settings'
 import type { BoardConfig, BoardObject as BoardObjectType, ObjectState } from '@/types/api'
@@ -242,15 +200,11 @@ import {
 } from '@/utils/objectFilter'
 import { resolveTemplate } from '@/utils/template'
 
-import AckModal from './AckModal.vue'
 import BoardLine from './BoardLine.vue'
 import BoardObject from './BoardObject.vue'
 import BoardZoomResetPill from './BoardZoomResetPill.vue'
-import CommentModal from './CommentModal.vue'
 import ContextMenu from './ContextMenu.vue'
-import DowntimeModal from './DowntimeModal.vue'
 import HoverMenu from './HoverMenu.vue'
-import RemoveDowntimeModal from './RemoveDowntimeModal.vue'
 
 const settingsStore = useSettingsStore()
 
@@ -979,14 +933,12 @@ function onCanvasClick(event: MouseEvent) {
 
 // ---- Hover / Context menus (view mode only) ----
 
-const hoverMenu = reactive({
-  visible: false,
-  object: null as BoardObjectType | null,
-  // Override state for synthetic objects (BI subtree nodes) that aren't in `states`.
-  stateOverride: null as ObjectState | null,
-  x: 0,
-  y: 0,
-  anchorRect: null as { left: number; top: number; right: number; bottom: number } | null
+// Shared hover-card state machine (position, anchor flip, close grace);
+// `stateOverride` carries synthetic objects (BI subtree nodes) that aren't
+// in `states`. State resolves from the props map so radar boards keep their
+// own filtered map.
+const objectHover = useObjectHoverMenu({
+  resolveState: (obj) => props.states[obj.id]
 })
 const contextMenu = reactive({
   visible: false,
@@ -1089,52 +1041,13 @@ function boundCoordsFor(line: BoardObjectType): {
   return r
 }
 
-// Close-grace so the operator can move onto the card and click a state pill
-// (HoverMenu @card-enter cancels, @card-leave closes). Programmatic closes
-// (context menu, edit mode) go through closeMenus() and stay immediate.
-const hoverGrace = useHoverGrace(() => {
-  hoverMenu.visible = false
-})
-
 function openHoverMenu(event: MouseEvent, obj: BoardObjectType) {
   if (props.preview) return
-  hoverGrace.cancelClose()
-  hoverMenu.object = obj
-  hoverMenu.stateOverride = null
-  hoverMenu.x = event.pageX + 12
-  hoverMenu.y = event.pageY + 12
-  // Walk up from event.target to find an icon-sized wrapper for anchoring
-  // the tooltip flip. Skipped for lines because their bounding-box spans
-  // the whole board. event.currentTarget would be null by now (cleared
-  // after Vue's emit bridge), so we work from event.target instead.
-  hoverMenu.anchorRect = obj.type === 'line' ? null : findIconWrapperRect(event.target)
-  hoverMenu.visible = true
+  objectHover.open(obj, event)
 }
 
 function openSubtreeHover(event: MouseEvent, obj: BoardObjectType, state: ObjectState) {
-  hoverGrace.cancelClose()
-  hoverMenu.object = obj
-  hoverMenu.stateOverride = state
-  hoverMenu.x = event.pageX + 12
-  hoverMenu.y = event.pageY + 12
-  hoverMenu.anchorRect = findIconWrapperRect(event.target)
-  hoverMenu.visible = true
-}
-
-function findIconWrapperRect(
-  target: EventTarget | null
-): { left: number; top: number; right: number; bottom: number } | null {
-  let el = target instanceof Element ? target : null
-  while (el && el !== document.body) {
-    const r = el.getBoundingClientRect()
-    // Icon wrappers are roughly square and small — a real icon plus its
-    // label tops out around 100×100 px. Anything larger is a container.
-    if (r.width > 0 && r.width < 200 && r.height > 0 && r.height < 200) {
-      return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
-    }
-    el = el.parentElement
-  }
-  return null
+  objectHover.open(obj, event, { stateOverride: state })
 }
 
 function openContextMenu(event: MouseEvent, obj: BoardObjectType) {
@@ -1177,31 +1090,8 @@ function onContextMenuDetach() {
   if (obj) emit('object-detach', obj)
 }
 
-// ---- CMK actions from context menu ----
-
-const objectActions = useObjectActions(() => props.checkmkUrl ?? null, closeMenus)
-const {
-  ackModalObject,
-  downtimeModalObject,
-  commentModalObject,
-  removeDowntimeModal,
-  closeAckModal,
-  closeDowntimeModal,
-  closeRemoveDowntimeModal
-} = objectActions
-const onContextMenuAck = () => objectActions.handlers.acknowledge(contextMenu.object)
-const onContextMenuRemoveAck = () => objectActions.handlers.removeAck(contextMenu.object)
-const onContextMenuDowntime = () => objectActions.handlers.scheduleDowntime(contextMenu.object)
-const onContextMenuRemoveDowntime = () => objectActions.handlers.removeDowntime(contextMenu.object)
-const onContextMenuAddComment = () => objectActions.handlers.addComment(contextMenu.object)
-const onContextMenuToggleNotifications = (enable: boolean) =>
-  objectActions.handlers.toggleNotifications(contextMenu.object, enable)
-
-const onContextMenuForceCheck = () => objectActions.handlers.forceCheck(contextMenu.object)
-
 function closeMenus() {
-  hoverGrace.cancelClose()
-  hoverMenu.visible = false
+  objectHover.close()
   contextMenu.visible = false
 }
 

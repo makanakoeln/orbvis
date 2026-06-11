@@ -89,16 +89,17 @@
 
     <!-- Hover popup -->
     <HoverMenu
-      v-if="hoverMenu.visible && hoverMenu.object"
-      :object="hoverMenu.object"
-      :state="hoverState"
-      :x="hoverMenu.x"
-      :y="hoverMenu.y"
+      v-if="objectHover.hover.visible && objectHover.hover.object"
+      :object="objectHover.hover.object"
+      :state="objectHover.state.value"
+      :x="objectHover.hover.x"
+      :y="objectHover.hover.y"
+      :anchor-rect="objectHover.hover.anchorRect"
       :connection-id="props.connectionId"
       :checkmk-url="props.checkmkUrl ?? null"
       :template="resolveTemplate(null, props.hoverTemplate, settingsStore.settings.hover_template)"
-      @card-enter="hoverGrace.cancelClose()"
-      @card-leave="hoverGrace.scheduleClose()"
+      @card-enter="objectHover.cancelClose()"
+      @card-leave="objectHover.scheduleClose()"
     />
 
     <DetailDrawer
@@ -167,14 +168,6 @@
         resolveTemplate(null, props.contextTemplate, settingsStore.settings.context_template)
       "
       @close="closeContextMenu"
-      @acknowledge="onContextMenuAck"
-      @remove-ack="onContextMenuRemoveAck"
-      @schedule-downtime="onContextMenuDowntime"
-      @remove-downtime="onContextMenuRemoveDowntime"
-      @force-check="onContextMenuForceCheck"
-      @add-comment="onContextMenuAddComment"
-      @enable-notifications="onContextMenuToggleNotifications(true)"
-      @disable-notifications="onContextMenuToggleNotifications(false)"
     />
 
     <BoardZoomResetPill
@@ -253,8 +246,8 @@ import {
   useFlowNodeModel
 } from '@/composables/useFlowNodeModel'
 import { useFlowSelection } from '@/composables/useFlowSelection'
-import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useObjectActions } from '@/composables/useObjectActions'
+import { useObjectHoverMenu } from '@/composables/useObjectHoverMenu'
 import { useTopKHint } from '@/composables/useTopKHint'
 import { useTopologyFeed } from '@/composables/useTopologyFeed'
 import { useAuthStore } from '@/stores/auth'
@@ -361,33 +354,25 @@ const {
   topKWorstIds: () => topKWorstIds.value
 })
 
-const hoverMenu = reactive<{
-  visible: boolean
-  object: BoardObject | null
-  state: ObjectState | undefined
-  x: number
-  y: number
-}>({ visible: false, object: null, state: undefined, x: 0, y: 0 })
-
 // The hovered node, kept so the tooltip's state can be re-derived live. Reading
 // topologyTimingVersion makes next-check/overdue tick in an open tooltip the
 // same way the detail drawer does, instead of freezing at the hover moment.
 const hoverFNode = ref<FNode | null>(null)
 
-// Close-grace so the operator can move from a node onto the hover card and
-// click a service-state pill (HoverMenu @card-enter/-leave round-trip).
-const hoverGrace = useHoverGrace(() => {
-  hoverMenu.visible = false
-  hoverMenu.object = null
-  hoverFNode.value = null
-})
-const hoverState = computed<ObjectState | undefined>(() => {
-  const cur = hoverFNode.value
-  if (!cur) return undefined
-  void nodes.value
-  void statesStore.topologyTimingVersion
-  const fresh = lastFNodes.find((n) => n.id === cur.id) ?? cur
-  return objectStateFromFNode(fresh)
+// Shared hover-card state machine; flow nodes never enter the states store,
+// so the live state derives from the hovered node's current topology entry.
+const objectHover = useObjectHoverMenu({
+  resolveState: () => {
+    const cur = hoverFNode.value
+    if (!cur) return undefined
+    void nodes.value
+    void statesStore.topologyTimingVersion
+    const fresh = lastFNodes.find((n) => n.id === cur.id) ?? cur
+    return objectStateFromFNode(fresh)
+  },
+  onClose: () => {
+    hoverFNode.value = null
+  }
 })
 
 const contextMenu = reactive<{
@@ -521,15 +506,6 @@ const {
   closeDowntimeModal,
   closeRemoveDowntimeModal
 } = objectActions
-const onContextMenuAck = () => objectActions.handlers.acknowledge(contextMenu.object)
-const onContextMenuRemoveAck = () => objectActions.handlers.removeAck(contextMenu.object)
-const onContextMenuDowntime = () => objectActions.handlers.scheduleDowntime(contextMenu.object)
-const onContextMenuRemoveDowntime = () => objectActions.handlers.removeDowntime(contextMenu.object)
-const onContextMenuAddComment = () => objectActions.handlers.addComment(contextMenu.object)
-const onContextMenuForceCheck = () => objectActions.handlers.forceCheck(contextMenu.object)
-const onContextMenuToggleNotifications = (enable: boolean) =>
-  objectActions.handlers.toggleNotifications(contextMenu.object, enable)
-
 // Off-layout hides per-service health; aggregate problem counts to surface
 // them in a click-to-fix CTA so a green-dot board doesn't mask CRIT/WARN.
 // Total includes UNKNOWN (so unknown-only sites still trigger the banner)
@@ -1535,8 +1511,7 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
       // Site root opens an aggregated drawer; no shift-select / context
       // menu since site-level bulk ops aren't a thing.
       if (d.nodeType === 'site') {
-        hoverGrace.cancelClose()
-        hoverMenu.visible = false
+        objectHover.close()
         openDetail(boardObjectFromFNode(d), d)
         return
       }
@@ -1557,15 +1532,13 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
         if (url) openUrl(url, '_blank')
         return
       }
-      hoverGrace.cancelClose()
-      hoverMenu.visible = false
+      objectHover.close()
       openDetail(boardObjectFromFNode(d), d)
     })
     .on('contextmenu', (event: MouseEvent, d) => {
       if (d.nodeType === 'site') return
       event.preventDefault()
-      hoverGrace.cancelClose()
-      hoverMenu.visible = false
+      objectHover.close()
       contextMenu.object = boardObjectFromFNode(d)
       contextMenu.state = objectStateFromFNode(d)
       contextMenu.x = event.pageX
@@ -1574,18 +1547,23 @@ function render(svg: SVGSVGElement, topoNodes: TopologyNode[]) {
     })
     .on('mouseenter', (event: MouseEvent, d) => {
       if (props.preview || d.nodeType === 'site') return
-      hoverGrace.cancelClose()
       const nodeRect = (event.currentTarget as SVGGElement).getBoundingClientRect()
       hoverFNode.value = d
-      hoverMenu.object = boardObjectFromFNode(d)
-      hoverMenu.x = nodeRect.right + 8
-      hoverMenu.y = nodeRect.top
-      hoverMenu.visible = true
+      objectHover.open(boardObjectFromFNode(d), null, {
+        x: nodeRect.right + 8,
+        y: nodeRect.top,
+        anchorRect: {
+          left: nodeRect.left,
+          top: nodeRect.top,
+          right: nodeRect.right,
+          bottom: nodeRect.bottom
+        }
+      })
     })
     .on('mouseleave', () => {
       // Grace instead of hiding outright: the card carries clickable state
       // pills, so the pointer must survive the trip onto it.
-      hoverGrace.scheduleClose()
+      objectHover.scheduleClose()
     })
 
   // Readonly boards keep drag interactive (persistence inside drag.end

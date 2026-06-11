@@ -52,7 +52,8 @@
             @endpoint-down="(which, e) => onEndpointPointerDown(c.el, which, e)"
             @hover="onElementHoverEnter(c.el, $event)"
             @hover-leave="onElementHoverLeave(c.el)"
-            @open="onElementViewClick(c.el)"
+            @open="onElementViewClick(c.el, $event)"
+            @context="onElementContextMenu(c.el, $event)"
           />
         </svg>
 
@@ -79,7 +80,8 @@
             @pointerdown.stop="onElementPointerDown(el, $event)"
             @mouseenter="onElementHoverEnter(el, $event)"
             @mouseleave="onElementHoverLeave(el)"
-            @click="onElementViewClick(el)"
+            @click="onElementViewClick(el, $event)"
+            @contextmenu="onElementContextMenu(el, $event)"
           >
             <PresentationElementView
               :element="el"
@@ -467,7 +469,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'object-hover': [obj: BoardObject, event: MouseEvent]
   'object-hover-leave': []
-  'object-click': [obj: BoardObject]
+  'object-click': [obj: BoardObject, event: MouseEvent | undefined]
+  'object-context': [obj: BoardObject, event: MouseEvent]
 }>()
 
 const interactive = computed(
@@ -495,9 +498,18 @@ function onElementHoverLeave(el: PresentationElement): void {
   if (viewLinked(el)) emit('object-hover-leave')
 }
 
-function onElementViewClick(el: PresentationElement): void {
+function onElementViewClick(el: PresentationElement, event?: MouseEvent): void {
   const obj = viewObjectFor(el)
-  if (obj) emit('object-click', obj)
+  if (obj) emit('object-click', obj, event)
+}
+
+// Right-click drill-down on bound elements — edit mode keeps the browser
+// menu (the editor has its own affordances for element actions).
+function onElementContextMenu(el: PresentationElement, event: MouseEvent): void {
+  const obj = viewObjectFor(el)
+  if (!obj) return
+  event.preventDefault()
+  emit('object-context', obj, event)
 }
 
 const {

@@ -275,9 +275,9 @@
           :preview="isPreview"
           @object-click="onObjectClick"
           @object-contextmenu="onObjectContextMenu"
-          @object-contextmenu-view="onWorldmapContextMenuView"
-          @object-hover="onWorldmapHover"
-          @object-hover-leave="onWorldmapHoverLeave"
+          @object-contextmenu-view="onWorldmapMarkerContext"
+          @object-hover="(obj, e) => objectHover.open(obj, e)"
+          @object-hover-leave="objectHover.scheduleClose()"
           @canvas-latlng-click="onCanvasLatLngClick"
           @canvas-contextmenu-view="onWorldmapCanvasContextMenu"
           @latlng-drag-end="onLatLngDragEnd"
@@ -422,9 +422,10 @@
           :readonly="boardConfig.readonly ?? false"
           :preview="isPreview"
           :kiosk="isKiosk"
-          @object-hover="onPresentationHover"
-          @object-hover-leave="presHoverGrace.scheduleClose()"
+          @object-hover="(obj, e) => objectHover.open(obj, e)"
+          @object-hover-leave="objectHover.scheduleClose()"
           @object-click="onPresentationObjectClick"
+          @object-context="onPresentationContext"
         />
       </div>
 
@@ -1050,29 +1051,40 @@
       @cancel="bulkDeleteOpen = false"
     />
 
-    <!-- Worldmap HoverMenu -->
+    <!-- Shared hover card — worldmap, foldertree and presentation objects all
+       feed the same useObjectHoverMenu state machine. Foldertree leaves are
+       synthesized (no perf_data, no template macros) — they keep the built-in
+       card and skip the perfometer fetch instead of rendering a broken
+       custom hover_template. -->
     <HoverMenu
-      v-if="isWorldmap && worldmapHover.visible && worldmapHover.object"
-      :object="worldmapHover.object"
-      :state="statesStore.states[worldmapHover.object.id]"
-      :x="worldmapHover.x"
-      :y="worldmapHover.y"
-      :connection-id="boardConfig?.connection_id ?? null"
+      v-if="objectHover.hover.visible && objectHover.hover.object"
+      :object="objectHover.hover.object"
+      :state="objectHover.state.value"
+      :x="objectHover.hover.x"
+      :y="objectHover.hover.y"
+      :anchor-rect="objectHover.hover.anchorRect"
+      :connection-id="
+        isFolderTree
+          ? null
+          : (objectHover.hover.object.connection_id ?? boardConfig?.connection_id ?? null)
+      "
       :checkmk-url="checkmkUrl"
       :template="
-        resolveTemplate(
-          worldmapHover.object.hover_template,
-          boardConfig?.hover_template,
-          settingsStore.settings.hover_template
-        )
+        isFolderTree
+          ? null
+          : resolveTemplate(
+              objectHover.hover.object.hover_template,
+              boardConfig?.hover_template,
+              settingsStore.settings.hover_template
+            )
       "
-      @card-enter="worldmapHoverGrace.cancelClose()"
-      @card-leave="worldmapHoverGrace.scheduleClose()"
+      @card-enter="objectHover.cancelClose()"
+      @card-leave="objectHover.scheduleClose()"
     />
 
-    <!-- Worldmap ContextMenu -->
+    <!-- Object ContextMenu (worldmap markers, bound presentation elements) -->
     <ContextMenu
-      v-if="isWorldmap && worldmapCtxMenu.visible && worldmapCtxMenu.object"
+      v-if="(isWorldmap || isPresentation) && worldmapCtxMenu.visible && worldmapCtxMenu.object"
       :object="worldmapCtxMenu.object"
       v-bind="worldmapCtxState ? { state: worldmapCtxState } : {}"
       :x="worldmapCtxMenu.x"
@@ -1092,45 +1104,6 @@
       @delete="onWorldmapCtxDelete"
       @duplicate="onWorldmapCtxDuplicate"
       @detach="onWorldmapCtxDetach"
-      @acknowledge="onWorldmapCtxAck"
-      @remove-ack="onWorldmapCtxRemoveAck"
-      @schedule-downtime="onWorldmapCtxDowntime"
-      @remove-downtime="onWorldmapCtxRemoveDowntime"
-      @force-check="onWorldmapCtxForceCheck"
-      @add-comment="onWorldmapCtxAddComment"
-      @enable-notifications="onWorldmapCtxToggleNotifications(true)"
-      @disable-notifications="onWorldmapCtxToggleNotifications(false)"
-    />
-
-    <HoverMenu
-      v-if="isFolderTree && folderHover"
-      :object="folderHover.object"
-      :state="folderHover.state"
-      :x="folderHover.x"
-      :y="folderHover.y"
-      :checkmk-url="checkmkUrl"
-      @card-enter="folderHoverGrace.cancelClose()"
-      @card-leave="folderHoverGrace.scheduleClose()"
-    />
-
-    <!-- Presentation HoverMenu (bound elements in view mode) -->
-    <HoverMenu
-      v-if="isPresentation && presHover.visible && presHover.object"
-      :object="presHover.object"
-      :state="statesStore.states[presHover.object.id]"
-      :x="presHover.x"
-      :y="presHover.y"
-      :connection-id="presHover.object.connection_id ?? boardConfig?.connection_id ?? null"
-      :checkmk-url="checkmkUrl"
-      :template="
-        resolveTemplate(
-          undefined,
-          boardConfig?.hover_template,
-          settingsStore.settings.hover_template
-        )
-      "
-      @card-enter="presHoverGrace.cancelClose()"
-      @card-leave="presHoverGrace.scheduleClose()"
     />
 
     <template v-if="isFolderTree && folderCtx">
@@ -1223,32 +1196,6 @@
         <span>{{ _t('Save current view as default') }}</span>
       </button>
     </div>
-    <AckModal
-      v-if="worldmapAckModal && checkmkUrl"
-      :object="worldmapAckModal"
-      :checkmk-url="checkmkUrl"
-      @close="closeWorldmapAckModal"
-    />
-    <DowntimeModal
-      v-if="worldmapDowntimeModal && checkmkUrl"
-      :object="worldmapDowntimeModal"
-      :checkmk-url="checkmkUrl"
-      @close="closeWorldmapDowntimeModal"
-    />
-    <CommentModal
-      v-if="worldmapCommentModal && checkmkUrl"
-      :object="worldmapCommentModal"
-      :checkmk-url="checkmkUrl"
-      @close="worldmapCommentModal = null"
-    />
-    <RemoveDowntimeModal
-      v-if="worldmapRemoveDowntimeModal.visible && checkmkUrl"
-      :downtimes="worldmapRemoveDowntimeModal.downtimes"
-      :checkmk-url="checkmkUrl"
-      :object-name="worldmapRemoveDowntimeModal.objectName"
-      @close="closeWorldmapRemoveDowntimeModal"
-    />
-
     <!-- Object Properties Modal -->
     <Teleport to="body">
       <ObjectPropertiesModal
@@ -1292,7 +1239,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import OnboardingTour from '@/components/OnboardingTour.vue'
@@ -1329,8 +1276,8 @@ import { useBoardRotation } from '@/composables/useBoardRotation'
 import { useBoardTour } from '@/composables/useBoardTour'
 import { useElementRect } from '@/composables/useElementRect'
 import { useFolderTreeInteractions } from '@/composables/useFolderTreeInteractions'
-import { useHoverGrace } from '@/composables/useHoverGrace'
 import { useObjectActions } from '@/composables/useObjectActions'
+import { useObjectHoverMenu } from '@/composables/useObjectHoverMenu'
 import { useToast } from '@/composables/useToast'
 import { useWorldmapMenus } from '@/composables/useWorldmapMenus'
 import { useAuthStore } from '@/stores/auth'
@@ -1567,43 +1514,34 @@ function onSaveWorldmapViewAsDefault(view: { lat: number; lng: number; zoom: num
   showSettings.value = true
 }
 
+// Shared hover card for worldmap, foldertree and presentation objects — one
+// state machine (position, anchor flip, close grace, live state) instead of a
+// copy per board type.
+const objectHover = useObjectHoverMenu()
+
 const {
-  worldmapHover,
   worldmapCtxMenu,
   worldmapCtxState,
   worldmapCanvasCtxMenu,
-  worldmapHoverGrace,
-  worldmapAckModal,
-  worldmapDowntimeModal,
-  worldmapCommentModal,
-  worldmapRemoveDowntimeModal,
-  onWorldmapHover,
-  onWorldmapHoverLeave,
   onWorldmapContextMenuView,
   onWorldmapCtxEdit,
   onWorldmapCtxDelete,
   onWorldmapCtxDuplicate,
   onWorldmapCtxDetach,
-  onWorldmapCtxDowntime,
-  onWorldmapCtxRemoveDowntime,
-  onWorldmapCtxAck,
-  onWorldmapCtxAddComment,
-  onWorldmapCtxRemoveAck,
-  onWorldmapCtxToggleNotifications,
-  onWorldmapCtxForceCheck,
   closeWorldmapMenus,
   onWorldmapCanvasContextMenu,
-  onWorldmapCanvasCtxSaveAsDefault,
-  closeWorldmapAckModal,
-  closeWorldmapDowntimeModal,
-  closeWorldmapRemoveDowntimeModal
+  onWorldmapCanvasCtxSaveAsDefault
 } = useWorldmapMenus({
   editor,
-  checkmkUrl,
   isReadonly: () => boardConfig.value?.readonly ?? false,
   openPropsModal,
-  onSaveViewAsDefault: onSaveWorldmapViewAsDefault
+  onSaveViewAsDefault: onSaveWorldmapViewAsDefault,
+  closeHover: () => objectHover.close()
 })
+
+// The view survives board switches (rotation, breadcrumb): a hover card or
+// context menu opened on the previous board must not carry over.
+watch(boardName, () => closeWorldmapMenus())
 
 function _closePropsModal() {
   propsModalObject.value = null
@@ -1699,7 +1637,7 @@ function openDetail(obj: BoardObject) {
   } else {
     detailDrawerObject.value = obj
   }
-  worldmapHover.visible = false
+  objectHover.close()
   worldmapCtxMenu.visible = false
 }
 
@@ -1763,34 +1701,30 @@ function closeDetail() {
 }
 
 // Presentation view mode: bound elements surface as transient BoardObjects —
-// hover opens the shared HoverMenu, click the shared detail drawer.
-const presHover = reactive({
-  visible: false,
-  object: null as BoardObject | null,
-  x: 0,
-  y: 0
-})
-const presHoverGrace = useHoverGrace(() => {
-  presHover.visible = false
-})
-
-function onPresentationHover(obj: BoardObject, event: MouseEvent): void {
-  presHoverGrace.cancelClose()
-  presHover.object = obj
-  presHover.x = event.pageX + 12
-  presHover.y = event.pageY + 12
-  presHover.visible = true
+// click follows the shared object-click contract (click_action, Ctrl+Click,
+// detail drawer), same as the other board types.
+function onPresentationObjectClick(obj: BoardObject, event?: MouseEvent): void {
+  objectHover.close()
+  onObjectClick(obj, event)
 }
 
-function onPresentationObjectClick(obj: BoardObject): void {
-  presHoverGrace.cancelClose()
-  presHover.visible = false
-  openDetail(obj)
+// Right-click on a bound presentation element opens the same navigation
+// context menu as worldmap markers. The menu is position:fixed, so it takes
+// client coordinates; NO_PERMISSION objects get no menu (same gate as the
+// static board's openContextMenu).
+function onPresentationContext(obj: BoardObject, event: MouseEvent): void {
+  if (statesStore.getState(obj.id)?.state === 'NO_PERMISSION') return
+  onWorldmapContextMenuView(obj, event.clientX, event.clientY)
+}
+
+// Worldmap right-click additionally selects the marker — that side effect is
+// worldmap behaviour, not part of the shared context-menu contract.
+function onWorldmapMarkerContext(obj: BoardObject, x: number, y: number): void {
+  editor.selectObject(obj.id)
+  onWorldmapContextMenuView(obj, x, y)
 }
 
 const {
-  folderHover,
-  folderHoverGrace,
   folderCtx,
   folderBulkModal,
   folderSetupUrl,
@@ -1811,7 +1745,8 @@ const {
   onObjectClick,
   setDrawerSeed: (state) => {
     drawerSeedState.value = state
-  }
+  },
+  hover: objectHover
 })
 
 function onDetailAck() {

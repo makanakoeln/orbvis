@@ -197,6 +197,7 @@
 import { type CSSProperties, computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { metricsApi } from '@/api/client'
+import type { HoverAnchorRect } from '@/composables/useObjectHoverMenu'
 import { useAuthStore } from '@/stores/auth'
 import type { BoardObject, ObjectState, PerfometerResult } from '@/types/api'
 import { buildServiceStateViewUrl } from '@/utils/boardNavigation'
@@ -220,7 +221,7 @@ const props = defineProps<{
   // Bounding rect of the hovered icon (in viewport coords). When the tooltip
   // has to flip to avoid overflow we anchor the flipped position at this
   // rect's edges so the tooltip never lands on top of the icon.
-  anchorRect?: { left: number; top: number; right: number; bottom: number } | null
+  anchorRect?: HoverAnchorRect | null
 }>()
 
 // Card hover round-trip for the close-grace in the host views: the parent

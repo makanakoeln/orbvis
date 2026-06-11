@@ -1,16 +1,9 @@
 import { type Ref, computed, ref } from 'vue'
 
-import { useHoverGrace } from '@/composables/useHoverGrace'
+import type { useObjectHoverMenu } from '@/composables/useObjectHoverMenu'
 import { useStatesStore } from '@/stores/states'
 import type { BoardObject, FolderTreeNode, MonitoringState, ObjectState } from '@/types/api'
 import { stripCheckmkBase } from '@/utils/boardNavigation'
-
-interface FolderHover {
-  object: BoardObject
-  state: ObjectState | undefined
-  x: number
-  y: number
-}
 
 interface FolderCtx {
   node: FolderTreeNode
@@ -25,21 +18,31 @@ interface FolderTreeOptions {
   isClickActionNone: () => boolean
   onObjectClick: (obj: BoardObject) => void
   setDrawerSeed: (state: ObjectState) => void
+  // Shared hover card (lives in the host view) — foldertree leaves feed it
+  // with synthesized objects + states.
+  hover: ReturnType<typeof useObjectHoverMenu>
 }
 
 /**
- * Hover popup, folder context menu and bulk-action modal for the foldertree
- * board. Foldertree leaves never enter the SSE state map (services are lazy,
- * the flat host list is empty by design), so each interaction synthesises an
- * ObjectState from the tree node via {@link folderNodeToState}.
+ * Folder context menu, bulk-action modal and the hover/drawer feeders for the
+ * foldertree board. Foldertree leaves never enter the SSE state map (services
+ * are lazy, the flat host list is empty by design), so each interaction
+ * synthesises an ObjectState from the tree node via {@link folderNodeToState}.
  *
  * Selecting a leaf seeds the drawer (`setDrawerSeed`) and opens it through the
  * shared `onObjectClick`; both are injected because the drawer lives in the
  * host view.
  */
 export function useFolderTreeInteractions(options: FolderTreeOptions) {
-  const { isPreview, checkmkUrl, canBulkCommand, isClickActionNone, onObjectClick, setDrawerSeed } =
-    options
+  const {
+    isPreview,
+    checkmkUrl,
+    canBulkCommand,
+    isClickActionNone,
+    onObjectClick,
+    setDrawerSeed,
+    hover
+  } = options
   const statesStore = useStatesStore()
 
   // Synthesise an ObjectState from a tree node for the hover/drawer. Pass
@@ -100,12 +103,9 @@ export function useFolderTreeInteractions(options: FolderTreeOptions) {
     folderBulkModal.value = node
   }
 
-  const folderHover = ref<FolderHover | null>(null)
-
   function onFolderHoverHost(node: FolderTreeNode, x: number, y: number): void {
-    folderHoverGrace.cancelClose()
-    folderHover.value = {
-      object: {
+    hover.open(
+      {
         id: node.title,
         type: 'host',
         host_name: node.title,
@@ -114,18 +114,15 @@ export function useFolderTreeInteractions(options: FolderTreeOptions) {
         z: 0,
         url_target: '_blank'
       },
-      state: folderNodeToState(node),
-      x: x + 12,
-      y: y + 12
-    }
+      null,
+      { x: x + 12, y: y + 12, anchorRect: null, stateOverride: folderNodeToState(node) }
+    )
   }
 
   function onFolderHoverService(host: string, node: FolderTreeNode, x: number, y: number): void {
-    folderHoverGrace.cancelClose()
-    const id = `${host};${node.title}`
-    folderHover.value = {
-      object: {
-        id,
+    hover.open(
+      {
+        id: `${host};${node.title}`,
         type: 'service',
         host_name: host,
         service_description: node.title,
@@ -134,18 +131,13 @@ export function useFolderTreeInteractions(options: FolderTreeOptions) {
         z: 0,
         url_target: '_blank'
       },
-      state: folderNodeToState(node, host),
-      x: x + 12,
-      y: y + 12
-    }
+      null,
+      { x: x + 12, y: y + 12, anchorRect: null, stateOverride: folderNodeToState(node, host) }
+    )
   }
 
-  const folderHoverGrace = useHoverGrace(() => {
-    folderHover.value = null
-  })
-
   function onFolderHoverClear(): void {
-    folderHoverGrace.scheduleClose()
+    hover.scheduleClose()
   }
 
   const folderCtx = ref<FolderCtx | null>(null)
@@ -154,7 +146,7 @@ export function useFolderTreeInteractions(options: FolderTreeOptions) {
     // The settings preview is non-interactive; read-only displays (click_action
     // 'none') get no context menu, mirroring onObjectClick's click gating.
     if (isPreview.value || isClickActionNone()) return
-    folderHover.value = null
+    hover.close()
     folderCtx.value = { node, x, y }
   }
 
@@ -185,8 +177,6 @@ export function useFolderTreeInteractions(options: FolderTreeOptions) {
   }
 
   return {
-    folderHover,
-    folderHoverGrace,
     folderCtx,
     folderBulkModal,
     folderSetupUrl,
