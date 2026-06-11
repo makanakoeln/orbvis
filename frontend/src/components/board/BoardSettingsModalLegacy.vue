@@ -28,7 +28,10 @@
               <!-- Alias -->
               <div class="board-settings__field">
                 <CmkLabel>{{ _t('Display name') }}</CmkLabel>
-                <CmkInput v-model="form.alias" field-size="FILL" />
+                <!-- aria-label keeps the field addressable like the FormSpec
+                     variant ("Display name") — same operator contract, and the
+                     shared e2e spec locates it in both modes. -->
+                <CmkInput v-model="form.alias" field-size="FILL" :aria-label="_t('Display name')" />
               </div>
 
               <!-- Connection -->
@@ -745,6 +748,7 @@ import CmkInput from '@/components/cmk/user-input/CmkInput'
 import { ApiError, boardsApi, connectionsApi, rolesApi } from '@/api/client'
 import { useRadarGroups } from '@/composables/useRadarGroups'
 import { useAuthStore } from '@/stores/auth'
+import { useBoardsStore } from '@/stores/boards'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   BoardRead,
@@ -813,6 +817,7 @@ function onSlideInClose() {
 
 const { _t } = usei18n()
 const auth = useAuthStore()
+const boardsStore = useBoardsStore()
 const settingsStore = useSettingsStore()
 
 const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => {
@@ -1103,7 +1108,7 @@ async function save() {
     } else {
       view = { type: form.value.map_type }
     }
-    await boardsApi.update(
+    const updated = await boardsApi.update(
       props.board.name,
       {
         alias: form.value.alias,
@@ -1126,6 +1131,14 @@ async function save() {
       auth.accessToken!,
       localVersion.value
     )
+    // Adopt the response like the FormSpec modal does: the store keeps the
+    // fresh alias/version, so the breadcrumb updates and a follow-up save
+    // can't trip over a stale If-Match (409). Name-guarded — when hosted
+    // from the boards list, another board may be on screen.
+    localVersion.value = updated.version ?? localVersion.value
+    if (boardsStore.currentBoard?.name === updated.name) {
+      boardsStore.currentBoard = updated
+    }
     emit('updated')
     emit('close')
   } catch (e: unknown) {

@@ -78,9 +78,14 @@ test.describe('OrbVis board edit', () => {
     await expect(aliasInput).toHaveValue(ORIGINAL_ALIAS)
     await aliasInput.fill(EDITED_ALIAS)
     await page.getByRole('button', { name: /^save$/i }).click()
+    // The dialog closes once the update settled — navigating earlier can
+    // abort the in-flight PUT and the alias silently stays unchanged.
+    await expect(aliasInput).toBeHidden({ timeout: 10_000 })
 
     // Reload from scratch; the persisted alias must survive the round-trip.
-    await page.goto(`./#/boards/${BOARD}`)
+    // goto() on the identical hash URL is a no-op for the SPA — reload()
+    // forces a real round-trip against the server state.
+    await page.reload()
     await expect(page.getByText(EDITED_ALIAS).first()).toBeVisible({ timeout: 10_000 })
 
     // And it is persisted server-side, not just in the live store.
