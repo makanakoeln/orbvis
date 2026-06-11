@@ -1236,6 +1236,9 @@ msgstr "Balken"
 msgid "Traffic light"
 msgstr "Ampel"
 
+msgid "Value"
+msgstr "Wert"
+
 msgid "Target"
 msgstr "Ziel"
 

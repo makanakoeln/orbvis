@@ -174,7 +174,7 @@ class DisplayConfig(BaseModel):
     mode: Literal["icon", "text", "gadget"] = "icon"
     image: str | None = None
     image_size: int | None = None
-    gadget_type: Literal["gauge", "bar", "trafficlight"] | None = None
+    gadget_type: Literal["gauge", "bar", "trafficlight", "value"] | None = None
     gadget_metric: str | None = None
 
 

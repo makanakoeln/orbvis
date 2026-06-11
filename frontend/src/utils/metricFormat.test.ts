@@ -35,6 +35,16 @@ describe('renderMetricValue', () => {
 
   it('falls back to the SI heuristic without a registry entry', () => {
     expect(renderMetricValue(8927830016, null, 'B')).toBe('8.93 GB')
-    expect(renderMetricValue(0.02, undefined, 'ms')).toBe('0.02 ms')
+  })
+
+  it('routes raw time units through the CMK TimeFormatter without a registry entry', () => {
+    // Never "4.5 kms" — time scales by 60, not 1000.
+    expect(renderMetricValue(4500, null, 'ms')).toBe('4.5 s')
+    expect(renderMetricValue(0.4, undefined, 'ms')).toBe('0.4 ms')
+    expect(renderMetricValue(0.02, undefined, 'ms')).toBe('20 \u03bcs')
+    expect(renderMetricValue(137, null, 's')).toBe('2 min 17 s')
+    expect(renderMetricValue(259200, null, 's')).toBe('3 d')
+    expect(renderMetricValue(350, null, 'us')).toBe('0.35 ms')
+    expect(renderMetricValue(12, null, 'ns')).toBe('0.01 \u03bcs')
   })
 })

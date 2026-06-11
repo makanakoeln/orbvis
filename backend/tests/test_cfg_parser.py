@@ -535,6 +535,17 @@ def test_fixture_service_gadget(all_objects_board):
     assert o["display"] == {"mode": "gadget", "gadget_type": "gauge", "gadget_metric": None}
 
 
+def test_gadget_url_rawnumbers_maps_to_value():
+    content = (
+        "define global {\n    alias = Map\n}\n"
+        "define service {\n    host_name = srv\n    service_description = CPU load\n"
+        "    x = 10\n    y = 10\n    view_type = gadget\n    gadget_url = rawNumbers.php\n}\n"
+    )
+    board = cfg_to_board(content, "m")
+    o = board["objects"][0]
+    assert o["display"] == {"mode": "gadget", "gadget_type": "value", "gadget_metric": None}
+
+
 def test_fixture_service_with_view_type_line_becomes_line(all_objects_board):
     """The legacy format encodes lines as service blocks with view_type=line — must import as line."""
     o = _by_id(all_objects_board, "line_s00003")

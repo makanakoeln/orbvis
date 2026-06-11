@@ -1157,7 +1157,8 @@ const gadgetTypeOptions = computed(() => ({
   suggestions: [
     { name: 'gauge', title: _t('Gauge') },
     { name: 'bar', title: _t('Bar') },
-    { name: 'trafficlight', title: _t('Traffic light') }
+    { name: 'trafficlight', title: _t('Traffic light') },
+    { name: 'value', title: _t('Value') }
   ]
 }))
 const urlTargetOptions = computed(() => ({

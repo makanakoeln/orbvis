@@ -56,7 +56,10 @@ function textBlock(
 
 function dataTile(
   geo: Geo,
-  opts: { mode?: 'icon' | 'text' | 'gadget'; gadget?: 'gauge' | 'bar' | 'trafficlight' } = {}
+  opts: {
+    mode?: 'icon' | 'text' | 'gadget'
+    gadget?: 'gauge' | 'bar' | 'trafficlight' | 'value'
+  } = {}
 ): DataElement {
   const el = createElement('data', geo.x, geo.y)
   if (el.kind !== 'data') throw new Error('unreachable')

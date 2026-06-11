@@ -194,11 +194,18 @@ const gadgetBinding = {
   enabled: () =>
     props.element.kind === 'data' &&
     props.element.display.mode === 'gadget' &&
-    effectiveGadgetType.value !== 'trafficlight'
+    ['gauge', 'bar'].includes(effectiveGadgetType.value)
 }
 const perfometer = usePerfometer(gadgetBinding)
-// Registered display units so the readout matches the Checkmk GUI.
-const metricUnits = useMetricUnits(gadgetBinding)
+// Registered display units so the readout matches the Checkmk GUI. The raw
+// value gadget needs these too, but no perfometer (it has no fill to scale).
+const metricUnits = useMetricUnits({
+  ...gadgetBinding,
+  enabled: () =>
+    props.element.kind === 'data' &&
+    props.element.display.mode === 'gadget' &&
+    effectiveGadgetType.value !== 'trafficlight'
+})
 // The sample perf_data always carries exactly one metric; hand its name to the
 // gadget so an unbound preview renders a value instead of an empty dial.
 const sampleMetric = computed(() => {
@@ -297,7 +304,7 @@ const gadgetSize = computed(() => {
   const availW = el.w - 28
   const availH = el.h - labelH - 24
   const gt = effectiveGadgetType.value
-  const hFactor = gt === 'trafficlight' ? 1.85 : gt === 'bar' ? 0.55 : 0.7
+  const hFactor = gt === 'trafficlight' ? 1.85 : gt === 'bar' ? 0.55 : gt === 'value' ? 0.4 : 0.7
   return Math.max(36, Math.min(availW, availH / hFactor))
 })
 

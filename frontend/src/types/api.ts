@@ -60,7 +60,7 @@ export interface DisplayConfig {
   mode: 'icon' | 'text' | 'gadget'
   image?: string | null
   image_size?: number | null
-  gadget_type?: 'gauge' | 'bar' | 'trafficlight' | null
+  gadget_type?: 'gauge' | 'bar' | 'trafficlight' | 'value' | null
   gadget_metric?: string | null
 }
 

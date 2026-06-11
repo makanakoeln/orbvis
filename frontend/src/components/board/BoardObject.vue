@@ -548,11 +548,17 @@ const gadgetBinding = {
   perfData: () => props.state?.perf_data,
   enabled: () =>
     props.object.display?.mode === 'gadget' &&
-    (props.object.display?.gadget_type || 'gauge') !== 'trafficlight'
+    ['gauge', 'bar'].includes(props.object.display?.gadget_type || 'gauge')
 }
 const gadgetPerfometer = usePerfometer(gadgetBinding)
-// Registered display units so the readout matches the Checkmk GUI.
-const gadgetMetricUnits = useMetricUnits(gadgetBinding)
+// Registered display units so the readout matches the Checkmk GUI. The raw
+// value gadget needs these too, but no perfometer (it has no fill to scale).
+const gadgetMetricUnits = useMetricUnits({
+  ...gadgetBinding,
+  enabled: () =>
+    props.object.display?.mode === 'gadget' &&
+    (props.object.display?.gadget_type || 'gauge') !== 'trafficlight'
+})
 
 const GRAPH_DATA_TIMEOUT_MS = 15_000
 const dataTimedOut = ref(false)

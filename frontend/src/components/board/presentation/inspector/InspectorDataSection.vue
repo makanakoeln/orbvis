@@ -225,7 +225,8 @@ const modeOptions = computed(() => [
 const gadgetOptions = computed(() => [
   { label: _t('Gauge'), value: 'gauge' },
   { label: _t('Bar'), value: 'bar' },
-  { label: _t('Light'), value: 'trafficlight' }
+  { label: _t('Light'), value: 'trafficlight' },
+  { label: _t('Value'), value: 'value' }
 ])
 
 function patchDisplay(p: Record<string, unknown>): void {

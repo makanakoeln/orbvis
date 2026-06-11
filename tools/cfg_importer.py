@@ -61,6 +61,7 @@ GADGET_URL_MAP: dict[str, str] = {
     "std_speedometer2.php": "gauge",
     "std_bar.php": "bar",
     "std_html_bar.php": "bar",
+    "rawNumbers.php": "value",
 }
 
 # Legacy url_target values that reference the old CMK frameset — remap to _blank

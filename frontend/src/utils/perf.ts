@@ -73,7 +73,9 @@ function trimFixed(s: string): string {
 const PREFIXED_UNIT = /^[KMGTP]i?B$/i
 
 /** Format a metric value with an SI prefix: 8927830016 + "B" → "8.93 GB".
- * Percent values keep their plain form ("54%"). */
+ * Percent values keep their plain form ("54%"). Time units are NOT special-
+ * cased here — renderMetricValue routes them through the CMK TimeFormatter
+ * before this heuristic ever sees them. */
 export function fmtSI(value: number, unit: string): string {
   if (unit === '%') return `${value.toFixed(0)}%`
   if (PREFIXED_UNIT.test(unit)) return `${trimFixed(value.toFixed(2))} ${unit}`

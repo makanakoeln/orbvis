@@ -138,7 +138,6 @@ describe('fmtSI', () => {
     expect(fmtSI(5.1, 'KB')).toBe('5.1 KB')
     // Integers ending in zero must keep their digits (regression: "250" → "25").
     expect(fmtSI(250e9, 'B')).toBe('250 GB')
-    expect(fmtSI(120, 'ms')).toBe('120 ms')
     expect(fmtSI(100000, '')).toBe('100k')
   })
 

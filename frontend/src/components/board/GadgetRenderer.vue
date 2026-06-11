@@ -63,6 +63,18 @@
     >
   </div>
 
+  <!-- Raw value (NagVis rawNumbers): the metric reading as bare state-coloured text -->
+  <div v-else-if="type === 'value'" class="orb-gadget__stack">
+    <span
+      class="orb-gadget__raw"
+      :style="{
+        color: stateColor(state?.state),
+        fontSize: Math.max(11, Math.round(size * 0.32 * rawScale)) + 'px'
+      }"
+      >{{ valueLabel }}</span
+    >
+  </div>
+
   <!-- Gauge (SVG semicircle arc) -->
   <div v-else class="orb-gadget__stack">
     <svg :width="size" :height="size * 0.65" :viewBox="`0 0 ${size} ${size * 0.65}`">
@@ -122,7 +134,7 @@ import {
 import { stateColor } from '@/utils/stateColors'
 
 const props = defineProps<{
-  type: string // 'gauge' | 'bar' | 'trafficlight'
+  type: string // 'gauge' | 'bar' | 'trafficlight' | 'value'
   metric?: string | null
   state: ObjectState | undefined
   size: number
@@ -159,6 +171,15 @@ const valueLabel = computed(() =>
 // client-side formatting of the raw perf value.
 const readout = computed(() => (scaled.value ? `${pct.value.toFixed(0)}%` : valueLabel.value))
 const caption = computed(() => (scaled.value ? props.perfometer?.label || valueLabel.value : ''))
+
+// The raw-value gadget scales on its own label since it never shows a percentage.
+const rawScale = computed(() => {
+  const n = valueLabel.value.length
+  if (n <= 4) return 1
+  if (n <= 6) return 0.85
+  if (n <= 8) return 0.7
+  return 0.55
+})
 
 // Shrink the readout font for long absolute values so e.g. "512 MB" still fits.
 const readoutScale = computed(() => {
@@ -264,6 +285,13 @@ const valArc = computed(() => {
   align-items: center;
   justify-content: center;
   font-weight: 700;
+}
+
+.orb-gadget__raw {
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  text-shadow: var(--shadow-text);
 }
 
 .orb-gadget__value {
