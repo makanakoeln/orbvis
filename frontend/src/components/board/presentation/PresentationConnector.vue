@@ -84,7 +84,7 @@
 import { computed } from 'vue'
 
 import type { ObjectState, ShapeElement } from '@/types/api'
-import { type FlowVisual, flowVisual } from '@/utils/connectorFlow'
+import { type FlowVisual, connectorLabelVisible, flowVisual } from '@/utils/connectorFlow'
 
 interface Pt {
   x: number
@@ -117,8 +117,10 @@ const twoWay = computed(() => !!props.element.flow && !!props.element.flow_metri
 const isArrow = computed(() => props.element.shape === 'arrow')
 const angle = computed(() => Math.atan2(props.end.y - props.start.y, props.end.x - props.start.x))
 
-const haloWidth = computed(
-  () => Math.max(visForward.value.width, twoWay.value ? visBack.value.width : 0) + 8
+const haloWidth = computed(() =>
+  twoWay.value
+    ? Math.max(visForward.value.width, visBack.value.width) + 8
+    : visForward.value.width + 8
 )
 
 function lerp(t: number): Pt {
@@ -212,7 +214,7 @@ const segments = computed<Segment[]>(() => {
 // The element label controls the pill: ``show === false`` hides it, a label
 // text replaces the live value on a one-way link. Two-way links show one value
 // pill per direction.
-const labelShow = computed(() => props.element.label?.show !== false)
+const labelShow = computed(() => connectorLabelVisible(props.element))
 const pillFontSize = computed(() => props.element.label?.size ?? 11)
 const pillColor = computed(() => props.element.label?.color || '#fff')
 const pillBg = computed(() => props.element.label?.background || 'rgb(0 0 0 / 65%)')

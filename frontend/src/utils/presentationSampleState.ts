@@ -11,6 +11,17 @@ export function isBindable(el: PresentationElement): el is BindableElement {
   return el.kind === 'data' || el.kind === 'shape'
 }
 
+// The full set of binding fields, all cleared — the single source for "reset
+// the binding" so type switches, connection changes and drag&drop binds can't
+// drift apart when a new binding type is added.
+export const EMPTY_BINDING = {
+  object_type: null,
+  host_name: null,
+  service_description: null,
+  group_name: null,
+  aggregation_id: null
+} as const
+
 // Any of the binding fields counts: host/service, host-/servicegroup or a BI
 // aggregation make the element "bound".
 export function hasBinding(el: BindableElement): boolean {

@@ -169,6 +169,7 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 
 import { useDataBinding } from '@/composables/useDataBinding'
 import type { DataElement, ElementLabel, ShapeElement } from '@/types/api'
+import { connectorLabelVisible } from '@/utils/connectorFlow'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AutocompleteInput from '../../AutocompleteInput.vue'
@@ -223,7 +224,9 @@ function patchDisplay(p: Record<string, unknown>): void {
 // A connector's value pill defaults to visible (label === null), a box
 // shape's state label to hidden — the checkbox mirrors the effective state.
 const effectiveLabelShow = computed(() =>
-  connectorEl.value ? props.element.label?.show !== false : (props.element.label?.show ?? false)
+  connectorEl.value
+    ? connectorLabelVisible(connectorEl.value)
+    : (props.element.label?.show ?? false)
 )
 
 const labelBase = computed<ElementLabel>(() => {

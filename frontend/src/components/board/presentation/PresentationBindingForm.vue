@@ -92,6 +92,7 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 import { useDataBinding } from '@/composables/useDataBinding'
 import { useConnectionsStore } from '@/stores/connections'
 import type { AggregationInfo, DataElement, ShapeElement } from '@/types/api'
+import { EMPTY_BINDING } from '@/utils/presentationSampleState'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AutocompleteInput from '../AutocompleteInput.vue'
@@ -124,6 +125,8 @@ const binding = useDataBinding(effectiveConnection)
 // ── object type ─────────────────────────────────────────────────────────────
 // "host" covers the host + optional service pair; groups and BI aggregations
 // carry an explicit object_type so the state service resolves them per type.
+// Mirrors the backend derivation in state_service._object_type — change both
+// together.
 type BindKind = 'host' | 'hostgroup' | 'servicegroup' | 'aggregation'
 
 const bindKind = computed<BindKind>(() => {
@@ -148,13 +151,7 @@ function onBindKindChange(v: string | null): void {
   if (kind === bindKind.value) return
   // Switching the type clears the whole binding — stale fields from another
   // type must not linger in the element.
-  emit('patch', {
-    object_type: kind === 'host' ? null : kind,
-    host_name: null,
-    service_description: null,
-    group_name: null,
-    aggregation_id: null
-  })
+  emit('patch', { ...EMPTY_BINDING, object_type: kind === 'host' ? null : kind })
 }
 
 // ── per-type suggestion sources ─────────────────────────────────────────────
@@ -246,11 +243,9 @@ onMounted(async () => {
 
 function onConnectionChange(v: string | null): void {
   emit('patch', {
-    connection_id: v || null,
-    host_name: null,
-    service_description: null,
-    group_name: null,
-    aggregation_id: null
+    ...EMPTY_BINDING,
+    object_type: props.element.object_type ?? null,
+    connection_id: v || null
   })
   hosts.value = []
   services.value = []

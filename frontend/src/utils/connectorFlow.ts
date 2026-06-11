@@ -18,6 +18,13 @@ export interface FlowVisual {
   valueText: string
 }
 
+// A connector's value pill defaults to VISIBLE (label === null shows the live
+// value); only an explicit ``show: false`` hides it. Box shapes default the
+// other way (see PresentationElementView.shapeLabelShow).
+export function connectorLabelVisible(el: ShapeElement): boolean {
+  return el.label?.show !== false
+}
+
 function staticDash(dash: ShapeElement['dash'], w: number): string | undefined {
   if (dash === 'dashed') return `${w * 3} ${w * 2}`
   if (dash === 'dotted') return `${w} ${w * 1.5}`

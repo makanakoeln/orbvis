@@ -1,6 +1,7 @@
-import type { DataElement, PresentationElement, PresentationObjectType } from '@/types/api'
+import type { DataElement, PresentationElement } from '@/types/api'
 
 import { createElement } from './presentationElements'
+import { EMPTY_BINDING } from './presentationSampleState'
 
 // Drag&drop binding from the data panel: dropping a host/service, group or BI
 // aggregation onto an existing element binds it; dropping onto empty slide
@@ -40,13 +41,7 @@ export function parseBindingDropPayload(raw: string): BindingDropPayload | null 
 // The element patch that applies a drop payload — clears every binding field
 // of the other types so stale values can't linger.
 export function bindingPatch(payload: BindingDropPayload): Record<string, unknown> {
-  const base: Record<string, unknown> = {
-    object_type: null as PresentationObjectType | null,
-    host_name: null,
-    service_description: null,
-    group_name: null,
-    aggregation_id: null
-  }
+  const base: Record<string, unknown> = { ...EMPTY_BINDING }
   if (payload.kind === 'host') {
     base.host_name = payload.name
     base.service_description = payload.service ?? null

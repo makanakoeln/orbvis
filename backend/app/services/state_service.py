@@ -815,7 +815,8 @@ async def _get_presentation_states(
 
     def _object_type(el: DataElement | ShapeElement) -> ObjectType:
         # Explicit object_type wins; legacy elements without one keep the
-        # original host/service derivation.
+        # original host/service derivation. Mirrors the frontend's ``bindKind``
+        # (PresentationBindingForm.vue) — change both together.
         if el.object_type:
             return el.object_type
         if el.aggregation_id:
