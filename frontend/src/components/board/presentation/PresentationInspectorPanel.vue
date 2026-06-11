@@ -196,6 +196,17 @@
               :placeholder="_t('Background image…')"
               @update:model-value="emit('slide', { background_image: $event || null })"
             />
+            <CmkButton class="insp__grow" :disabled="bgUploading" @click="bgFileInput?.click()">
+              {{ bgUploading ? _t('Uploading…') : _t('Upload background image…') }}
+            </CmkButton>
+            <input
+              ref="bgFileInput"
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
+              class="insp__hidden-file"
+              @change="onBgUpload"
+            />
+            <p v-if="bgUploadError" class="insp__error">{{ bgUploadError }}</p>
           </section>
           <section v-if="$slots.slide" class="insp__section">
             <slot name="slide" />
@@ -214,6 +225,8 @@ import CmkButton from '@/components/cmk/CmkButton'
 import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown'
 import CmkScrollContainer from '@/components/cmk/CmkScrollContainer'
 
+import { imagesApi } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
 import type { PresentationElement, PresentationTheme, PresentationView } from '@/types/api'
 import { ICONS, SLIDE_PRESETS } from '@/utils/presentationCanvasChrome'
 import { themeOptions } from '@/utils/presentationThemes'
@@ -293,6 +306,30 @@ function onMultiOpacity(e: Event): void {
   emit('patch', { opacity: Number((e.target as HTMLInputElement).value) / 100 })
 }
 
+// Direct background upload into the image library — the picker stays for
+// re-using existing images; emitting the slide patch rides the auto-save.
+const auth = useAuthStore()
+const bgFileInput = ref<HTMLInputElement | null>(null)
+const bgUploading = ref(false)
+const bgUploadError = ref('')
+
+async function onBgUpload(e: Event): Promise<void> {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || !auth.accessToken) return
+  bgUploading.value = true
+  bgUploadError.value = ''
+  try {
+    const entry = await imagesApi.upload(file, auth.accessToken)
+    emit('slide', { background_image: entry.name })
+  } catch (err) {
+    bgUploadError.value = err instanceof Error ? err.message : _t('Upload failed')
+  } finally {
+    bgUploading.value = false
+  }
+}
+
 const themeDropdownOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: themeOptions().map((t) => ({ name: t.name, title: t.title }))
@@ -368,6 +405,16 @@ const slidePresets = SLIDE_PRESETS
 .insp__grow {
   flex: 1;
   justify-content: center;
+}
+
+.insp__hidden-file {
+  display: none;
+}
+
+.insp__error {
+  margin: 0;
+  font-size: var(--font-size-normal);
+  color: var(--color-state-critical, #f87171);
 }
 
 .insp__head {

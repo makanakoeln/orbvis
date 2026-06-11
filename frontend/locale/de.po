@@ -2643,3 +2643,9 @@ msgstr "Teilt den Link in eine Zweirichtungs-Weathermap"
 
 msgid "Flow animation overrides the stroke style"
 msgstr "Die Fluss-Animation übersteuert den Konturstil"
+
+msgid "Uploading…"
+msgstr "Wird hochgeladen…"
+
+msgid "Upload failed"
+msgstr "Upload fehlgeschlagen"
