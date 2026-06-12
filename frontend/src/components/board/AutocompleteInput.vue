@@ -1,6 +1,7 @@
 <template>
   <div class="orb-autocomplete">
     <input
+      ref="inputRef"
       :value="displayValue"
       :placeholder="placeholder"
       :disabled="disabled"
@@ -16,21 +17,27 @@
     />
     <span v-if="loading" class="orb-autocomplete__loading">…</span>
 
-    <div v-if="open && filtered.length > 0" class="orb-autocomplete__dropdown">
-      <button
-        v-for="(item, i) in filtered"
-        :key="item.value"
-        type="button"
-        class="orb-autocomplete__option"
-        :class="i === activeIndex ? 'orb-autocomplete__option--active' : ''"
-        @mousedown.prevent="select(item.value)"
+    <Teleport to="body">
+      <div
+        v-if="open && filtered.length > 0"
+        class="orb-autocomplete__dropdown"
+        :style="dropdownStyle"
       >
-        {{ item.label }}
-      </button>
-      <div v-if="truncated > 0" class="orb-autocomplete__more">
-        +{{ truncated }} more — keep typing to narrow results
+        <button
+          v-for="(item, i) in filtered"
+          :key="item.value"
+          type="button"
+          class="orb-autocomplete__option"
+          :class="i === activeIndex ? 'orb-autocomplete__option--active' : ''"
+          @mousedown.prevent="select(item.value)"
+        >
+          {{ item.label }}
+        </button>
+        <div v-if="truncated > 0" class="orb-autocomplete__more">
+          +{{ truncated }} more — keep typing to narrow results
+        </div>
       </div>
-    </div>
+    </Teleport>
     <p v-if="emptyText && !loading && suggestions.length === 0" class="orb-autocomplete__empty">
       {{ emptyText }}
     </p>
@@ -38,7 +45,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import type { CSSProperties } from 'vue'
 
 const props = defineProps<{
   modelValue: string
@@ -61,6 +69,53 @@ const emit = defineEmits<{
 
 const open = ref(false)
 const activeIndex = ref(-1)
+
+// The dropdown is teleported to <body> so the inspector panel's `overflow:auto`
+// can't clip it, and anchored with a fixed position that flips above the input
+// when there isn't room below — without this a metric/service list low in the
+// panel opened off-screen and its entries were unreachable.
+const inputRef = ref<HTMLInputElement | null>(null)
+const dropdownStyle = ref<CSSProperties>({})
+
+const DROPDOWN_MAX_HEIGHT = 192
+const DROPDOWN_GAP = 4
+
+function updatePosition(): void {
+  const el = inputRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom
+  const spaceAbove = rect.top
+  const openUp = spaceBelow < DROPDOWN_MAX_HEIGHT + DROPDOWN_GAP && spaceAbove > spaceBelow
+  const base: CSSProperties = { left: `${rect.left}px`, width: `${rect.width}px` }
+  dropdownStyle.value = openUp
+    ? {
+        ...base,
+        bottom: `${window.innerHeight - rect.top + DROPDOWN_GAP}px`,
+        maxHeight: `${Math.min(DROPDOWN_MAX_HEIGHT, spaceAbove - DROPDOWN_GAP * 2)}px`
+      }
+    : {
+        ...base,
+        top: `${rect.bottom + DROPDOWN_GAP}px`,
+        maxHeight: `${Math.min(DROPDOWN_MAX_HEIGHT, spaceBelow - DROPDOWN_GAP * 2)}px`
+      }
+}
+
+watch(open, (isOpen) => {
+  if (isOpen) {
+    void nextTick(updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+  } else {
+    window.removeEventListener('scroll', updatePosition, true)
+    window.removeEventListener('resize', updatePosition)
+  }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', updatePosition, true)
+  window.removeEventListener('resize', updatePosition)
+})
 
 /** The text currently shown in the input field. */
 const displayValue = computed(() => {
@@ -102,6 +157,7 @@ function onInput(e: Event) {
   emit('update:modelValue', (e.target as HTMLInputElement).value)
   open.value = true
   activeIndex.value = -1
+  void nextTick(updatePosition)
 }
 
 function onBlur() {
@@ -157,13 +213,9 @@ function confirmSelection() {
 }
 
 .orb-autocomplete__dropdown {
-  position: absolute;
-  z-index: 50;
-  top: 100%;
-  right: 0;
-  left: 0;
+  position: fixed;
+  z-index: 1000;
   max-height: 192px;
-  margin-top: var(--dimension-3);
   overflow: auto;
   background: var(--default-form-element-bg-color);
   border-radius: 8px;
