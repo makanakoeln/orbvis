@@ -1,6 +1,6 @@
 import { connectionsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
-import type { AggregationInfo } from '@/types/api'
+import type { AggregationInfo, MetricChoice } from '@/types/api'
 
 // Shared host/service/group/metric lookups for every binding surface
 // (inspector, data panel, connect-data popover). Results are cached per
@@ -65,7 +65,7 @@ export function useDataBinding(connectionId: () => string) {
     )
   }
 
-  function metrics(host: string, service?: string | null): Promise<string[]> {
+  function metrics(host: string, service?: string | null): Promise<MetricChoice[]> {
     const conn = connectionId()
     if (!conn || !host || !token()) return Promise.resolve([])
     return cached(

@@ -34,6 +34,7 @@ if FORM_SPECS_AVAILABLE:
         connection_spec,
         form_data_to_config,
     )
+from app.connections.livestatus import LivestatusConnection
 from app.models.user import User
 from app.schemas.board import AggregationInfo, AggregationNode, normalize_object_filter
 from app.schemas.connection import (
@@ -49,6 +50,7 @@ from app.schemas.topology import (
     TopologyNode,
 )
 from app.services import connection_service
+from app.services.perfometer_service import metric_titles
 from app.services.state_service import (
     get_connection,
     get_connection_objects,
@@ -521,24 +523,42 @@ async def get_topology(
             _topology_cache_locks.pop(cache_key, None)
 
 
-@router.get("/{connection_id}/perf-metrics", response_model=list[str])
+class MetricChoice(BaseModel):
+    name: str  # raw perfdata label — stored and matched against perf_data
+    title: str  # Checkmk metric title in CMK mode, the raw label otherwise
+
+
+@router.get("/{connection_id}/perf-metrics", response_model=list[MetricChoice])
 async def get_perf_metrics(
     connection_id: str,
     host: str = Query(...),
     service: str | None = Query(None),
     user: User = Depends(get_current_user),
-) -> list[str]:
-    """Return perf_data metric names for a host or service (for metric autocomplete)."""
+) -> list[MetricChoice]:
+    """Return perf_data metrics for a host or service (for metric autocomplete),
+    each paired with its Checkmk metric title when running against Checkmk."""
     connection = get_connection(connection_id)
     if connection is None:
         return []
     try:
         async with _auth_scope(connection, user):
-            if service:
-                state = await connection.get_service_state(host, service)
+            check_command = ""
+            if service and isinstance(connection, LivestatusConnection):
+                perf_data, check_command = await connection.get_service_perf_and_cmd(host, service)
+            elif service:
+                perf_data = (await connection.get_service_state(host, service)).perf_data
             else:
-                state = await connection.get_host_state(host)
-        return _parse_metric_names(state.perf_data)
+                perf_data = (await connection.get_host_state(host)).perf_data
+        # First call registers ~3000 CMK graphing plugins — keep it off the loop.
+        titles = (
+            await asyncio.to_thread(metric_titles, perf_data, check_command)
+            if check_command
+            else {}
+        )
+        return [
+            MetricChoice(name=label, title=titles.get(label) or label)
+            for label in _parse_metric_names(perf_data)
+        ]
     except Exception:
         return []
 

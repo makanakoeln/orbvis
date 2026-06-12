@@ -835,6 +835,11 @@ export interface MetricGraphGroup {
   metrics: string[]
 }
 
+export interface MetricChoice {
+  name: string
+  title: string
+}
+
 export interface MetricHistoryResponse {
   series: Record<string, MetricPoint[]>
   titles: Record<string, string>

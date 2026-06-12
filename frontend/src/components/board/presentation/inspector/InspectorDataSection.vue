@@ -126,7 +126,8 @@
           <span class="orb-cap">{{ _t('Flow metric') }}</span>
           <AutocompleteInput
             v-model="flowMetricModel"
-            :suggestions="metrics"
+            :suggestions="metrics.map((m) => m.name)"
+            :display-labels="metrics.map((m) => m.title)"
             :loading="loadingMetrics"
             :placeholder="element.host_name ? _t('Pick a metric…') : _t('e.g. if_in_bps')"
             @change="emit('patch', { flow_metric: $event || null })"
@@ -136,7 +137,8 @@
           <span class="orb-cap">{{ _t('Return metric (optional)') }}</span>
           <AutocompleteInput
             v-model="flowMetricBackModel"
-            :suggestions="metrics"
+            :suggestions="metrics.map((m) => m.name)"
+            :display-labels="metrics.map((m) => m.title)"
             :loading="loadingMetrics"
             :placeholder="_t('Splits the link into a two-way weathermap')"
             @change="emit('patch', { flow_metric_back: $event || null })"
@@ -169,7 +171,7 @@ import CmkSwitch from '@/components/cmk/CmkSwitch'
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 
 import { useDataBinding } from '@/composables/useDataBinding'
-import type { DataElement, ElementLabel, ShapeElement } from '@/types/api'
+import type { DataElement, ElementLabel, MetricChoice, ShapeElement } from '@/types/api'
 import { connectorLabelVisible } from '@/utils/connectorFlow'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
@@ -261,7 +263,7 @@ function onLabelText(e: Event): void {
 // Data-element gadget metrics live in PresentationGadgetMetricField; only the
 // connector flow/return pickers are sourced here.
 const binding = useDataBinding(() => props.element.connection_id || props.connectionId)
-const metrics = ref<string[]>([])
+const metrics = ref<MetricChoice[]>([])
 const loadingMetrics = ref(false)
 const flowMetricModel = ref('')
 const flowMetricBackModel = ref('')

@@ -27,6 +27,7 @@ from app.services.perfometer_service import (
     _resolve_bound,
     _resolve_quantity,
     _trim,
+    metric_titles,
     metric_unit_formats,
 )
 
@@ -372,3 +373,15 @@ class TestMetricUnitFormats:
         out = metric_unit_formats("x=5;;;;", "check_mk-p")
         assert out["x"].symbol == "B"
         assert out["x"].scale == 1.0
+
+
+class TestMetricTitles:
+    """Without OMD the Checkmk graphing registry is unavailable, so titles fall
+    back to {} and the endpoint shows raw labels. The CMK-mode path (real titles
+    via Checkmk's own translation + registry) is covered by the live deployment."""
+
+    def test_no_cmk_returns_empty(self) -> None:
+        assert metric_titles("load1=1.09;;;0;8 load5=0.56;;;;", "check_mk-cpu_loads") == {}
+
+    def test_empty_perfdata_returns_empty(self) -> None:
+        assert metric_titles("", "check_mk-cpu_loads") == {}

@@ -40,12 +40,16 @@ describe('useDataBinding', () => {
 
   it('caches services per host and metrics per host/service', async () => {
     mockConnectionsApi.objects.mockResolvedValue(['CPU load'])
-    mockConnectionsApi.perfMetrics.mockResolvedValue(['load1', 'load5'])
+    const choices = [
+      { name: 'load1', title: 'CPU load average of last minute' },
+      { name: 'load5', title: 'CPU load average of last 5 minutes' }
+    ]
+    mockConnectionsApi.perfMetrics.mockResolvedValue(choices)
     const b = useDataBinding(() => 'live_1')
     await b.services('web01')
     await b.services('web01')
     expect(mockConnectionsApi.objects).toHaveBeenCalledTimes(1)
-    expect(await b.metrics('web01', 'CPU load')).toEqual(['load1', 'load5'])
+    expect(await b.metrics('web01', 'CPU load')).toEqual(choices)
     await b.metrics('web01', 'CPU load')
     expect(mockConnectionsApi.perfMetrics).toHaveBeenCalledTimes(1)
     await b.metrics('web01')

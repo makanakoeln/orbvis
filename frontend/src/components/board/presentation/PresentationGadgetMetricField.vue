@@ -7,7 +7,8 @@
       <span class="orb-cap">{{ _t('Metric') }}</span>
       <AutocompleteInput
         v-model="metricModel"
-        :suggestions="metrics"
+        :suggestions="metrics.map((m) => m.name)"
+        :display-labels="metrics.map((m) => m.title)"
         :loading="loadingMetrics"
         :placeholder="element.host_name ? _t('Pick a metric…') : _t('Bind a host first')"
         @change="emit('patch', { display: { ...element.display, gadget_metric: $event || null } })"
@@ -27,7 +28,7 @@
 import { computed, ref, watch } from 'vue'
 
 import { useDataBinding } from '@/composables/useDataBinding'
-import type { DataElement } from '@/types/api'
+import type { DataElement, MetricChoice } from '@/types/api'
 import { isMetriclessBinding } from '@/utils/presentationSampleState'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
@@ -47,7 +48,7 @@ const emit = defineEmits<{ patch: [Record<string, unknown>] }>()
 const isGroupBinding = computed(() => isMetriclessBinding(props.element))
 
 const binding = useDataBinding(() => props.element.connection_id || props.connectionId)
-const metrics = ref<string[]>([])
+const metrics = ref<MetricChoice[]>([])
 const loadingMetrics = ref(false)
 const metricModel = ref('')
 

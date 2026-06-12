@@ -21,6 +21,7 @@ import type {
   ImageEntry,
   ImageUsageEntry,
   MapStates,
+  MetricChoice,
   MetricGraphGroup,
   MetricHistoryResponse,
   MetricUnitMap,
@@ -585,7 +586,7 @@ export const connectionsApi = {
     host: string,
     token: string,
     service?: string
-  ): Promise<string[]> => {
+  ): Promise<MetricChoice[]> => {
     const params = new URLSearchParams({ host })
     if (service) params.set('service', service)
     return request(`/connections/${connectionId}/perf-metrics?${params}`, {}, token)

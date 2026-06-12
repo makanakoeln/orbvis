@@ -556,9 +556,10 @@
                 <label class="field-label">{{ _t('Metric (in)') }}</label>
                 <AutocompleteInput
                   v-model="form.weathermap_metric"
-                  :suggestions="metricSuggestions"
+                  :suggestions="metricIdSuggestions"
+                  :display-labels="metricIdSuggestions.map((id) => metricIdToTitle[id] ?? id)"
                   :placeholder="_t('first metric')"
-                  :empty-text="metricSuggestions.length === 0 ? _t('No metrics available') : ''"
+                  :empty-text="metricIdSuggestions.length === 0 ? _t('No metrics available') : ''"
                   class="orb-props__grow"
                 />
               </div>
@@ -576,9 +577,10 @@
                 <label class="field-label">{{ _t('Metric (out)') }}</label>
                 <AutocompleteInput
                   v-model="form.weathermap_metric_out"
-                  :suggestions="metricSuggestions"
+                  :suggestions="metricIdSuggestions"
+                  :display-labels="metricIdSuggestions.map((id) => metricIdToTitle[id] ?? id)"
                   :placeholder="_t('second metric (optional)')"
-                  :empty-text="metricSuggestions.length === 0 ? _t('No metrics available') : ''"
+                  :empty-text="metricIdSuggestions.length === 0 ? _t('No metrics available') : ''"
                   class="orb-props__grow"
                 />
               </div>
@@ -824,9 +826,10 @@
                   <label class="field-label">{{ _t('Metric') }}</label>
                   <AutocompleteInput
                     v-model="form.display.gadget_metric"
-                    :suggestions="metricSuggestions"
+                    :suggestions="metricIdSuggestions"
+                    :display-labels="metricIdSuggestions.map((id) => metricIdToTitle[id] ?? id)"
                     :placeholder="_t('first metric')"
-                    :empty-text="metricSuggestions.length === 0 ? _t('No metrics available') : ''"
+                    :empty-text="metricIdSuggestions.length === 0 ? _t('No metrics available') : ''"
                     class="orb-props__grow"
                   />
                 </div>
@@ -1264,6 +1267,7 @@ const {
   graphTemplates,
   boardNames,
   boardLabels,
+  metricIdSuggestions,
   metricIdToTitle,
   metricTitleToId,
   metricSuggestions,

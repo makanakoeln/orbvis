@@ -3,7 +3,7 @@ import { type Ref, computed, nextTick, onMounted, ref, watch } from 'vue'
 import { boardsApi, connectionsApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useStatesStore } from '@/stores/states'
-import type { BoardObject, MetricGraphGroup, ObjectState } from '@/types/api'
+import type { BoardObject, MetricChoice, MetricGraphGroup, ObjectState } from '@/types/api'
 import { parsePerfData } from '@/utils/perf'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
@@ -42,7 +42,7 @@ export function useObjectFormData(options: ObjectFormDataOptions) {
   const statesStore = useStatesStore()
   const { _t } = usei18n()
 
-  const fetchedMetrics = ref<string[]>([])
+  const fetchedMetrics = ref<MetricChoice[]>([])
   const graphTemplates = ref<MetricGraphGroup[]>([])
   const boardNames = ref<string[]>([])
   const boardLabels = ref<string[]>([])
@@ -50,13 +50,17 @@ export function useObjectFormData(options: ObjectFormDataOptions) {
   // ---- Metric suggestion model ----
 
   const metricIdSuggestions = computed((): string[] => {
-    if (fetchedMetrics.value.length) return fetchedMetrics.value
+    if (fetchedMetrics.value.length) return fetchedMetrics.value.map((m) => m.name)
     return parsePerfData(state()?.perf_data ?? '').map((m) => m.label)
   })
 
-  // Map metric ID → human-readable title (falls back to the ID itself)
+  // Map metric ID → human-readable title (falls back to the ID itself). The
+  // perf-metrics fetch carries Checkmk's own titles; the per-object state titles
+  // stay as a fallback for IDs the fetch didn't cover.
   const metricIdToTitle = computed((): Record<string, string> => {
-    return statesStore.metricTitles[object().id] ?? {}
+    const fromFetch: Record<string, string> = {}
+    for (const m of fetchedMetrics.value) fromFetch[m.name] = m.title
+    return { ...(statesStore.metricTitles[object().id] ?? {}), ...fromFetch }
   })
 
   // Map display title → metric ID (for reverse lookup when user selects a suggestion)
@@ -254,6 +258,7 @@ export function useObjectFormData(options: ObjectFormDataOptions) {
     graphTemplates,
     boardNames,
     boardLabels,
+    metricIdSuggestions,
     metricIdToTitle,
     metricTitleToId,
     metricSuggestions,

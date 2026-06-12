@@ -719,3 +719,57 @@ def metric_unit_formats(perf_data_str: str, check_command: str) -> dict[str, Met
             scale=scale,
         )
     return out
+
+
+_graphing_registered = False
+
+
+def _ensure_cmk_graphing_registered() -> bool:
+    """Populate Checkmk's graphing registries (metric specs + check translations)
+    once, exactly as the GUI does at startup. Lets ``metric_titles`` resolve names
+    through Checkmk's own logic rather than a reimplementation. CMK mode only — a
+    transient failure is retried on the next call (not pinned like an lru_cache)."""
+    global _graphing_registered
+    if _graphing_registered:
+        return True
+    try:
+        from cmk.gui.graphing_main import register as register_graphing
+    except ImportError:
+        return False
+    try:
+        register_graphing()
+    except Exception:
+        logger.debug("cmk graphing registration unavailable", exc_info=True)
+        return False
+    _graphing_registered = True
+    return True
+
+
+def metric_titles(perf_data_str: str, check_command: str) -> dict[str, str]:
+    """Map each raw perfdata label to its Checkmk metric title using Checkmk's own
+    translation + metric registry (CMK mode only). Keys are the RAW labels (what
+    clients store and match against perf_data); labels Checkmk doesn't know are
+    omitted so the caller falls back to the raw label."""
+    if not perf_data_str.strip() or not _ensure_cmk_graphing_registered():
+        return {}
+    try:
+        from cmk.gui.graphing._from_api import metrics_from_api
+        from cmk.gui.graphing._legacy import check_metrics
+        from cmk.gui.graphing._metrics import get_metric_spec
+        from cmk.gui.graphing._translated_metrics import (
+            find_matching_translation,
+            lookup_metric_translations_for_check_command,
+        )
+        from cmk.utils.metrics import MetricName
+    except ImportError:
+        return {}
+    translations = lookup_metric_translations_for_check_command(check_metrics, check_command)
+    out: dict[str, str] = {}
+    for label in _parse_perf_data(perf_data_str):
+        try:
+            # Checkmk normalises dots to underscores before its registry lookup.
+            name = find_matching_translation(MetricName(label.replace(".", "_")), translations).name
+            out[label] = get_metric_spec(name, metrics_from_api).title
+        except Exception:
+            continue
+    return out
