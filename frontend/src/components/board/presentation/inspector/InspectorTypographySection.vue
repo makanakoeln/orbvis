@@ -85,6 +85,7 @@
         <span class="orb-cap">{{ _t('Color') }}</span>
         <ColorField
           :label="_t('Color')"
+          :default-color="tokens['--pres-fg']"
           :value="element.color"
           @set="emit('patch', { color: $event })"
         />
@@ -107,16 +108,19 @@ import { computed } from 'vue'
 import NumberInput from '@/components/NumberInput.vue'
 import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown'
 
-import type { TextElement } from '@/types/api'
+import type { PresentationTheme, TextElement } from '@/types/api'
 import { PRESENTATION_FONTS } from '@/utils/presentationFonts'
+import { themeTokens } from '@/utils/presentationThemes'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 import ColorField from '../ColorField.vue'
 
 const { _t } = usei18n()
 
-defineProps<{ element: TextElement }>()
+const props = defineProps<{ element: TextElement; theme: PresentationTheme }>()
 const emit = defineEmits<{ patch: [Record<string, unknown>] }>()
+
+const tokens = computed(() => themeTokens(props.theme))
 
 const fontOptions = computed(() => ({
   type: 'fixed' as const,

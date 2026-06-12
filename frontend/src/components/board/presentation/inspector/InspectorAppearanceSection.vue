@@ -7,6 +7,7 @@
         <ColorField
           :label="_t('Fill')"
           :value="element.fill"
+          :default-color="tokens['--pres-shape-fill']"
           @set="emit('patch', { fill: $event })"
         />
       </div>
@@ -15,6 +16,7 @@
         <ColorField
           :label="_t('Stroke')"
           :value="element.stroke"
+          :default-color="tokens['--pres-shape-stroke']"
           @set="emit('patch', { stroke: $event })"
         />
       </div>
@@ -59,15 +61,18 @@ import { computed } from 'vue'
 import NumberInput from '@/components/NumberInput.vue'
 import CmkToggleButtonGroup from '@/components/cmk/CmkToggleButtonGroup'
 
-import type { ShapeElement } from '@/types/api'
+import type { PresentationTheme, ShapeElement } from '@/types/api'
+import { themeTokens } from '@/utils/presentationThemes'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 import ColorField from '../ColorField.vue'
 
 const { _t } = usei18n()
 
-const props = defineProps<{ element: ShapeElement }>()
+const props = defineProps<{ element: ShapeElement; theme: PresentationTheme }>()
 const emit = defineEmits<{ patch: [Record<string, unknown>] }>()
+
+const tokens = computed(() => themeTokens(props.theme))
 
 const isConnector = computed(
   () => props.element.shape === 'line' || props.element.shape === 'arrow'

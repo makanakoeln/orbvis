@@ -1,13 +1,14 @@
 <template>
-  <label class="cf" :title="label">
-    <!-- backgroundColor (not the ``background`` shorthand) so the cf__swatch--auto
-         "no colour" diagonal stays visible instead of being reset to none. -->
+  <label class="cf" :title="title">
+    <!-- When unset the swatch previews the effective theme colour with a dashed
+         border ("inherited"); the picker opens on that colour too. A theme whose
+         default is transparent (e.g. text background) shows a checkerboard. -->
     <span
       class="cf__swatch"
-      :style="{ backgroundColor: value || 'transparent' }"
-      :class="{ 'cf__swatch--auto': !value }"
+      :class="{ 'cf__swatch--auto': !value, 'cf__swatch--empty': showsCheckerboard }"
+      :style="swatchStyle"
     >
-      <input type="color" class="cf__input" :value="value || '#3b82f6'" @input="onInput" />
+      <input type="color" class="cf__input" :value="pickerValue" @input="onInput" />
     </span>
     <!-- Clearing to null returns the element to the theme default. -->
     <button
@@ -22,12 +23,35 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 const { _t } = usei18n()
 
-defineProps<{ label: string; value: string | null | undefined }>()
+const props = defineProps<{
+  label: string
+  value: string | null | undefined
+  /** Effective colour applied when no explicit value is set. Resolved from the
+      active presentation theme; omit (or pass 'transparent') for properties
+      that default to no colour. */
+  defaultColor?: string
+}>()
 const emit = defineEmits<{ set: [string | null] }>()
+
+const HEX_RE = /^#[0-9a-fA-F]{6}$/
+
+const effective = computed(() => props.value || props.defaultColor || '')
+const showsCheckerboard = computed(
+  () => !props.value && (!props.defaultColor || props.defaultColor === 'transparent')
+)
+const swatchStyle = computed(() =>
+  showsCheckerboard.value ? undefined : { backgroundColor: effective.value }
+)
+const pickerValue = computed(() => (HEX_RE.test(effective.value) ? effective.value : '#3b82f6'))
+const title = computed(() =>
+  props.value ? `${props.label}: ${props.value}` : `${props.label}: ${_t('theme default')}`
+)
 
 function onInput(e: Event): void {
   emit('set', (e.target as HTMLInputElement).value)
@@ -51,8 +75,25 @@ function onInput(e: Event): void {
   cursor: pointer;
 }
 
+/* Unset: the colour is inherited from the theme — dashed border signals "auto". */
 .cf__swatch--auto {
-  background-image: linear-gradient(45deg, transparent 45%, #f472b6 45% 55%, transparent 55%);
+  border-style: dashed;
+  border-color: var(--text-muted, #8b93a7);
+}
+
+/* Transparent default: standard checkerboard so "no colour" reads clearly. */
+.cf__swatch--empty {
+  background-image:
+    linear-gradient(45deg, rgb(255 255 255 / 12%) 25%, transparent 25%),
+    linear-gradient(-45deg, rgb(255 255 255 / 12%) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgb(255 255 255 / 12%) 75%),
+    linear-gradient(-45deg, transparent 75%, rgb(255 255 255 / 12%) 75%);
+  background-size: 10px 10px;
+  background-position:
+    0 0,
+    0 5px,
+    5px -5px,
+    -5px 0;
 }
 
 .cf__input {

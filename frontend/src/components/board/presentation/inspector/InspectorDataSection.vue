@@ -51,6 +51,7 @@
         <ColorField
           :label="_t('Fill')"
           :value="element.fill"
+          :default-color="tokens['--pres-shape-fill']"
           @set="emit('patch', { fill: $event })"
         />
       </div>
@@ -88,6 +89,7 @@
           <ColorField
             :label="_t('Label color')"
             :value="element.label?.color"
+            :default-color="tokens['--pres-fg']"
             @set="emit('patch', { label: { ...labelBase, color: $event } })"
           />
         </div>
@@ -171,8 +173,15 @@ import CmkSwitch from '@/components/cmk/CmkSwitch'
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 
 import { useDataBinding } from '@/composables/useDataBinding'
-import type { DataElement, ElementLabel, MetricChoice, ShapeElement } from '@/types/api'
+import type {
+  DataElement,
+  ElementLabel,
+  MetricChoice,
+  PresentationTheme,
+  ShapeElement
+} from '@/types/api'
 import { connectorLabelVisible } from '@/utils/connectorFlow'
+import { themeTokens } from '@/utils/presentationThemes'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AutocompleteInput from '../../AutocompleteInput.vue'
@@ -187,9 +196,12 @@ const props = defineProps<{
   element: DataElement | ShapeElement
   connectionId: string
   targets: { id: string; name: string }[]
+  theme: PresentationTheme
 }>()
 
 const emit = defineEmits<{ patch: [Record<string, unknown>] }>()
+
+const tokens = computed(() => themeTokens(props.theme))
 
 const connectorEl = computed<ShapeElement | null>(() =>
   props.element.kind === 'shape' &&

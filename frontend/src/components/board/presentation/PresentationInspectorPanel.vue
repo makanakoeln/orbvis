@@ -69,11 +69,13 @@
           <InspectorTypographySection
             v-if="single.kind === 'text'"
             :element="single"
+            :theme="view.theme"
             @patch="emit('patch', $event)"
           />
           <InspectorAppearanceSection
             v-if="single.kind === 'shape'"
             :element="single"
+            :theme="view.theme"
             @patch="emit('patch', $event)"
           />
           <InspectorImageSection
@@ -86,6 +88,7 @@
             :element="single"
             :connection-id="connectionId"
             :targets="targets"
+            :theme="view.theme"
             @patch="emit('patch', $event)"
           />
         </div>
@@ -190,6 +193,7 @@
               <ColorField
                 :label="_t('Background color')"
                 :value="view.background ?? null"
+                :default-color="themeTokens(view.theme)['--pres-bg']"
                 @set="emit('slide', { background: $event })"
               />
               <span class="insp__hint insp__hint--inline">{{
@@ -235,7 +239,7 @@ import { imagesApi } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import type { PresentationElement, PresentationTheme, PresentationView } from '@/types/api'
 import { ICONS, SLIDE_PRESETS } from '@/utils/presentationCanvasChrome'
-import { themeOptions } from '@/utils/presentationThemes'
+import { themeOptions, themeTokens } from '@/utils/presentationThemes'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 import ImagePicker from '../ImagePicker.vue'
