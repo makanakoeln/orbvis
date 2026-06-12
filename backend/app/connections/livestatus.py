@@ -53,6 +53,7 @@ from app.schemas.state import (
     ObjectState,
     ServicesSummary,
 )
+from app.services.perfometer_service import metric_title, metric_titles
 
 logger = logging.getLogger(__name__)
 
@@ -103,10 +104,12 @@ def _match_graphs(available: set[str]) -> list[GraphGroup]:
     return list(best.values())
 
 
+def _title_case(label: str) -> str:
+    return " ".join(w.capitalize() for w in label.split("_"))
+
+
 def _cmk_metric_title(label: str) -> str:
-    return load_cmk_graphing_data().titles.get(label) or " ".join(
-        w.capitalize() for w in label.split("_")
-    )
+    return metric_title(label) or _title_case(label)
 
 
 def _default_site_id(sid: str | None = None) -> str:
@@ -977,8 +980,15 @@ class LivestatusConnection(ConnectionBase):
         return await self._fetch_details("service", hostname, service)
 
     async def _get_metric_titles(self, host: str, service: str | None) -> dict[str, str]:
-        """Lookup display titles for the host/service's perf_data metric IDs."""
-        names = await self._get_perf_metric_names(host, service)
+        """Lookup display titles for the host/service's perf_data metric IDs via
+        Checkmk's own metric registry. For a service the check command drives
+        Checkmk's translation (renames); the raw label stays the key."""
+        if service:
+            perf_data, check_command = await self.get_service_perf_and_cmd(host, service)
+            cmk = await asyncio.to_thread(metric_titles, perf_data, check_command)
+            names = [m.split("=", 1)[0].strip("'") for m in perf_data.split() if "=" in m]
+            return {n: cmk.get(n) or _title_case(n) for n in names}
+        names = await self._get_perf_metric_names(host, None)
         return {n: _cmk_metric_title(n) for n in names}
 
     async def _fetch_details(

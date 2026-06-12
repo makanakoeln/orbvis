@@ -773,3 +773,21 @@ def metric_titles(perf_data_str: str, check_command: str) -> dict[str, str]:
         except Exception:
             continue
     return out
+
+
+def metric_title(name: str) -> str | None:
+    """Checkmk's display title for a (canonical) metric name via its own registry,
+    or ``None`` outside CMK. No check-command translation — callers that have one
+    should use ``metric_titles`` instead."""
+    if not name or not _ensure_cmk_graphing_registered():
+        return None
+    try:
+        from cmk.gui.graphing._from_api import metrics_from_api
+        from cmk.gui.graphing._metrics import get_metric_spec
+    except ImportError:
+        return None
+    try:
+        title: str = get_metric_spec(name, metrics_from_api).title
+        return title
+    except Exception:
+        return None
