@@ -278,13 +278,34 @@ const metricModel = ref('')
 const flowMetricModel = ref('')
 const flowMetricBackModel = ref('')
 
+// When the bound object identity (host/service) changes on the SAME element,
+// the previously picked metric belongs to a different object and is almost
+// always invalid — reset it so the operator re-picks from the fresh list.
+// Connection and object-type switches null the host/service too, so this one
+// watcher covers every binding change.
 watch(
-  () => [props.element.id, props.element.host_name, props.element.service_description],
-  async () => {
-    metricModel.value =
-      (props.element.kind === 'data' ? props.element.display.gadget_metric : null) ?? ''
-    flowMetricModel.value = (connectorEl.value?.flow_metric ?? '') as string
-    flowMetricBackModel.value = (connectorEl.value?.flow_metric_back ?? '') as string
+  () => [props.element.id, props.element.host_name, props.element.service_description] as const,
+  async (curr, prev) => {
+    const bindingChanged =
+      prev !== undefined && prev[0] === curr[0] && (prev[1] !== curr[1] || prev[2] !== curr[2])
+
+    if (bindingChanged) {
+      if (props.element.kind === 'data' && props.element.display.gadget_metric) {
+        patchDisplay({ gadget_metric: null })
+      }
+      if (connectorEl.value?.flow_metric || connectorEl.value?.flow_metric_back) {
+        emit('patch', { flow_metric: null, flow_metric_back: null })
+      }
+      metricModel.value = ''
+      flowMetricModel.value = ''
+      flowMetricBackModel.value = ''
+    } else {
+      metricModel.value =
+        (props.element.kind === 'data' ? props.element.display.gadget_metric : null) ?? ''
+      flowMetricModel.value = (connectorEl.value?.flow_metric ?? '') as string
+      flowMetricBackModel.value = (connectorEl.value?.flow_metric_back ?? '') as string
+    }
+
     const host = props.element.host_name
     if (!host) {
       metrics.value = []
