@@ -74,6 +74,10 @@
       />
     </div>
 
+    <!-- A gadget's metric belongs with the service it reads — host/service
+         consumers drop the picker in here, right under the binding. -->
+    <slot name="after-binding" />
+
     <CmkCheckbox
       v-if="bindKind === 'host' || bindKind === 'aggregation'"
       :model-value="element.only_hard_states ?? false"

@@ -214,7 +214,16 @@
             :element="connectGuide.current.value"
             :connection-id="config.connection_id"
             @patch="onConnectPatch"
-          />
+          >
+            <template #after-binding>
+              <PresentationGadgetMetricField
+                v-if="connectMetricEl"
+                :element="connectMetricEl"
+                :connection-id="config.connection_id"
+                @patch="onConnectPatch"
+              />
+            </template>
+          </PresentationBindingForm>
         </div>
         <div class="pres__connect-pop-foot">
           <button
@@ -412,6 +421,7 @@ import { useToast } from '@/composables/useToast'
 import type {
   BoardConfig,
   BoardObject,
+  DataElement,
   ObjectState,
   PresentationElement,
   PresentationView,
@@ -451,6 +461,7 @@ import PresentationConnector from './PresentationConnector.vue'
 import PresentationConnectorLabels from './PresentationConnectorLabels.vue'
 import PresentationDataPanel from './PresentationDataPanel.vue'
 import PresentationElementView from './PresentationElementView.vue'
+import PresentationGadgetMetricField from './PresentationGadgetMetricField.vue'
 import PresentationInspectorPanel from './PresentationInspectorPanel.vue'
 import PresentationTemplateGallery from './PresentationTemplateGallery.vue'
 
@@ -1364,6 +1375,14 @@ const connectSlotTitle = computed(() => {
     n: String(n ?? '?'),
     name: el.name || layerName(el)
   })
+})
+
+// A gauge/bar/value slot still needs a metric once a host/service is bound —
+// the walkthrough offers the same picker the element inspector does so the
+// template-fill flow doesn't leave gadgets on an auto-picked metric.
+const connectMetricEl = computed<DataElement | null>(() => {
+  const el = connectGuide.current.value
+  return el && el.kind === 'data' && el.display.mode === 'gadget' ? el : null
 })
 
 // Badge boxes for the connect overlay — resolved to the real on-slide bounds

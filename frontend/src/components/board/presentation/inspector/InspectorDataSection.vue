@@ -37,24 +37,15 @@
             @update:selected-option="patchDisplay({ gadget_type: $event })"
           />
         </div>
-        <div v-if="!isGroupBinding" class="ins__field">
-          <span class="orb-cap">{{ _t('Metric') }}</span>
-          <AutocompleteInput
-            v-model="metricModel"
-            :suggestions="metrics"
-            :loading="loadingMetrics"
-            :placeholder="element.host_name ? _t('Pick a metric…') : _t('Bind a host first')"
-            @change="patchDisplay({ gadget_metric: $event || null })"
-          />
-        </div>
-        <span v-else class="ins__note">
-          {{
-            _t(
-              'Groups and BI aggregations carry no metrics — gauge and bar show a state light instead.'
-            )
-          }}
-        </span>
       </template>
+      <!-- Outside the gadget block on purpose: the field self-hides off-gadget,
+           but its mount keeps the binding-change metric reset running in every
+           display mode. -->
+      <PresentationGadgetMetricField
+        :element="element"
+        :connection-id="connectionId"
+        @patch="emit('patch', $event)"
+      />
       <div class="ins__field">
         <span class="orb-cap">{{ _t('Fill') }}</span>
         <ColorField
@@ -180,13 +171,13 @@ import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 import { useDataBinding } from '@/composables/useDataBinding'
 import type { DataElement, ElementLabel, ShapeElement } from '@/types/api'
 import { connectorLabelVisible } from '@/utils/connectorFlow'
-import { isMetriclessBinding } from '@/utils/presentationSampleState'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AutocompleteInput from '../../AutocompleteInput.vue'
 import ImagePicker from '../../ImagePicker.vue'
 import ColorField from '../ColorField.vue'
 import PresentationBindingForm from '../PresentationBindingForm.vue'
+import PresentationGadgetMetricField from '../PresentationGadgetMetricField.vue'
 
 const { _t } = usei18n()
 
@@ -214,10 +205,6 @@ const endpointOptions = computed(() => ({
       .map((t) => ({ name: t.id, title: t.name }))
   ]
 }))
-
-// Group/BI bindings have a state but no perf metrics — the metric picker
-// would only mislead ("Bind a host first" on an already-bound element).
-const isGroupBinding = computed(() => isMetriclessBinding(props.element))
 
 const modeOptions = computed(() => ({
   type: 'fixed' as const,
@@ -270,11 +257,12 @@ function onLabelText(e: Event): void {
   emit('patch', { label: { ...labelBase.value, text: text || null } })
 }
 
-// ── metric suggestions for the bound host/service ───────────────────────────
+// ── metric suggestions for a connector's flow animation ─────────────────────
+// Data-element gadget metrics live in PresentationGadgetMetricField; only the
+// connector flow/return pickers are sourced here.
 const binding = useDataBinding(() => props.element.connection_id || props.connectionId)
 const metrics = ref<string[]>([])
 const loadingMetrics = ref(false)
-const metricModel = ref('')
 const flowMetricModel = ref('')
 const flowMetricBackModel = ref('')
 
@@ -290,24 +278,20 @@ watch(
       prev !== undefined && prev[0] === curr[0] && (prev[1] !== curr[1] || prev[2] !== curr[2])
 
     if (bindingChanged) {
-      if (props.element.kind === 'data' && props.element.display.gadget_metric) {
-        patchDisplay({ gadget_metric: null })
-      }
       if (connectorEl.value?.flow_metric || connectorEl.value?.flow_metric_back) {
         emit('patch', { flow_metric: null, flow_metric_back: null })
       }
-      metricModel.value = ''
       flowMetricModel.value = ''
       flowMetricBackModel.value = ''
     } else {
-      metricModel.value =
-        (props.element.kind === 'data' ? props.element.display.gadget_metric : null) ?? ''
       flowMetricModel.value = (connectorEl.value?.flow_metric ?? '') as string
       flowMetricBackModel.value = (connectorEl.value?.flow_metric_back ?? '') as string
     }
 
+    // Only connectors consume this list (flow/return pickers) — a data element's
+    // gadget metric is sourced by PresentationGadgetMetricField, so don't fetch.
     const host = props.element.host_name
-    if (!host) {
+    if (!host || !connectorEl.value) {
       metrics.value = []
       return
     }
