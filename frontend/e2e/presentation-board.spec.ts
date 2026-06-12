@@ -129,4 +129,94 @@ test.describe('OrbVis presentation board', () => {
     await expect(page.locator('.ptg')).toHaveCount(0)
     await expect(page.locator('.pres__el')).not.toHaveCount(0)
   })
+
+  // Two regressions in the element inspector: (1) changing the bound service must
+  // clear the stale gadget metric — `util` is meaningless on `Memory`; and (2) the
+  // metric/service autocomplete must escape the inspector's `overflow:auto` so its
+  // list can't be clipped off-screen. The fixture binds a deterministic test-backend
+  // service (`localhost`/`CPU utilization`, metric `util`) so the assertions are stable.
+  test('binding change resets the metric and the autocomplete escapes the panel', async ({
+    page
+  }) => {
+    const METRIC_BOARD = 'e2e-presentation-metric'
+    await ctx.delete(`api/v1/boards/${METRIC_BOARD}`, { headers: authHeader })
+    const created = await ctx.post('api/v1/boards', {
+      headers: authHeader,
+      data: {
+        name: METRIC_BOARD,
+        alias: 'E2E Metric Reset',
+        connection_id: 'test',
+        view: {
+          type: 'presentation',
+          elements: [
+            {
+              id: 'd1',
+              kind: 'data',
+              x: 240,
+              y: 200,
+              w: 220,
+              h: 160,
+              object_type: 'host',
+              host_name: 'localhost',
+              service_description: 'CPU utilization',
+              display: { mode: 'gadget', gadget_type: 'value', gadget_metric: 'util' }
+            }
+          ]
+        }
+      }
+    })
+    expect(created.status(), 'metric fixture board should be created').toBe(201)
+
+    try {
+      await login(page)
+      await page.goto(`./#/boards/${METRIC_BOARD}`)
+      await page.locator('[data-tour="edit-fab"]').click()
+
+      // Select the bound data tile → the inspector opens on the Element tab.
+      await page
+        .locator('.pres__el')
+        .filter({ has: page.locator('.pres-el__data') })
+        .first()
+        .click()
+      const inspector = page.locator('.insp')
+      await expect(inspector).toBeVisible()
+
+      const metric = inspector.getByPlaceholder('Pick a metric…')
+      await expect(metric).toHaveValue('util')
+
+      // (2) Opening the autocomplete teleports it to <body> with fixed positioning,
+      // so the inspector's scroll container can no longer clip it.
+      await metric.click()
+      const dropdown = page.locator('.orb-autocomplete__dropdown')
+      await expect(dropdown).toBeVisible()
+      await expect(inspector.locator('.orb-autocomplete__dropdown')).toHaveCount(0)
+      await expect(dropdown).toHaveCSS('position', 'fixed')
+      const box = await dropdown.boundingBox()
+      const viewport = page.viewportSize()
+      expect(box).not.toBeNull()
+      expect(viewport).not.toBeNull()
+      expect(box!.y).toBeGreaterThanOrEqual(0)
+      expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height + 1)
+      await page.keyboard.press('Escape')
+
+      // (1) Switch the bound service → the metric belongs to the old object and resets.
+      const service = inspector.getByPlaceholder('Whole host if empty')
+      await service.click()
+      await service.fill('Memory')
+      await page
+        .locator('.orb-autocomplete__dropdown')
+        .getByRole('button', { name: 'Memory', exact: true })
+        .click()
+      await expect(metric).toHaveValue('')
+
+      // The reset persists through the debounced save.
+      await expect(inspector.locator('.insp__save-label')).toHaveText(/saved/i, { timeout: 5000 })
+      const saved = await ctx.get(`api/v1/boards/${METRIC_BOARD}`, { headers: authHeader })
+      const el = (await saved.json()).view.elements.find((e: { id: string }) => e.id === 'd1')
+      expect(el.service_description).toBe('Memory')
+      expect(el.display.gadget_metric).toBeNull()
+    } finally {
+      await ctx.delete(`api/v1/boards/${METRIC_BOARD}`, { headers: authHeader })
+    }
+  })
 })
