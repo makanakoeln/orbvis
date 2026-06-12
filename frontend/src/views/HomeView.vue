@@ -517,6 +517,160 @@
                 <rect x="193" y="106" width="32" height="7" rx="2" fill="rgba(255,208,0,0.12)" />
                 <circle cx="197.5" cy="109.5" r="1.5" fill="#ffd000" />
               </svg>
+              <!-- Folder Tree thumbnail — nested SETUP folders with live severity -->
+              <svg
+                v-else-if="map.view.type === 'foldertree'"
+                viewBox="0 0 256 128"
+                class="orb-home__thumb-media orb-home__thumb-media--fill"
+              >
+                <rect width="256" height="128" fill="#18181b" />
+                <!-- tree guide rails -->
+                <path
+                  d="M16 24 V102 M16 39 H26 M16 102 H26 M32 45 V81 M32 60 H42 M32 81 H42"
+                  stroke="#3f3f46"
+                  stroke-width="1"
+                  fill="none"
+                />
+                <!-- row 1 (root, open) — green -->
+                <path d="M10.5 15.5 h6 l-3 5 z" fill="#71717a" />
+                <rect x="22" y="12" width="6" height="3" rx="1" fill="rgba(34,197,94,0.5)" />
+                <rect
+                  x="22"
+                  y="14"
+                  width="14"
+                  height="9"
+                  rx="1.5"
+                  fill="rgba(34,197,94,0.18)"
+                  stroke="rgba(34,197,94,0.6)"
+                  stroke-width="0.75"
+                />
+                <rect x="40" y="16" width="78" height="5" rx="2" fill="rgba(255,255,255,0.22)" />
+                <circle cx="240" cy="18" r="3.5" fill="#22c55e" />
+                <!-- row 2 (open) — red -->
+                <path d="M26.5 36.5 h6 l-3 5 z" fill="#71717a" />
+                <rect x="38" y="33" width="6" height="3" rx="1" fill="rgba(239,68,68,0.5)" />
+                <rect
+                  x="38"
+                  y="35"
+                  width="14"
+                  height="9"
+                  rx="1.5"
+                  fill="rgba(239,68,68,0.18)"
+                  stroke="rgba(239,68,68,0.6)"
+                  stroke-width="0.75"
+                />
+                <rect x="56" y="37" width="66" height="5" rx="2" fill="rgba(255,255,255,0.22)" />
+                <circle cx="240" cy="39" r="3.5" fill="#ef4444" />
+                <!-- row 3 (leaf) — red -->
+                <rect x="44" y="54" width="6" height="3" rx="1" fill="rgba(239,68,68,0.5)" />
+                <rect
+                  x="44"
+                  y="56"
+                  width="14"
+                  height="9"
+                  rx="1.5"
+                  fill="rgba(239,68,68,0.18)"
+                  stroke="rgba(239,68,68,0.6)"
+                  stroke-width="0.75"
+                />
+                <rect x="62" y="58" width="54" height="5" rx="2" fill="rgba(255,255,255,0.16)" />
+                <circle cx="240" cy="60" r="3.5" fill="#ef4444" />
+                <!-- row 4 (leaf) — green -->
+                <rect x="44" y="75" width="6" height="3" rx="1" fill="rgba(34,197,94,0.5)" />
+                <rect
+                  x="44"
+                  y="77"
+                  width="14"
+                  height="9"
+                  rx="1.5"
+                  fill="rgba(34,197,94,0.18)"
+                  stroke="rgba(34,197,94,0.6)"
+                  stroke-width="0.75"
+                />
+                <rect x="62" y="79" width="60" height="5" rx="2" fill="rgba(255,255,255,0.16)" />
+                <circle cx="240" cy="81" r="3.5" fill="#22c55e" />
+                <!-- row 5 (closed) — yellow -->
+                <path d="M27 99 l4 3 l-4 3 z" fill="#71717a" />
+                <rect x="38" y="96" width="6" height="3" rx="1" fill="rgba(255,208,0,0.5)" />
+                <rect
+                  x="38"
+                  y="98"
+                  width="14"
+                  height="9"
+                  rx="1.5"
+                  fill="rgba(255,208,0,0.18)"
+                  stroke="rgba(255,208,0,0.6)"
+                  stroke-width="0.75"
+                />
+                <rect x="56" y="100" width="70" height="5" rx="2" fill="rgba(255,255,255,0.22)" />
+                <circle cx="240" cy="102" r="3.5" fill="#ffd000" />
+              </svg>
+              <!-- Presentation thumbnail — design-first slide with title and gadgets -->
+              <svg
+                v-else-if="map.view.type === 'presentation'"
+                viewBox="0 0 256 128"
+                class="orb-home__thumb-media orb-home__thumb-media--fill"
+              >
+                <rect width="256" height="128" fill="#18181b" />
+                <!-- slide canvas -->
+                <rect
+                  x="22"
+                  y="12"
+                  width="212"
+                  height="104"
+                  rx="6"
+                  fill="#1f2430"
+                  stroke="rgba(255,255,255,0.12)"
+                  stroke-width="1"
+                />
+                <!-- title block -->
+                <rect x="34" y="22" width="86" height="7" rx="2" fill="rgba(255,255,255,0.78)" />
+                <rect x="34" y="33" width="54" height="4" rx="2" fill="rgba(255,255,255,0.3)" />
+                <!-- gauge gadget -->
+                <path
+                  d="M44 96 A22 22 0 0 1 88 96"
+                  fill="none"
+                  stroke="#3f3f46"
+                  stroke-width="5"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M44 96 A22 22 0 0 1 79 78.4"
+                  fill="none"
+                  stroke="#22c55e"
+                  stroke-width="5"
+                  stroke-linecap="round"
+                />
+                <rect x="58" y="88" width="16" height="4" rx="2" fill="rgba(255,255,255,0.5)" />
+                <!-- bar gadget card -->
+                <rect
+                  x="110"
+                  y="56"
+                  width="46"
+                  height="48"
+                  rx="4"
+                  fill="rgba(255,255,255,0.04)"
+                  stroke="rgba(255,255,255,0.1)"
+                  stroke-width="0.75"
+                />
+                <rect x="118" y="80" width="7" height="18" rx="1.5" fill="#22c55e" />
+                <rect x="129" y="70" width="7" height="28" rx="1.5" fill="#ffd000" />
+                <rect x="140" y="86" width="7" height="12" rx="1.5" fill="#22c55e" />
+                <!-- value / light card -->
+                <rect
+                  x="164"
+                  y="56"
+                  width="46"
+                  height="48"
+                  rx="4"
+                  fill="rgba(255,255,255,0.04)"
+                  stroke="rgba(255,255,255,0.1)"
+                  stroke-width="0.75"
+                />
+                <circle cx="187" cy="74" r="9" fill="rgba(239,68,68,0.22)" />
+                <circle cx="187" cy="74" r="5" fill="#ef4444" />
+                <rect x="174" y="90" width="26" height="6" rx="2" fill="rgba(255,255,255,0.28)" />
+              </svg>
               <!-- Static board thumbnail — scattered host/service objects, no tree structure -->
               <svg
                 v-else
