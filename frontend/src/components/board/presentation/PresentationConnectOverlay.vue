@@ -11,7 +11,14 @@
       :style="slotStyle(slot)"
       @pointerdown.stop="!slot.bound && emit('pick', slot.id)"
     >
-      <span class="pco__badge" :class="{ 'pco__badge--bound': slot.bound }" :style="badgeStyle">
+      <span
+        class="pco__badge"
+        :class="{
+          'pco__badge--bound': slot.bound,
+          'pco__badge--current': slot.id === currentId && !slot.bound
+        }"
+        :style="badgeStyle"
+      >
         {{ slot.bound ? '✓' : slot.n }}
       </span>
     </div>
@@ -75,28 +82,38 @@ const badgeStyle = computed(() => ({
 .pco__slot {
   position: absolute;
   border-style: dashed;
-  border-color: var(--pres-accent, #38bdf8);
+
+  /* Waiting slots recede so the eye lands on the one current slot. */
+  border-color: color-mix(in srgb, var(--pres-accent, #38bdf8) 45%, transparent);
   cursor: pointer;
   pointer-events: auto;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .pco__slot--bound {
-  border-color: color-mix(in srgb, var(--pres-accent, #38bdf8) 35%, transparent);
+  border-color: color-mix(in srgb, var(--pres-accent, #38bdf8) 30%, transparent);
   cursor: default;
 }
 
+/* The current slot reads as "fill me now": solid border + accent tint, kept
+   distinct without motion so it still stands out under prefers-reduced-motion. */
 .pco__slot--current {
+  border-style: solid;
+  border-color: var(--pres-accent, #38bdf8);
+  background: color-mix(in srgb, var(--pres-accent, #38bdf8) 14%, transparent);
   animation: pco-pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes pco-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--pres-accent, #38bdf8) 55%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--pres-accent, #38bdf8) 70%, transparent);
   }
 
   50% {
-    box-shadow: 0 0 0 10px color-mix(in srgb, var(--pres-accent, #38bdf8) 0%, transparent);
+    box-shadow: 0 0 0 12px color-mix(in srgb, var(--pres-accent, #38bdf8) 0%, transparent);
   }
 }
 
@@ -121,5 +138,11 @@ const badgeStyle = computed(() => ({
 
 .pco__badge--bound {
   background: #22c55e;
+}
+
+/* Lift the current slot's number off the muted ones with a contrasting ring. */
+.pco__badge--current {
+  box-shadow: 0 0 0 2px var(--pres-bg, #0b1020);
+  outline: 2px solid var(--pres-accent, #38bdf8);
 }
 </style>
