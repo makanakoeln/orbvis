@@ -539,6 +539,7 @@ export interface ObjectState {
   last_state_change?: number | null
   tree?: AggregationNode | null
   services_summary?: ServicesSummary | null
+  hosts_summary?: ServicesSummary | null
 }
 
 export interface PerfometerSegment {

@@ -48,6 +48,9 @@ class ObjectState(BaseModel):
     tree: AggregationNode | None = None
     # Aggregated service-state counts; populated only for type=='host'.
     services_summary: ServicesSummary | None = None
+    # Member host-state counts (UP→ok, DOWN→critical, UNREACHABLE→unknown);
+    # populated for host dyngroups so the UI can show a "Hosts" pill row.
+    hosts_summary: ServicesSummary | None = None
 
 
 class ObjectTiming(BaseModel):

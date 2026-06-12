@@ -169,6 +169,10 @@ export function hostStateOn(state: string): string {
   return 'hst0' // UP
 }
 
+// host_regex over more than this many members would push the view URL past
+// Apache's ~8 KB request-line limit, so the pill stays non-clickable above it.
+const _MAX_HOST_REGEX_MEMBERS = 90
+
 /**
  * Checkmk view listing a host's (or site's) services filtered to one state —
  * the target of the clickable state pills/chips in HoverMenu and DetailDrawer.
@@ -177,7 +181,11 @@ export function hostStateOn(state: string): string {
  */
 export function buildServiceStateViewUrl(
   checkmkUrl: string | null,
-  target: { host?: string | null | undefined; site?: string | null | undefined },
+  target: {
+    host?: string | null | undefined
+    site?: string | null | undefined
+    hosts?: string[] | null | undefined
+  },
   state: string
 ): string | null {
   if (!checkmkUrl) return null
@@ -192,8 +200,53 @@ export function buildServiceStateViewUrl(
     params._active = 'svcstate;site'
   } else if (target.host) {
     params.host = target.host
+  } else if (target.hosts && target.hosts.length) {
+    if (target.hosts.length > _MAX_HOST_REGEX_MEMBERS) return null
+    const alt = target.hosts.map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+    params.host_regex = `^(${alt})$`
+    params._active = 'svcstate;hostregex'
   } else {
     return null
   }
-  return buildCheckmkViewUrl(checkmkUrl, 'allservices', params)
+  params.display_options = _VIEW_LINK_DISPLAY_OPTIONS
+  return buildCheckmkViewUrl(checkmkUrl, 'allservices', params, { chrome: true })
+}
+
+// Lone lowercase "f" hides Checkmk's filter bar, keeps the rest of the chrome.
+const _VIEW_LINK_DISPLAY_OPTIONS = 'f'
+
+/**
+ * What an object's ``services_summary`` counts. Host groups roll up member HOST
+ * states into that field; everyone else counts services. (Host dyngroups carry
+ * their host rollup separately in ``hosts_summary``.)
+ */
+export function summarySubject(obj: BoardObject): 'hosts' | 'services' {
+  return obj.type === 'hostgroup' ? 'hosts' : 'services'
+}
+
+/**
+ * Checkmk allhosts view filtered to one host state over a member set — the
+ * target of clickable HOST state pills/chips on dyngroups.
+ */
+export function buildHostStateViewUrl(
+  checkmkUrl: string | null,
+  hosts: string[],
+  state: string
+): string | null {
+  if (!checkmkUrl) return null
+  if (!['UP', 'DOWN', 'UNREACHABLE'].includes(state)) return null
+  if (!hosts.length || hosts.length > _MAX_HOST_REGEX_MEMBERS) return null
+  const alt = hosts.map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+  return buildCheckmkViewUrl(
+    checkmkUrl,
+    'allhosts',
+    {
+      filled_in: 'filter',
+      _active: 'hoststate;hostregex',
+      host_regex: `^(${alt})$`,
+      [hostStateOn(state)]: 'on',
+      display_options: _VIEW_LINK_DISPLAY_OPTIONS
+    },
+    { chrome: true }
+  )
 }

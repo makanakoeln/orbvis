@@ -1,7 +1,13 @@
 import { computed } from 'vue'
 
 import type { BoardObject, ObjectState } from '@/types/api'
-import { buildServiceStateViewUrl, hostStateOn, stripCheckmkBase } from '@/utils/boardNavigation'
+import {
+  buildHostStateViewUrl,
+  buildServiceStateViewUrl,
+  hostStateOn,
+  stripCheckmkBase,
+  summarySubject
+} from '@/utils/boardNavigation'
 
 export interface SummaryChip {
   state: string
@@ -16,6 +22,8 @@ interface SummaryChipsOptions {
   state: () => ObjectState | undefined
   checkmkUrl: () => string | null | undefined
   isSite: () => boolean
+  /** Member host names for a dyngroup, so its chips can deep-link by host_regex. */
+  dyngroupHosts?: () => string[] | null
 }
 
 /**
@@ -25,11 +33,17 @@ interface SummaryChipsOptions {
  * status output ("504 hosts (504 up, 0 down, 0 unreachable)").
  */
 export function useSummaryChips(options: SummaryChipsOptions) {
-  const { object, state, checkmkUrl, isSite } = options
+  const { object, state, checkmkUrl, isSite, dyngroupHosts } = options
 
   function buildServiceChipUrl(stateName: string, count: number): string | null {
     const obj = object()
     if (count <= 0 || !obj) return null
+    if (obj.type === 'dyngroup') {
+      const hosts = dyngroupHosts?.() ?? null
+      return hosts?.length
+        ? buildServiceStateViewUrl(checkmkUrl() ?? null, { hosts }, stateName)
+        : null
+    }
     const isSiteObj = obj.type === 'site'
     return buildServiceStateViewUrl(
       checkmkUrl() ?? null,
@@ -42,6 +56,10 @@ export function useSummaryChips(options: SummaryChipsOptions) {
     const obj = object()
     const url = checkmkUrl()
     if (count <= 0 || !url || !obj) return null
+    if (obj.type === 'dyngroup') {
+      const hosts = dyngroupHosts?.() ?? null
+      return hosts?.length ? buildHostStateViewUrl(url, hosts, stateName) : null
+    }
     if (obj.type !== 'site' || !obj.host_name) return null
     const base = stripCheckmkBase(url)
     const params: Record<string, string> = {
@@ -55,6 +73,10 @@ export function useSummaryChips(options: SummaryChipsOptions) {
   }
 
   const serviceChips = computed<SummaryChip[]>(() => {
+    // Host groups pack member HOST states into services_summary — rendered as a
+    // "Hosts" chip row below (via hostsSummary), not as service chips.
+    const obj = object()
+    if (obj && summarySubject(obj) === 'hosts') return []
     const s = state()?.services_summary
     if (!s) return []
     const make = (
@@ -82,6 +104,15 @@ export function useSummaryChips(options: SummaryChipsOptions) {
   // Site state output looks like "504 hosts (504 up, 0 down, 0 unreachable)";
   // extract the host counts so we can render the same kind of chip row as services.
   const hostsSummary = computed<{ up: number; down: number; unreachable: number } | null>(() => {
+    // Host dyngroups carry the member host-state rollup directly; host groups
+    // pack it into services_summary (UP→ok, DOWN→critical, UNREACHABLE→unknown).
+    const hs = state()?.hosts_summary
+    if (hs) return { up: hs.ok ?? 0, down: hs.critical ?? 0, unreachable: hs.unknown ?? 0 }
+    const obj = object()
+    if (obj?.type === 'hostgroup') {
+      const s = state()?.services_summary
+      if (s) return { up: s.ok ?? 0, down: s.critical ?? 0, unreachable: s.unknown ?? 0 }
+    }
     if (!isSite()) return null
     const out = state()?.output
     if (!out) return null

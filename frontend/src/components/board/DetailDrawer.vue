@@ -120,16 +120,19 @@
 
                 <pre v-if="state.output" class="detail-drawer__output">{{ state.output }}</pre>
 
+                <div v-if="hostChips.length" class="detail-drawer__chips-label">
+                  {{ _t('Hosts') }}
+                </div>
                 <div
-                  v-if="serviceChips.length"
+                  v-if="hostChips.length"
                   class="detail-drawer__chips"
                   :style="{
-                    gridTemplateColumns: `repeat(${serviceChips.length}, 1fr)`
+                    gridTemplateColumns: `repeat(${hostChips.length}, 1fr)`
                   }"
                 >
                   <component
                     :is="chip.url ? 'a' : 'button'"
-                    v-for="chip in serviceChips"
+                    v-for="chip in hostChips"
                     :key="chip.state"
                     :type="chip.url ? undefined : 'button'"
                     :href="chip.url || undefined"
@@ -148,16 +151,19 @@
                   </component>
                 </div>
 
+                <div v-if="serviceChips.length" class="detail-drawer__chips-label">
+                  {{ serviceChipsLabel }}
+                </div>
                 <div
-                  v-if="hostChips.length"
+                  v-if="serviceChips.length"
                   class="detail-drawer__chips"
                   :style="{
-                    gridTemplateColumns: `repeat(${hostChips.length}, 1fr)`
+                    gridTemplateColumns: `repeat(${serviceChips.length}, 1fr)`
                   }"
                 >
                   <component
                     :is="chip.url ? 'a' : 'button'"
-                    v-for="chip in hostChips"
+                    v-for="chip in serviceChips"
                     :key="chip.state"
                     :type="chip.url ? undefined : 'button'"
                     :href="chip.url || undefined"
@@ -789,7 +795,7 @@ import { useSummaryChips } from '@/composables/useSummaryChips'
 import { useIsDark } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/auth'
 import type { BoardObject, BulkAckTarget, ObjectState } from '@/types/api'
-import { buildCheckmkUrl, stripCheckmkBase } from '@/utils/boardNavigation'
+import { buildCheckmkUrl, stripCheckmkBase, summarySubject } from '@/utils/boardNavigation'
 import { getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
 import { stateColor } from '@/utils/stateColors'
 import { formatRelativeDuration, formatRelativeFuture } from '@/utils/time'
@@ -993,11 +999,23 @@ const sinceText = computed(() => {
   return duration ? _t('since %{duration}', { duration }) : null
 })
 
+const dyngroupHosts = computed<string[] | null>(() => {
+  if (props.object?.type !== 'dyngroup') return null
+  if (props.object.bundle_hosts?.length) return props.object.bundle_hosts
+  const hosts = [...new Set(groupMembers.value.map((m) => m.host).filter(Boolean))]
+  return hosts.length ? hosts : null
+})
+
+const serviceChipsLabel = computed(() =>
+  props.object && summarySubject(props.object) === 'hosts' ? _t('Hosts') : _t('Services')
+)
+
 const { serviceChips, hostChips } = useSummaryChips({
   object: () => props.object,
   state: () => props.state,
   checkmkUrl: () => props.checkmkUrl,
-  isSite: () => isSite.value
+  isSite: () => isSite.value,
+  dyngroupHosts: () => dyngroupHosts.value
 })
 
 interface Modifier {
@@ -1804,6 +1822,15 @@ const isDark = useIsDark()
        filtered out before render). */
   display: grid;
   gap: 6px;
+}
+
+.detail-drawer__chips-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
 }
 
 .detail-drawer__chip {

@@ -398,7 +398,6 @@ async def test_static_bundle_suppresses_markers_and_folds_services(mock_connecti
     assert "auto:srv2" not in by_id
     assert "auto:srv3" in by_id
     mock_connection.get_dyngroup_state.assert_awaited_once()
-    assert mock_connection.get_dyngroup_state.await_args.kwargs.get("combined") is True
 
 
 @pytest.mark.asyncio

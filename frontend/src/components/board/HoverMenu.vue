@@ -122,14 +122,14 @@
             {{ state.output }}
           </div>
 
-          <!-- Services summary pills (host objects only). With a Checkmk URL
-                         each pill deep-links into the filtered allservices view, so the
-                         operator jumps straight from hover to "the 3 CRIT services"
-                         without the drawer detour. -->
-          <div v-if="servicePills.length" class="orb-hover__pills">
+          <!-- State pills, one labelled row per summary (host dyngroups show
+                         both Hosts and Services); each pill deep-links to the
+                         matching filtered Checkmk view. -->
+          <div v-for="row in pillRows" :key="row.label" class="orb-hover__pills">
+            <span class="orb-hover__pills-label">{{ row.label }}</span>
             <component
               :is="pill.url ? 'a' : 'span'"
-              v-for="pill in servicePills"
+              v-for="pill in row.pills"
               :key="pill.label"
               class="orb-hover__pill"
               :class="[pill.cls, { 'orb-hover__pill--link': pill.url }]"
@@ -196,11 +196,15 @@
 <script setup lang="ts">
 import { type CSSProperties, computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
-import { metricsApi } from '@/api/client'
+import { connectionsApi, metricsApi } from '@/api/client'
 import type { HoverAnchorRect } from '@/composables/useObjectHoverMenu'
 import { useAuthStore } from '@/stores/auth'
-import type { BoardObject, ObjectState, PerfometerResult } from '@/types/api'
-import { buildServiceStateViewUrl } from '@/utils/boardNavigation'
+import type { BoardObject, ObjectState, PerfometerResult, ServicesSummary } from '@/types/api'
+import {
+  buildHostStateViewUrl,
+  buildServiceStateViewUrl,
+  summarySubject
+} from '@/utils/boardNavigation'
 import { VISUAL_ONLY_TYPES, getBoardObjectIdentifier, getObjectTypeLabel } from '@/utils/naming'
 import { type PerfMetric, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
 import { sanitizeTemplateHtml } from '@/utils/sanitize'
@@ -258,6 +262,11 @@ const cmkPerfometer = ref<PerfometerResult | null>(null)
 // raw perf_data fallback while the proper CMK perfometer is still loading —
 // otherwise the tooltip flickers between two different bar styles.
 const cmkPerfometerStatus = ref<'idle' | 'loading' | 'done'>('idle')
+
+// Member host names for a (non-bundle) dyngroup, fetched lazily so its pills
+// can deep-link to a host_regex-filtered Checkmk view. Bundles already carry
+// bundle_hosts, so they skip this.
+const dyngroupMemberHosts = ref<string[] | null>(null)
 
 // Viewport-aware positioning: render once invisible to measure, then flip to
 // the cursor's left/top side if the tooltip would overflow the right/bottom
@@ -369,6 +378,29 @@ onMounted(() => {
       .finally(() => {
         cmkPerfometerStatus.value = 'done'
       })
+  }
+})
+
+onMounted(() => {
+  if (
+    props.object.type === 'dyngroup' &&
+    !props.object.bundle_hosts?.length &&
+    props.object.object_filter &&
+    props.connectionId &&
+    props.checkmkUrl &&
+    authStore.accessToken
+  ) {
+    connectionsApi
+      .dyngroupMembers(
+        props.connectionId,
+        props.object.object_types ?? 'host',
+        props.object.object_filter,
+        authStore.accessToken
+      )
+      .then((rows) => {
+        dyngroupMemberHosts.value = [...new Set(rows.map((r) => r.host).filter(Boolean))]
+      })
+      .catch(() => {})
   }
 })
 
@@ -515,51 +547,61 @@ const nextCheckText = computed((): NextCheckText | null => {
 })
 
 interface ServicePill {
-  label: 'OK' | 'WARN' | 'CRIT' | 'UNKN' | 'PEND'
+  label: string
   count: number
   cls: string
   dot: string
-  /** Deep-link into the filtered Checkmk allservices view (hosts only). */
+  /** Deep-link into the filtered Checkmk view, or null when not linkable. */
   url: string | null
 }
 
-const servicePills = computed((): ServicePill[] => {
-  // Hosts: per-host service-state breakdown.
-  // Hostgroups/Servicegroups: per-member state breakdown — the backend
-  // populates the same ``services_summary`` shape (UP→ok, DOWN→critical,
-  // UNREACHABLE→unknown for hostgroups), so the same pill row works.
-  if (
-    props.object.type !== 'host' &&
-    props.object.type !== 'hostgroup' &&
-    props.object.type !== 'servicegroup'
-  )
-    return []
-  const summary = props.state?.services_summary
-  if (!summary) return []
-  // Severity-descending: a CRIT pill catches the eye before "all green",
-  // matching the operator's "what's broken?" mental model. OK is still
-  // shown last as confirmation.
-  // Pills deep-link only for plain hosts: group pills count MEMBER states
-  // (hosts/services of the group), so a per-host svcstate URL would lie.
-  const linkable = props.object.type === 'host'
-  const url = (state: string | null): string | null =>
-    linkable && state
-      ? buildServiceStateViewUrl(props.checkmkUrl ?? null, { host: props.object.host_name }, state)
-      : null
-  // Severity-descending: a CRIT pill catches the eye before "all green";
-  // OK stays last as confirmation.
-  const defs: Array<{
-    key: keyof typeof summary
-    label: ServicePill['label']
-    tone: string
-    state: string | null
-  }> = [
-    { key: 'critical', label: 'CRIT', tone: 'crit', state: 'CRITICAL' },
-    { key: 'unknown', label: 'UNKN', tone: 'unknown', state: 'UNKNOWN' },
-    { key: 'warning', label: 'WARN', tone: 'warn', state: 'WARNING' },
-    { key: 'pending', label: 'PEND', tone: 'pending', state: 'PENDING' },
-    { key: 'ok', label: 'OK', tone: 'ok', state: 'OK' }
-  ]
+interface PillRow {
+  label: string
+  pills: ServicePill[]
+}
+
+// Member hosts of a dyngroup, used to scope its deep-links (bundle_hosts, or
+// the lazily-fetched member list for hand-written dyngroups).
+const dyngroupHostSet = computed<string[] | null>(() =>
+  props.object.type === 'dyngroup'
+    ? props.object.bundle_hosts?.length
+      ? props.object.bundle_hosts
+      : dyngroupMemberHosts.value
+    : null
+)
+
+// Severity-descending pills for one summary. ``kind`` picks host vs service
+// labels/states and the matching Checkmk deep-link target.
+function buildPills(summary: ServicesSummary, kind: 'hosts' | 'services'): ServicePill[] {
+  const hosts = dyngroupHostSet.value
+  const linkFor = (state: string | null): string | null => {
+    if (!state || !props.checkmkUrl) return null
+    if (kind === 'hosts') {
+      return props.object.type === 'dyngroup' && hosts?.length
+        ? buildHostStateViewUrl(props.checkmkUrl, hosts, state)
+        : null
+    }
+    if (props.object.type === 'host')
+      return buildServiceStateViewUrl(props.checkmkUrl, { host: props.object.host_name }, state)
+    if (props.object.type === 'dyngroup' && hosts?.length)
+      return buildServiceStateViewUrl(props.checkmkUrl, { hosts }, state)
+    return null
+  }
+  const defs =
+    kind === 'hosts'
+      ? ([
+          { key: 'critical', label: 'DOWN', tone: 'crit', state: 'DOWN' },
+          { key: 'unknown', label: 'UNRCH', tone: 'unknown', state: 'UNREACHABLE' },
+          { key: 'pending', label: 'PEND', tone: 'pending', state: null },
+          { key: 'ok', label: 'UP', tone: 'ok', state: 'UP' }
+        ] as const)
+      : ([
+          { key: 'critical', label: 'CRIT', tone: 'crit', state: 'CRITICAL' },
+          { key: 'unknown', label: 'UNKN', tone: 'unknown', state: 'UNKNOWN' },
+          { key: 'warning', label: 'WARN', tone: 'warn', state: 'WARNING' },
+          { key: 'pending', label: 'PEND', tone: 'pending', state: 'PENDING' },
+          { key: 'ok', label: 'OK', tone: 'ok', state: 'OK' }
+        ] as const)
   return defs
     .filter((d) => (summary[d.key] ?? 0) > 0)
     .map((d) => ({
@@ -567,8 +609,28 @@ const servicePills = computed((): ServicePill[] => {
       count: summary[d.key] ?? 0,
       cls: `orb-hover__pill--${d.tone}`,
       dot: `orb-hover__pill-dot--${d.tone}`,
-      url: url(d.state)
+      url: linkFor(d.state)
     }))
+}
+
+// Host dyngroups show two rows (member hosts + their services); everything else
+// shows one. ``services_summary`` holds host states for host groups (labelled
+// accordingly), services otherwise.
+const pillRows = computed<PillRow[]>(() => {
+  if (!['host', 'hostgroup', 'servicegroup', 'dyngroup'].includes(props.object.type)) return []
+  const rows: PillRow[] = []
+  const hs = props.state?.hosts_summary
+  if (hs) {
+    const pills = buildPills(hs, 'hosts')
+    if (pills.length) rows.push({ label: _t('Hosts'), pills })
+  }
+  const ss = props.state?.services_summary
+  if (ss) {
+    const kind = summarySubject(props.object)
+    const pills = buildPills(ss, kind)
+    if (pills.length) rows.push({ label: kind === 'hosts' ? _t('Hosts') : _t('Services'), pills })
+  }
+  return rows
 })
 
 const perfMetrics = computed((): PerfMetric[] => {
@@ -830,8 +892,18 @@ a.orb-hover__pill:hover {
 .orb-hover__pills {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--dimension-3);
   margin-top: 10px;
+}
+
+.orb-hover__pills-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-right: var(--dimension-2);
 }
 
 .orb-hover__pill {

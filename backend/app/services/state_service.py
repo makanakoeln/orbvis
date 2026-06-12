@@ -801,9 +801,7 @@ async def _get_object_state(connection: ConnectionBase, obj: BoardObject) -> Obj
             state = await connection.get_servicegroup_states(obj.group_name)
         elif obj.type == "dyngroup" and obj.object_filter:
             state = await connection.get_dyngroup_state(
-                obj.object_types or "host",
-                obj.object_filter,
-                combined=obj.bundle_kind is not None,
+                obj.object_types or "host", obj.object_filter
             )
             if obj.bundle_kind is not None and (obj.object_types or "host") == "host":
                 state.state = _combined_state_from_summary(state.state, state.services_summary)
