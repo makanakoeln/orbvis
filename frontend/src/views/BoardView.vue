@@ -942,6 +942,46 @@
             </svg>
           </button>
           <button
+            v-if="canBundle"
+            :title="_t('Bundle into a location')"
+            class="orb-board__actionbar-btn"
+            @click="bundleDialogOpen = true"
+          >
+            <svg
+              style="width: 14px; height: 14px"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 3v4m0 0L9 5m3 2 3-2M3 12h4m0 0L5 9m2 3-2 3m16-3h-4m0 0 2-3m-2 3 2 3M12 21v-4m0 0 3 2m-3-2-3 2M9.5 12a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0Z"
+              />
+            </svg>
+          </button>
+          <button
+            v-if="selectedIsBundle"
+            :title="_t('Unbundle')"
+            class="orb-board__actionbar-btn"
+            @click="editor.unbundleSelected()"
+          >
+            <svg
+              style="width: 14px; height: 14px"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M5 7h4V3M19 7h-4V3M5 17h4v4m10-4h-4v4M9.5 12a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0-5 0Z"
+              />
+            </svg>
+          </button>
+          <button
             :title="editor.selectedCount.value > 1 ? _t('Delete selected') : _t('Delete')"
             class="orb-board__actionbar-btn orb-board__actionbar-btn--danger"
             @click="onActionBarDelete"
@@ -1049,6 +1089,13 @@
       :confirm-label="_t('Delete')"
       @confirm="confirmBulkDelete"
       @cancel="bulkDeleteOpen = false"
+    />
+
+    <BundleDialog
+      v-if="bundleDialogOpen"
+      :host-count="selectedHostCount"
+      @confirm="onBundleConfirm"
+      @close="bundleDialogOpen = false"
     />
 
     <!-- Shared hover card — worldmap, foldertree and presentation objects all
@@ -1249,6 +1296,7 @@ import BoardCanvas from '@/components/board/BoardCanvas.vue'
 import BoardSearch from '@/components/board/BoardSearch.vue'
 import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue'
 import BulkAckModal from '@/components/board/BulkAckModal.vue'
+import BundleDialog from '@/components/board/BundleDialog.vue'
 import CommentModal from '@/components/board/CommentModal.vue'
 import ContextMenu from '@/components/board/ContextMenu.vue'
 import DetailDrawer from '@/components/board/DetailDrawer.vue'
@@ -1601,6 +1649,23 @@ const selectedObject = computed<BoardObject | null>(() => {
   if (!editor.selectedObjectId.value || !boardConfig.value) return null
   return boardConfig.value.objects.find((o) => o.id === editor.selectedObjectId.value) ?? null
 })
+
+const selectedHostCount = computed(() => {
+  const ids = new Set(editor.selectedIds.value)
+  return (boardConfig.value?.objects ?? []).filter(
+    (o) => ids.has(o.id) && o.type === 'host' && o.host_name && o.lat != null && o.lng != null
+  ).length
+})
+const canBundle = computed(() => isWorldmap.value && selectedHostCount.value >= 2)
+const selectedIsBundle = computed(
+  () => editor.selectedCount.value <= 1 && !!selectedObject.value?.bundle_kind
+)
+
+const bundleDialogOpen = ref(false)
+function onBundleConfirm(payload: { name: string; kind: 'static' | 'location' }) {
+  bundleDialogOpen.value = false
+  void editor.bundleSelected(payload.name, payload.kind)
+}
 
 // ---- Detail drawer (shared across static / worldmap / radar boards) ----
 

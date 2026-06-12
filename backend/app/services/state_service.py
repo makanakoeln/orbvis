@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from app.connections.base import BI_INT_TO_STATE, FolderTreeData, ServiceRow
+from app.connections.base import BI_INT_TO_STATE, FolderTreeData, GeoHost, ServiceRow
 from app.core.config import settings
 from app.integrations.checkmk import FolderScope
 from app.schemas.board import (
@@ -247,40 +247,81 @@ async def _execute_board_states(
 _AUTO_PREFIX = "auto:"
 
 
-async def inflate_auto_objects(cfg: BoardConfig, connection: ConnectionBase) -> list[BoardObject]:
-    """If the board is a worldmap with ``auto_source``, append matching hosts.
+def _names_or_filter(names: list[str]) -> str:
+    safe = [n for n in names if "\n" not in n]
+    lines = "".join(f"Filter: name = {n}\n" for n in safe)
+    return lines + (f"Or: {len(safe)}\n" if len(safe) > 1 else "")
 
-    Persisted objects always win — if an auto-discovered host shares its name
-    with one the operator manually placed, the manual entry's coordinates are
-    kept and the auto entry is skipped, giving the operator a safe override.
+
+async def inflate_auto_objects(cfg: BoardConfig, connection: ConnectionBase) -> list[BoardObject]:
+    """Resolve a worldmap's automap hosts and geo "bundles".
+
+    ``auto_source`` appends every geo host as a transient marker (persisted
+    objects win on name clash). Location bundles additionally re-match hosts at
+    their coordinate so new hosts there auto-join; both bundle kinds suppress
+    their members' individual markers.
     """
     view = cfg.view
-    if not isinstance(view, WorldmapView) or view.auto_source is None:
+    if not isinstance(view, WorldmapView):
         return cfg.objects
-    group_type = view.auto_source if view.auto_source != "all_hosts" else None
-    try:
-        geo_hosts = await connection.get_hosts_with_geo(
-            group_type=group_type,
-            group_name=view.auto_filter_value or None,
-        )
-    except Exception:
-        logger.warning("Failed to fetch geo hosts for board %s", cfg.name, exc_info=True)
+    has_location_bundle = any(o.bundle_kind == "location" for o in cfg.objects)
+    if view.auto_source is None and not has_location_bundle:
         return cfg.objects
 
-    existing_host_names = {o.host_name for o in cfg.objects if o.host_name}
-    inflated: list[BoardObject] = list(cfg.objects)
-    for h in geo_hosts:
-        if h["name"] in existing_host_names:
-            continue
-        inflated.append(
-            BoardObject(
-                id=f"{_AUTO_PREFIX}{h['name']}",
-                type="host",
-                host_name=h["name"],
-                lat=h["lat"],
-                lng=h["lng"],
+    # Only auto_source boards fetch the (potentially huge) geo-host list; a
+    # location bundle then auto-joins from it. Without auto_source we skip the
+    # fetch and the bundle falls back to its persisted member baseline.
+    geo_hosts: list[GeoHost] = []
+    if view.auto_source is not None:
+        group_type = view.auto_source if view.auto_source != "all_hosts" else None
+        try:
+            geo_hosts = await connection.get_hosts_with_geo(
+                group_type=group_type, group_name=view.auto_filter_value or None
             )
-        )
+        except Exception:
+            logger.warning("Failed to fetch geo hosts for board %s", cfg.name, exc_info=True)
+
+    existing_host_names = {o.host_name for o in cfg.objects if o.host_name}
+    for o in cfg.objects:
+        if o.bundle_kind and o.bundle_hosts:
+            existing_host_names.update(o.bundle_hosts)
+
+    inflated: list[BoardObject] = []
+    for o in cfg.objects:
+        if o.bundle_kind == "location" and o.lat is not None and o.lng is not None:
+            prec = o.bundle_precision if o.bundle_precision is not None else 5
+            at_coord = [
+                h["name"]
+                for h in geo_hosts
+                if round(h["lat"], prec) == round(o.lat, prec)
+                and round(h["lng"], prec) == round(o.lng, prec)
+            ]
+            members = sorted(set(at_coord) | set(o.bundle_hosts or []))
+            existing_host_names.update(members)
+            inflated.append(
+                o.model_copy(
+                    update={
+                        "bundle_hosts": members,
+                        "object_filter": _names_or_filter(members) if members else o.object_filter,
+                    }
+                )
+            )
+        else:
+            inflated.append(o)
+
+    if view.auto_source is not None:
+        for h in geo_hosts:
+            if h["name"] in existing_host_names:
+                continue
+            inflated.append(
+                BoardObject(
+                    id=f"{_AUTO_PREFIX}{h['name']}",
+                    type="host",
+                    host_name=h["name"],
+                    lat=h["lat"],
+                    lng=h["lng"],
+                )
+            )
     return inflated
 
 
@@ -760,8 +801,12 @@ async def _get_object_state(connection: ConnectionBase, obj: BoardObject) -> Obj
             state = await connection.get_servicegroup_states(obj.group_name)
         elif obj.type == "dyngroup" and obj.object_filter:
             state = await connection.get_dyngroup_state(
-                obj.object_types or "host", obj.object_filter
+                obj.object_types or "host",
+                obj.object_filter,
+                combined=obj.bundle_kind is not None,
             )
+            if obj.bundle_kind is not None and (obj.object_types or "host") == "host":
+                state.state = _combined_state_from_summary(state.state, state.services_summary)
         elif obj.type == "line" and obj.host_name and obj.service_description:
             state = await connection.get_service_state(obj.host_name, obj.service_description)
         elif obj.type == "line" and obj.host_name:

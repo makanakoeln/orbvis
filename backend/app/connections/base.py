@@ -241,7 +241,9 @@ class ConnectionBase(ABC):
         """Return aggregated state for a service group."""
         ...
 
-    async def get_dyngroup_state(self, object_types: str, object_filter: str) -> ObjectState:
+    async def get_dyngroup_state(
+        self, object_types: str, object_filter: str, combined: bool = False
+    ) -> ObjectState:
         """Return aggregated worst-state for hosts/services matched by a Livestatus filter.
 
         Default returns NOT_SUPPORTED — only connections that speak raw LQL

@@ -747,6 +747,87 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     }
   }
 
+  async function bundleSelected(name: string, kind: 'static' | 'location') {
+    const board = boardsStore.currentBoard
+    if (!board) return
+    const ids = selectedIds.value.length ? selectedIds.value : []
+    const members = board.objects.filter(
+      (o) =>
+        ids.includes(o.id) && o.type === 'host' && o.host_name && o.lat != null && o.lng != null
+    )
+    const hosts = [...new Set(members.map((o) => o.host_name as string))]
+    if (hosts.length < 2) return
+    // Location bundles snap to the most common member coordinate so coordinate
+    // auto-join matches that spot; static bundles just sit at the centroid.
+    let lat: number, lng: number
+    if (kind === 'location') {
+      const counts = new Map<string, { lat: number; lng: number; n: number }>()
+      for (const o of members) {
+        const key = `${o.lat}|${o.lng}`
+        const e = counts.get(key) ?? { lat: o.lat as number, lng: o.lng as number, n: 0 }
+        e.n += 1
+        counts.set(key, e)
+      }
+      const best = [...counts.values()].reduce((a, b) => (b.n > a.n ? b : a))
+      lat = best.lat
+      lng = best.lng
+    } else {
+      lat = members.reduce((a, o) => a + (o.lat as number), 0) / members.length
+      lng = members.reduce((a, o) => a + (o.lng as number), 0) / members.length
+    }
+    const objectFilter =
+      hosts.map((h) => `Filter: name = ${h}`).join('\n') +
+      (hosts.length > 1 ? `\nOr: ${hosts.length}` : '') +
+      '\n'
+    const s = useSettingsStore().settings
+    const id = `dyngroup_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)}`
+    const bundle: BoardObject = {
+      id,
+      type: 'dyngroup',
+      x: 0,
+      y: 0,
+      lat,
+      lng,
+      object_types: 'host',
+      object_filter: objectFilter,
+      bundle_kind: kind,
+      bundle_hosts: hosts,
+      label: {
+        show: s.label_show,
+        text: name || null,
+        x: 0,
+        y: 0,
+        size: s.label_size,
+        color: s.label_color,
+        background: s.label_background
+      },
+      display: { mode: 'icon', image: null, image_size: null },
+      url_target: s.url_target,
+      z: s.z
+    }
+    try {
+      await boardsApi.addObject(mapName.value, bundle, auth.accessToken!)
+      // Refetch so the automap re-runs suppression and re-merges transient markers.
+      await onMapChange()
+      selectObject(id)
+    } catch (e) {
+      _reportError(_t('Bundling failed'), e)
+    }
+  }
+
+  async function unbundleSelected() {
+    const id = selectedObjectId.value
+    const obj = boardsStore.currentBoard?.objects.find((o) => o.id === id)
+    if (!id || !obj?.bundle_kind) return
+    try {
+      await boardsApi.deleteObject(mapName.value, id, auth.accessToken!)
+      await onMapChange()
+      selectObject(null)
+    } catch (e) {
+      _reportError(_t('Unbundling failed'), e)
+    }
+  }
+
   function cancelPlacing() {
     placing.value = false
   }
@@ -780,6 +861,8 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     saveLatLngs,
     deleteSelected,
     duplicateSelected,
+    bundleSelected,
+    unbundleSelected,
     cancelPlacing,
     resetForNewMap
   }

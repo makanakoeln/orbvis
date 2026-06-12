@@ -347,6 +347,154 @@ async def test_worldmap_auto_source_skips_persisted_duplicates(mock_connection, 
 
 
 @pytest.mark.asyncio
+async def test_static_bundle_suppresses_markers_and_folds_services(mock_connection, monkeypatch):
+    """A static geo bundle hides its members' auto markers and shows the worst
+    host+service state, not just host up/down."""
+    from app.schemas.board import WorldmapView
+    from app.schemas.state import ServicesSummary
+
+    mock_connection.get_hosts_with_geo = AsyncMock(
+        return_value=[
+            {"name": "srv1", "alias": "srv1", "lat": 1.0, "lng": 2.0},
+            {"name": "srv2", "alias": "srv2", "lat": 1.0, "lng": 2.0},
+            {"name": "srv3", "alias": "srv3", "lat": 5.0, "lng": 6.0},
+        ]
+    )
+    mock_connection.get_hosts_states = AsyncMock(
+        return_value={"srv3": ObjectState(object_id="srv3", type="host", state="UP")}
+    )
+    mock_connection.get_dyngroup_state = AsyncMock(
+        return_value=ObjectState(
+            object_id="",
+            type="dyngroup",
+            state="UP",
+            services_summary=ServicesSummary(critical=1),
+        )
+    )
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    cfg = BoardConfig(
+        name="geo",
+        alias="Geo",
+        connection_id="mock",
+        view=WorldmapView(auto_source="all_hosts"),
+        objects=[
+            BoardObject(
+                id="bundle1",
+                type="dyngroup",
+                object_types="host",
+                object_filter="Filter: name = srv1\nFilter: name = srv2\nOr: 2\n",
+                bundle_kind="static",
+                bundle_hosts=["srv1", "srv2"],
+                lat=1.0,
+                lng=2.0,
+            )
+        ],
+    )
+    result = await get_board_states(cfg)
+    by_id = {s.object_id: s for s in result.states}
+    assert by_id["bundle1"].state == "CRITICAL"
+    assert "auto:srv1" not in by_id
+    assert "auto:srv2" not in by_id
+    assert "auto:srv3" in by_id
+    mock_connection.get_dyngroup_state.assert_awaited_once()
+    assert mock_connection.get_dyngroup_state.await_args.kwargs.get("combined") is True
+
+
+@pytest.mark.asyncio
+async def test_location_bundle_matches_hosts_at_coordinate(mock_connection, monkeypatch):
+    """A location bundle re-resolves its members from the live geo hosts at its
+    coordinate and suppresses their individual markers."""
+    from app.schemas.board import WorldmapView
+    from app.schemas.state import ServicesSummary
+
+    mock_connection.get_hosts_with_geo = AsyncMock(
+        return_value=[
+            {"name": "srv1", "alias": "srv1", "lat": 1.0, "lng": 2.0},
+            {"name": "srv2", "alias": "srv2", "lat": 1.0, "lng": 2.0},
+            {"name": "srv3", "alias": "srv3", "lat": 5.0, "lng": 6.0},
+        ]
+    )
+    mock_connection.get_hosts_states = AsyncMock(
+        return_value={"srv3": ObjectState(object_id="srv3", type="host", state="UP")}
+    )
+    mock_connection.get_dyngroup_state = AsyncMock(
+        return_value=ObjectState(
+            object_id="", type="dyngroup", state="UP", services_summary=ServicesSummary()
+        )
+    )
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    cfg = BoardConfig(
+        name="geo",
+        alias="Geo",
+        connection_id="mock",
+        view=WorldmapView(auto_source="all_hosts"),
+        objects=[
+            BoardObject(
+                id="loc1",
+                type="dyngroup",
+                object_types="host",
+                bundle_kind="location",
+                lat=1.0,
+                lng=2.0,
+            )
+        ],
+    )
+    result = await get_board_states(cfg)
+    by_id = {s.object_id for s in result.states}
+    assert "loc1" in by_id
+    assert "auto:srv1" not in by_id
+    assert "auto:srv2" not in by_id
+    assert "auto:srv3" in by_id
+    called_filter = mock_connection.get_dyngroup_state.await_args.args[1]
+    assert "Filter: name = srv1" in called_filter
+    assert "Filter: name = srv2" in called_filter
+    assert "Or: 2" in called_filter
+
+
+@pytest.mark.asyncio
+async def test_location_bundle_without_auto_source_uses_baseline(mock_connection, monkeypatch):
+    """A location bundle on a board without auto_source still resolves its
+    selected members, so it isn't stuck PENDING when no host matches the coord."""
+    from app.schemas.board import WorldmapView
+    from app.schemas.state import ServicesSummary
+
+    mock_connection.get_hosts_with_geo = AsyncMock(return_value=[])
+    mock_connection.get_dyngroup_state = AsyncMock(
+        return_value=ObjectState(
+            object_id="", type="dyngroup", state="UP", services_summary=ServicesSummary()
+        )
+    )
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    cfg = BoardConfig(
+        name="geo",
+        alias="Geo",
+        connection_id="mock",
+        view=WorldmapView(auto_source=None),
+        objects=[
+            BoardObject(
+                id="loc1",
+                type="dyngroup",
+                object_types="host",
+                bundle_kind="location",
+                bundle_hosts=["srv1", "srv2"],
+                object_filter="Filter: name = srv1\nFilter: name = srv2\nOr: 2\n",
+                lat=1.0,
+                lng=2.0,
+            )
+        ],
+    )
+    result = await get_board_states(cfg)
+    assert "loc1" in {s.object_id for s in result.states}
+    mock_connection.get_dyngroup_state.assert_awaited_once()
+    called_filter = mock_connection.get_dyngroup_state.await_args.args[1]
+    assert "Filter: name = srv1" in called_filter
+    assert "Filter: name = srv2" in called_filter
+
+
+@pytest.mark.asyncio
 async def test_per_object_connection_override_unregistered_yields_pending(
     mock_connection, monkeypatch
 ):

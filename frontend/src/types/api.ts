@@ -407,6 +407,9 @@ export interface BoardObject {
   aggregation_id?: string | null
   object_types?: 'host' | 'service' | null
   object_filter?: string | null
+  bundle_kind?: 'static' | 'location' | null
+  bundle_hosts?: string[] | null
+  bundle_precision?: number | null
   expand_depth?: number
   only_hard_states?: boolean
   recognize_services?: boolean

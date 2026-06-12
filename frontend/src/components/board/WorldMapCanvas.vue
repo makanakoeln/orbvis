@@ -335,7 +335,12 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
 
 function syncMarkers() {
   if (!leafletMap) return
-  const objects = props.config.objects.filter((o) => o.type !== 'line')
+  const bundled = new Set(
+    props.config.objects.flatMap((o) => (o.bundle_kind ? (o.bundle_hosts ?? []) : []))
+  )
+  const objects = props.config.objects.filter(
+    (o) => o.type !== 'line' && !(o.type === 'host' && o.host_name && bundled.has(o.host_name))
+  )
   const currentIds = new Set(objects.map((o) => o.id))
 
   for (const obj of objects) {

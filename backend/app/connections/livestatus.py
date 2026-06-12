@@ -1114,7 +1114,9 @@ class LivestatusConnection(ConnectionBase):
         query = f"GET hosts\nColumns: {_HOST_MEMBER_COLUMNS}\n{lql_filter}"
         return _host_member_rows(await self._query(query))
 
-    async def get_dyngroup_state(self, object_types: str, object_filter: str) -> ObjectState:
+    async def get_dyngroup_state(
+        self, object_types: str, object_filter: str, combined: bool = False
+    ) -> ObjectState:
         # NagVis-style: feed the validated filter into GET hosts/services and
         # aggregate worst-of. normalize_object_filter at the schema layer has
         # already restricted this to safe Filter:/And:/Or: lines.
@@ -1135,17 +1137,33 @@ class LivestatusConnection(ConnectionBase):
                 pending=sum(1 for s in states if s == "PENDING"),
             )
             return ObjectState(object_id="", type="dyngroup", state=worst, services_summary=summary)
-        rows = await self._query(f"GET hosts\nColumns: state\n{lql_filter}")
+        # ``combined`` folds each host's service severities into the worst-state.
+        host_cols = (
+            "state num_services_ok num_services_warn num_services_crit "
+            "num_services_unknown num_services_pending"
+            if combined
+            else "state"
+        )
+        rows = await self._query(f"GET hosts\nColumns: {host_cols}\n{lql_filter}")
         if not rows:
             return ObjectState(object_id="", type="dyngroup", state="PENDING")
         states = [_HOST_STATE_MAP.get(_row_int(r, 0), "UNKNOWN") for r in rows]
         worst = max(states, key=lambda s: _HOST_SEVERITY.get(s, 0))
-        summary = ServicesSummary(
-            ok=sum(1 for s in states if s == "UP"),
-            critical=sum(1 for s in states if s == "DOWN"),
-            unknown=sum(1 for s in states if s == "UNREACHABLE"),
-            pending=sum(1 for s in states if s == "PENDING"),
-        )
+        if combined:
+            summary = ServicesSummary(
+                ok=sum(_row_int(r, 1) for r in rows),
+                warning=sum(_row_int(r, 2) for r in rows),
+                critical=sum(_row_int(r, 3) for r in rows),
+                unknown=sum(_row_int(r, 4) for r in rows),
+                pending=sum(_row_int(r, 5) for r in rows),
+            )
+        else:
+            summary = ServicesSummary(
+                ok=sum(1 for s in states if s == "UP"),
+                critical=sum(1 for s in states if s == "DOWN"),
+                unknown=sum(1 for s in states if s == "UNREACHABLE"),
+                pending=sum(1 for s in states if s == "PENDING"),
+            )
         return ObjectState(object_id="", type="dyngroup", state=worst, services_summary=summary)
 
     async def get_objects(

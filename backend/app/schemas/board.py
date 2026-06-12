@@ -334,6 +334,12 @@ class BoardObject(BaseModel):
     # Dyngroup: arbitrary Livestatus filter producing a set of hosts/services.
     object_types: Literal["host", "service"] | None = None
     object_filter: str | None = None
+    # Set ⇒ this dyngroup is a geo "bundle": worst-state folds host + service
+    # severities, and the worldmap automap suppresses the member hosts' markers.
+    bundle_kind: Literal["static", "location"] | None = None
+    bundle_hosts: list[str] | None = None
+    # None ⇒ exact coordinate match (5 decimals ≈ 1 m).
+    bundle_precision: int | None = Field(default=None, ge=0, le=8)
     # 0 = root only, hard cap 10 levels — see backend.app.services.state_service.
     expand_depth: int = Field(default=0, ge=0, le=10)
     only_hard_states: bool = False
@@ -530,6 +536,9 @@ class BoardObjectUpdate(BaseModel):
     aggregation_id: str | None = None
     object_types: Literal["host", "service"] | None = None
     object_filter: str | None = None
+    bundle_kind: Literal["static", "location"] | None = None
+    bundle_hosts: list[str] | None = None
+    bundle_precision: int | None = Field(default=None, ge=0, le=8)
     expand_depth: int | None = Field(default=None, ge=0, le=10)
     only_hard_states: bool | None = None
     recognize_services: bool | None = None

@@ -22,12 +22,17 @@ export function getBoardObjectName(object: BoardObject): string {
   return getBoardObjectIdentifier(object)
 }
 
-/** Raw monitoring identifier, ignoring the custom `label.text` override. */
+/** Monitoring identifier; falls back to the label (then id) for objects with
+ * no host/group/map/aggregation binding, such as geo bundles. */
 export function getBoardObjectIdentifier(object: BoardObject): string {
   if (object.host_name && object.service_description)
     return `${object.host_name} / ${object.service_description}`
   return (
-    object.host_name ?? object.group_name ?? object.map_name ?? object.aggregation_id ?? object.id
+    object.host_name ??
+    object.group_name ??
+    object.map_name ??
+    object.aggregation_id ??
+    (object.label?.text || object.id)
   )
 }
 
