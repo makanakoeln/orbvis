@@ -68,6 +68,54 @@ describe('GadgetRenderer value gadget', () => {
   })
 })
 
+describe('GadgetRenderer gauge readout', () => {
+  // CPU load's load1 carries a `max` (the core count) purely to scale the bar —
+  // Checkmk shows it as the absolute load, never a percent. The gauge readout
+  // must echo the CMK-formatted value, not fabricate "27%" from value/max.
+  it('shows the absolute value for a max-bearing non-% metric', () => {
+    const wrapper = mount(GadgetRenderer, {
+      props: {
+        type: 'gauge',
+        metric: 'load1',
+        state: makeState({ perf_data: 'load1=1.09;;;0;4', state: 'OK' }),
+        size: 120,
+        metricUnits: {
+          load1: {
+            notation: 'decimal',
+            symbol: '',
+            precision: { type: 'strict', digits: 2 },
+            scale: 1
+          }
+        }
+      }
+    })
+    const text = wrapper.find('text').text()
+    expect(text).toBe('1.09')
+    expect(text).not.toContain('%')
+  })
+
+  // A genuine % unit still reads as a percent — the value already carries it.
+  it('keeps the percent for a real % metric', () => {
+    const wrapper = mount(GadgetRenderer, {
+      props: {
+        type: 'gauge',
+        metric: 'util',
+        state: makeState({ perf_data: 'util=8.54%;;;0;100', state: 'OK' }),
+        size: 120,
+        metricUnits: {
+          util: {
+            notation: 'decimal',
+            symbol: '%',
+            precision: { type: 'auto', digits: 2 },
+            scale: 1
+          }
+        }
+      }
+    })
+    expect(wrapper.find('text').text()).toBe('8.54%')
+  })
+})
+
 describe('GadgetRenderer existing gadgets', () => {
   it.each([
     ['trafficlight', '.orb-gadget__traffic'],

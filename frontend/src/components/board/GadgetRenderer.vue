@@ -123,14 +123,7 @@ import { computed } from 'vue'
 
 import type { MetricUnitMap, ObjectState, PerfometerResult } from '@/types/api'
 import { renderMetricValue } from '@/utils/metricFormat'
-import {
-  getMetric,
-  hasFillScale,
-  hasPercentScale,
-  parsePerfData,
-  utilColor,
-  utilPercent
-} from '@/utils/perf'
+import { getMetric, hasFillScale, parsePerfData, utilColor, utilPercent } from '@/utils/perf'
 import { stateColor } from '@/utils/stateColors'
 
 const props = defineProps<{
@@ -149,28 +142,31 @@ const props = defineProps<{
 
 const metrics = computed(() => parsePerfData(props.state?.perf_data ?? ''))
 const m = computed(() => getMetric(metrics.value, props.metric))
-const scaled = computed(() => (m.value ? hasPercentScale(m.value) : false))
 const pct = computed(() => (m.value ? utilPercent(m.value) : 0))
 // Fill is proportional (NagVis scales to crit when there's no max). Metrics
 // without any client-side scale fall back to the CMK perfometer percentage,
-// which is computed from the plugin's focus_range. The readout text stays
-// absolute unless the unit is %.
+// which is computed from the plugin's focus_range.
 const fillPct = computed(() => {
   if (m.value && !hasFillScale(m.value)) return props.perfometer?.pcts[0] ?? 0
   return pct.value
 })
-const color = computed(() => (scaled.value ? utilColor(pct.value) : stateColor(props.state?.state)))
+// Colour by utilisation whenever there's a real scale (own max/crit/% unit or a
+// CMK perfometer); otherwise fall back to the monitoring state colour.
+const hasScale = computed(() => (m.value ? hasFillScale(m.value) : false) || !!props.perfometer)
+const color = computed(() =>
+  hasScale.value ? utilColor(fillPct.value) : stateColor(props.state?.state)
+)
 
 const valueLabel = computed(() =>
   m.value ? renderMetricValue(m.value.value, props.metricUnits?.[m.value.label], m.value.unit) : '—'
 )
 
-// Primary readout inside the gauge/bar: a percentage only when one is
-// meaningful, otherwise the absolute value (the caption below is then redundant).
-// The caption prefers the CMK perfometer label ("RAM used 8.32 GiB") over the
-// client-side formatting of the raw perf value.
-const readout = computed(() => (scaled.value ? `${pct.value.toFixed(0)}%` : valueLabel.value))
-const caption = computed(() => (scaled.value ? props.perfometer?.label || valueLabel.value : ''))
+// Primary readout inside the gauge/bar: the metric value rendered exactly like
+// Checkmk (vendored CMK formatter via the registry unit). A percent shows only
+// when the unit genuinely is % — never faked from a bare `max` such as CPU
+// load's core count. The CMK perfometer label carries the titled context below.
+const readout = computed(() => valueLabel.value)
+const caption = computed(() => props.perfometer?.label ?? '')
 
 // The raw-value gadget scales on its own label since it never shows a percentage.
 const rawScale = computed(() => {
