@@ -10,10 +10,12 @@
     <template v-if="element.kind === 'data'">
       <div class="ins__field">
         <span class="orb-cap">{{ _t('Display') }}</span>
-        <CmkToggleButtonGroup
-          :model-value="element.display.mode"
+        <CmkDropdown
+          :selected-option="element.display.mode"
           :options="modeOptions"
-          @update:model-value="patchDisplay({ mode: $event })"
+          :width="'fill'"
+          :label="_t('Display')"
+          @update:selected-option="patchDisplay({ mode: $event })"
         />
       </div>
       <div v-if="element.display.mode === 'icon'" class="ins__field">
@@ -27,10 +29,12 @@
       <template v-if="element.display.mode === 'gadget'">
         <div class="ins__field">
           <span class="orb-cap">{{ _t('Gadget') }}</span>
-          <CmkToggleButtonGroup
-            :model-value="element.display.gadget_type ?? 'gauge'"
+          <CmkDropdown
+            :selected-option="element.display.gadget_type ?? 'gauge'"
             :options="gadgetOptions"
-            @update:model-value="patchDisplay({ gadget_type: $event })"
+            :width="'fill'"
+            :label="_t('Gadget')"
+            @update:selected-option="patchDisplay({ gadget_type: $event })"
           />
         </div>
         <div v-if="!isGroupBinding" class="ins__field">
@@ -171,7 +175,6 @@ import { computed, ref, watch } from 'vue'
 import NumberInput from '@/components/NumberInput.vue'
 import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown'
 import CmkSwitch from '@/components/cmk/CmkSwitch'
-import CmkToggleButtonGroup from '@/components/cmk/CmkToggleButtonGroup'
 import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
 
 import { useDataBinding } from '@/composables/useDataBinding'
@@ -216,18 +219,24 @@ const endpointOptions = computed(() => ({
 // would only mislead ("Bind a host first" on an already-bound element).
 const isGroupBinding = computed(() => isMetriclessBinding(props.element))
 
-const modeOptions = computed(() => [
-  { label: _t('Icon'), value: 'icon' },
-  { label: _t('Text'), value: 'text' },
-  { label: _t('Gadget'), value: 'gadget' }
-])
+const modeOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'icon', title: _t('Icon') },
+    { name: 'text', title: _t('Text') },
+    { name: 'gadget', title: _t('Gadget') }
+  ]
+}))
 
-const gadgetOptions = computed(() => [
-  { label: _t('Gauge'), value: 'gauge' },
-  { label: _t('Bar'), value: 'bar' },
-  { label: _t('Light'), value: 'trafficlight' },
-  { label: _t('Value'), value: 'value' }
-])
+const gadgetOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'gauge', title: _t('Gauge') },
+    { name: 'bar', title: _t('Bar') },
+    { name: 'trafficlight', title: _t('Light') },
+    { name: 'value', title: _t('Value') }
+  ]
+}))
 
 function patchDisplay(p: Record<string, unknown>): void {
   if (props.element.kind !== 'data') return

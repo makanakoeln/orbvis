@@ -4,9 +4,13 @@
       <span class="pdp__title">{{ _t('Data browser') }}</span>
       <button class="pdp__x" :title="_t('Close')" @click="emit('close')">×</button>
     </div>
-    <div class="pdp__tabs">
-      <CmkToggleButtonGroup :model-value="tab" :options="tabOptions" @update:model-value="setTab" />
-    </div>
+    <CmkTabs :model-value="tab" class="pdp__tabs" @update:model-value="setTab">
+      <template #tabs>
+        <CmkTab id="hosts">{{ _t('Hosts') }}</CmkTab>
+        <CmkTab id="groups">{{ _t('Groups') }}</CmkTab>
+        <CmkTab id="bi">BI</CmkTab>
+      </template>
+    </CmkTabs>
     <input
       v-model="query"
       class="orb-field pdp__search"
@@ -118,7 +122,6 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import CmkLoading from '@/components/cmk/CmkLoading'
 import CmkScrollContainer from '@/components/cmk/CmkScrollContainer'
-import CmkToggleButtonGroup from '@/components/cmk/CmkToggleButtonGroup'
 
 import { useDataBinding } from '@/composables/useDataBinding'
 import type { ObjectState, PresentationElement } from '@/types/api'
@@ -129,6 +132,7 @@ import {
 } from '@/utils/presentationBindingDrop'
 import { isBindable } from '@/utils/presentationSampleState'
 import { stateColor } from '@/utils/stateColors'
+import CmkTabs, { CmkTab } from '@/vendor/cmk/components/CmkTabs'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 const { _t } = usei18n()
@@ -147,13 +151,8 @@ const binding = useDataBinding(() => props.connectionId)
 
 type Tab = 'hosts' | 'groups' | 'bi'
 const tab = ref<Tab>('hosts')
-const tabOptions = computed(() => [
-  { label: _t('Hosts'), value: 'hosts' },
-  { label: _t('Groups'), value: 'groups' },
-  { label: 'BI', value: 'bi' }
-])
-function setTab(v: string): void {
-  tab.value = v as Tab
+function setTab(v: string | number): void {
+  tab.value = String(v) as Tab
 }
 
 interface Row {
@@ -330,7 +329,30 @@ function onDragStart(e: DragEvent, payload: BindingDropPayload): void {
 }
 
 .pdp__tabs {
-  padding: 10px 12px 0;
+  padding: 8px 12px 0;
+}
+
+/* Vendored CmkTabs default to a boxy bar — slim it to an underline tab strip
+   that fits the 260px panel, matching the sibling DetailDrawer. */
+.pdp__tabs :deep(.cmk-tabs__list) {
+  gap: 0;
+  border-bottom: 1px solid var(--border, rgb(255 255 255 / 8%));
+}
+
+.pdp__tabs :deep(.cmk-tab__li) {
+  padding: 5px 12px !important;
+  font-size: var(--font-size-normal);
+  line-height: 1;
+  border-radius: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.pdp__tabs :deep(.cmk-tab__li[data-state='active']) {
+  color: var(--text);
+  background: transparent;
+  border-bottom: 2px solid var(--color-corporate-green-50, rgb(34 197 94));
 }
 
 .pdp__search {

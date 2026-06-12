@@ -49,11 +49,36 @@
     </div>
     <div class="ins__field">
       <span class="orb-cap">{{ _t('Align') }}</span>
-      <CmkToggleButtonGroup
-        :model-value="element.text_align"
-        :options="alignOptions"
-        @update:model-value="emit('patch', { text_align: $event })"
-      />
+      <div class="ins__toggles">
+        <button
+          v-for="opt in alignOptions"
+          :key="opt.value"
+          class="ins__toggle"
+          :class="{ 'ins__toggle--on': element.text_align === opt.value }"
+          :title="opt.label"
+          :aria-label="opt.label"
+          :aria-pressed="element.text_align === opt.value"
+          @click="emit('patch', { text_align: opt.value })"
+        >
+          <svg
+            class="ins__toggle-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <line
+              v-for="(ln, i) in alignLines[opt.value]"
+              :key="i"
+              :x1="ln[0]"
+              :y1="6 + i * 4"
+              :x2="ln[1]"
+              :y2="6 + i * 4"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
     <div class="ins__row">
       <div class="ins__field">
@@ -81,7 +106,6 @@ import { computed } from 'vue'
 
 import NumberInput from '@/components/NumberInput.vue'
 import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown'
-import CmkToggleButtonGroup from '@/components/cmk/CmkToggleButtonGroup'
 
 import type { TextElement } from '@/types/api'
 import { PRESENTATION_FONTS } from '@/utils/presentationFonts'
@@ -107,6 +131,29 @@ const alignOptions = computed(() => [
   { label: _t('Center'), value: 'center' },
   { label: _t('Right'), value: 'right' }
 ])
+
+// [x1, x2] per text line (y stepped in the template) — drawn as a left/center/
+// right-justified stack of rules, the universal text-alignment glyph.
+const alignLines: Record<string, [number, number][]> = {
+  left: [
+    [4, 20],
+    [4, 14],
+    [4, 20],
+    [4, 14]
+  ],
+  center: [
+    [4, 20],
+    [7, 17],
+    [4, 20],
+    [7, 17]
+  ],
+  right: [
+    [4, 20],
+    [10, 20],
+    [4, 20],
+    [10, 20]
+  ]
+}
 </script>
 
 <style scoped>
@@ -149,6 +196,11 @@ const alignOptions = computed(() => [
 
 .ins__toggle--i {
   font-style: italic;
+}
+
+.ins__toggle-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .ins__toggle--on {
