@@ -8,7 +8,6 @@ the cmk.graphing imports inside the module degrade gracefully (ImportError
 
 from __future__ import annotations
 
-import re
 from types import SimpleNamespace
 
 import pytest
@@ -294,13 +293,13 @@ class TestComputeSimpleRow:
 
 
 class TestMetricUnitFormats:
-    """metric_unit_formats maps raw perfdata labels to registry units."""
+    """metric_unit_formats looks up the unit by the Checkmk-translated canonical
+    name and applies the translation scale. Translation correctness itself lives
+    in Checkmk (``_canonical_name_and_scale``) and is mocked here."""
 
     @pytest.fixture()
     def plugins(self, monkeypatch: pytest.MonkeyPatch) -> _PluginData:
         data = _PluginData(
-            renames={"my_check": {"mem": "mem_used", "rta": "rta"}},
-            scales={"my_check": {"rta": 0.001}},
             units={
                 "mem_used": RegisteredUnit(
                     notation="IECNotation", symbol="B", precision_type="auto", precision_digits=2
@@ -308,7 +307,7 @@ class TestMetricUnitFormats:
                 "rta": RegisteredUnit(
                     notation="TimeNotation", symbol="s", precision_type="auto", precision_digits=3
                 ),
-                "if_in_bps": RegisteredUnit(
+                "if_out_bps": RegisteredUnit(
                     notation="SINotation",
                     symbol="bits/s",
                     precision_type="strict",
@@ -316,63 +315,39 @@ class TestMetricUnitFormats:
                 ),
             },
         )
+        # Canonical name + scale as Checkmk's find_matching_translation resolves them.
+        trans = {"mem": ("mem_used", 1.0), "rta": ("rta", 0.001), "out": ("if_out_bps", 8.0)}
         monkeypatch.setattr("app.services.perfometer_service._load_plugins", lambda: data)
+        monkeypatch.setattr(
+            "app.services.perfometer_service._ensure_cmk_graphing_registered", lambda: True
+        )
+        monkeypatch.setattr(
+            "app.services.perfometer_service._canonical_name_and_scale",
+            lambda label, cc: trans.get(label, (label, 1.0)),
+        )
         return data
 
-    def test_rename_and_scale_applied(self, plugins: _PluginData) -> None:
+    def test_translated_name_and_scale_applied(self, plugins: _PluginData) -> None:
         out = metric_unit_formats("mem=8927830016B;;;0; rta=0.02ms;;;;", "check_mk-my_check")
         assert out["mem"].notation == "iec"
         assert out["mem"].symbol == "B"
         assert out["mem"].scale == 1.0
-        # rta keeps its name but gets the ms→s translation factor.
         assert out["rta"].notation == "time"
         assert out["rta"].scale == 0.001
         assert out["rta"].precision_digits == 3
+
+    def test_interface_octets_to_bits_scale(self, plugins: _PluginData) -> None:
+        out = metric_unit_formats("out=131;;;0;", "check_mk-lnx_if")
+        assert out["out"].notation == "si"
+        assert out["out"].symbol == "bits/s"
+        assert out["out"].scale == 8.0
 
     def test_unregistered_metric_is_omitted(self, plugins: _PluginData) -> None:
         out = metric_unit_formats("unknown=5;;;;", "check_mk-my_check")
         assert out == {}
 
-    def test_canonical_name_without_translation(self, plugins: _PluginData) -> None:
-        # No rename entry for this plugin — raw label IS the canonical name.
-        out = metric_unit_formats("if_in_bps=1950;;;;", "check_mk-other_check")
-        assert out["if_in_bps"].notation == "si"
-        assert out["if_in_bps"].precision_type == "strict"
-        assert out["if_in_bps"].scale == 1.0
-
     def test_empty_perfdata(self, plugins: _PluginData) -> None:
         assert metric_unit_formats("", "check_mk-my_check") == {}
-
-    def test_regex_translation_scales(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # PING-style plugin: translations={"~.*rta": RenameToAndScaleBy("rta", 0.001)} —
-        # the raw label already equals the target, only the ms→s scale applies.
-        data = _PluginData(
-            regex_translations={"ping": [(re.compile(".*rta"), "rta", 0.001)]},
-            units={
-                "rta": RegisteredUnit(
-                    notation="TimeNotation", symbol="s", precision_type="auto", precision_digits=2
-                )
-            },
-        )
-        monkeypatch.setattr("app.services.perfometer_service._load_plugins", lambda: data)
-        out = metric_unit_formats("rta=0.4ms;;;;", "check_mk-ping")
-        assert out["rta"].notation == "time"
-        assert out["rta"].scale == 0.001
-
-    def test_exact_translation_wins_over_regex(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        data = _PluginData(
-            renames={"p": {"x": "exact_target"}},
-            regex_translations={"p": [(re.compile("x.*"), "regex_target", 10.0)]},
-            units={
-                "exact_target": RegisteredUnit(
-                    notation="SINotation", symbol="B", precision_type="auto", precision_digits=2
-                )
-            },
-        )
-        monkeypatch.setattr("app.services.perfometer_service._load_plugins", lambda: data)
-        out = metric_unit_formats("x=5;;;;", "check_mk-p")
-        assert out["x"].symbol == "B"
-        assert out["x"].scale == 1.0
 
 
 class TestMetricTitles:

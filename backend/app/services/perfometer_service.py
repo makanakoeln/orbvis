@@ -692,7 +692,7 @@ def metric_unit_formats(perf_data_str: str, check_command: str) -> dict[str, Met
     exact rendering Checkmk's GUI shows. Metrics without a registry entry are
     omitted — the client falls back to its own heuristic for those.
     """
-    if not perf_data_str.strip():
+    if not perf_data_str.strip() or not _ensure_cmk_graphing_registered():
         return {}
     plugins = _load_plugins()
     if not plugins.units:
@@ -700,11 +700,10 @@ def metric_unit_formats(perf_data_str: str, check_command: str) -> dict[str, Met
     raw = _parse_perf_data(perf_data_str)
     if not raw:
         return {}
-    plugin_name = _check_plugin_name(check_command)
 
     out: dict[str, MetricUnitFormat] = {}
     for label in raw:
-        canonical, scale = _find_translation(label, plugin_name, plugins)
+        canonical, scale = _canonical_name_and_scale(label, check_command)
         unit = plugins.units.get(canonical)
         if unit is None:
             continue
@@ -745,30 +744,41 @@ def _ensure_cmk_graphing_registered() -> bool:
     return True
 
 
+@lru_cache(maxsize=256)
+def _cmk_check_translations(check_command: str) -> object:
+    from cmk.gui.graphing._legacy import check_metrics
+    from cmk.gui.graphing._translated_metrics import (
+        lookup_metric_translations_for_check_command,
+    )
+
+    return lookup_metric_translations_for_check_command(check_metrics, check_command)
+
+
+def _canonical_name_and_scale(label: str, check_command: str) -> tuple[str, float]:
+    """Canonical metric name + scale for a raw perfdata label, via Checkmk's own
+    find_matching_translation (exact + regex translations). The seam every CMK
+    name/unit lookup goes through, so a perfvar that differs from the registry
+    name (interface ``in`` / ``out`` → ``if_in_bps`` / ``if_out_bps`` ×8) resolves
+    exactly as Checkmk's GUI does."""
+    from cmk.gui.graphing._translated_metrics import find_matching_translation
+    from cmk.utils.metrics import MetricName
+
+    spec = find_matching_translation(
+        MetricName(label.replace(".", "_")), _cmk_check_translations(check_command)
+    )
+    return (spec.name, spec.scale)
+
+
 def translate_metric_names(perf_data_str: str, check_command: str) -> dict[str, str]:
-    """Map each raw perfdata label to its canonical Checkmk metric name, using
-    Checkmk's own per-check-command translation (CMK mode only). This is what lets
-    a service whose perfvars differ from the registry name (e.g. interface ``in`` /
-    ``out`` → ``if_in_octets`` / ``if_out_octets``) match Checkmk graph templates.
-    Labels Checkmk can't translate are omitted; empty outside CMK mode."""
+    """Map each raw perfdata label to its canonical Checkmk metric name (CMK mode
+    only) so a service whose perfvars differ from the registry name matches
+    Checkmk graph templates. Labels Checkmk can't translate are omitted."""
     if not perf_data_str.strip() or not _ensure_cmk_graphing_registered():
         return {}
-    try:
-        from cmk.gui.graphing._legacy import check_metrics
-        from cmk.gui.graphing._translated_metrics import (
-            find_matching_translation,
-            lookup_metric_translations_for_check_command,
-        )
-        from cmk.utils.metrics import MetricName
-    except ImportError:
-        return {}
-    translations = lookup_metric_translations_for_check_command(check_metrics, check_command)
     out: dict[str, str] = {}
     for label in _parse_perf_data(perf_data_str):
         try:
-            out[label] = find_matching_translation(
-                MetricName(label.replace(".", "_")), translations
-            ).name
+            out[label] = _canonical_name_and_scale(label, check_command)[0]
         except Exception:
             continue
     return out

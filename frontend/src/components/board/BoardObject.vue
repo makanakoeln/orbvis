@@ -73,15 +73,7 @@
             <span
               class="orb-obj__legend-value"
               :style="{ color: CHART_PALETTE[idx % CHART_PALETTE.length] }"
-              >{{
-                fmtValueWithUnit(
-                  normalizeMetricValue(
-                    chartLatestValues[label]?.value ?? 0,
-                    chartLatestValues[label]?.unit
-                  ),
-                  chartLatestValues[label]?.unit
-                )
-              }}</span
+              >{{ legendValue(idx) }}</span
             >
           </div>
           <span
@@ -98,6 +90,7 @@
               :data="group.data"
               :metric-keys="Object.keys(group.data)"
               :mirrored-keys="group.mirrored"
+              :unit-map="chartMetricUnits"
               :window-secs="(object.graph_time_window ?? 60) * 60"
               :thresholds="chartThresholds"
               :unit="Object.values(group.data)[0]?.at(-1)?.unit"
@@ -481,12 +474,7 @@ import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 
 import { metricsApi } from '@/api/client'
 import { useArcRing } from '@/composables/useArcRing'
-import {
-  CHART_PALETTE,
-  MAX_VISIBLE_SERIES,
-  fmtValueWithUnit,
-  normalizeMetricValue
-} from '@/composables/useMetricChart'
+import { CHART_PALETTE, MAX_VISIBLE_SERIES } from '@/composables/useMetricChart'
 import { useMetricUnits } from '@/composables/useMetricUnits'
 import { usePerfometer } from '@/composables/usePerfometer'
 import { useIsDark } from '@/composables/useTheme'
@@ -494,6 +482,7 @@ import { useAuthStore } from '@/stores/auth'
 import type { MetricPoint } from '@/stores/states'
 import { useStatesStore } from '@/stores/states'
 import type { BoardObject, ObjectState } from '@/types/api'
+import { renderMetricValue } from '@/utils/metricFormat'
 import { utilColor as _utilColor, getMetric, parsePerfData, utilPercent } from '@/utils/perf'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
@@ -615,6 +604,8 @@ const imgLoadFailed = ref(false)
 // ---- Graph: native chart mode ----
 const isNativeChart = computed(() => props.object.type === 'graph' && !!props.object.host_name)
 
+const chartMetricUnits = useMetricUnits({ ...gadgetBinding, enabled: () => isNativeChart.value })
+
 const chartData = computed((): Record<string, MetricPoint[]> => {
   if (!isNativeChart.value) return {}
   const mv = statesStore.metricValues[props.object.id]
@@ -676,16 +667,6 @@ const hiddenMetricLabels = computed(() =>
 )
 const hasChartData = computed(() => Object.values(chartData.value).some((pts) => pts.length > 0))
 
-// Keyed by display label (title) so the template can use v-for labels as keys
-const chartLatestValues = computed(() =>
-  Object.fromEntries(
-    chartMetricKeys.value.map((k, i) => [
-      chartMetricLabels.value[i],
-      chartData.value[k]?.at(-1) ?? null
-    ])
-  )
-)
-
 const graphW = computed(() => props.resizeOverride?.width ?? props.object.graph_width ?? 400)
 const graphH = computed(() => props.resizeOverride?.height ?? props.object.graph_height ?? 200)
 
@@ -698,13 +679,17 @@ const chartThresholds = computed(() => {
 
 const isSingleMetric = computed(() => chartMetricLabels.value.length === 1)
 
+// Latest reading for the legend, formatted through Checkmk's unit registry.
+function legendValue(idx: number): string {
+  const key = chartMetricKeys.value[idx]
+  const pt = key ? chartData.value[key]?.at(-1) : undefined
+  if (!key || !pt) return ''
+  return renderMetricValue(pt.value, chartMetricUnits.value[key], pt.unit)
+}
+
 const singleMetricValueStr = computed(() => {
   if (!isSingleMetric.value) return ''
-  const label = chartMetricLabels.value[0]
-  if (label === undefined) return ''
-  const pt = chartLatestValues.value[label]
-  if (!pt) return ''
-  return fmtValueWithUnit(normalizeMetricValue(pt.value, pt.unit), pt.unit)
+  return legendValue(0)
 })
 
 const singleMetricColor = computed(() => {

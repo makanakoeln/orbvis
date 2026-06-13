@@ -20,8 +20,10 @@ import type { ComposeOption } from 'echarts/core'
 import { computed } from 'vue'
 import VChart from 'vue-echarts'
 
-import { CHART_PALETTE, fmtValueWithUnit, normalizeMetricValue } from '@/composables/useMetricChart'
+import { CHART_PALETTE, normalizeMetricValue } from '@/composables/useMetricChart'
 import type { MetricPoint } from '@/stores/states'
+import type { MetricUnitMap } from '@/types/api'
+import { renderMetricValue } from '@/utils/metricFormat'
 
 type EOption = ComposeOption<
   GridComponentOption | LineSeriesOption | MarkLineComponentOption | TooltipComponentOption
@@ -37,6 +39,10 @@ const props = defineProps<{
   data: Record<string, MetricPoint[]>
   metricKeys: string[]
   mirroredKeys?: string[]
+  // Checkmk's registered display unit per metric (label → spec). Carries the
+  // translation scale (e.g. interface octets ×8 → bits/s) and the unit symbol,
+  // so the chart reads exactly like Checkmk's own graph instead of raw counts.
+  unitMap?: MetricUnitMap
   windowSecs: number
   thresholds: { warn: number | null; crit: number | null } | null
   unit: string | undefined
@@ -70,9 +76,23 @@ function _hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`
 }
 
-function _fmtVal(normalized: number): string {
-  // Mirrored series carry a negated value; show its magnitude like CMK does.
-  return fmtValueWithUnit(hasMirrored.value ? Math.abs(normalized) : normalized, props.unit)
+// Plotted value: apply the metric's registered translation scale so the data is
+// in Checkmk's canonical unit (e.g. interface octets ×8 → bits/s); fall back to
+// the raw-perfdata SI normalisation when the metric isn't registered.
+function _plot(rawValue: number, key: string, pointUnit?: string): number {
+  const scale = props.unitMap?.[key]?.scale
+  return scale !== undefined
+    ? rawValue * scale
+    : normalizeMetricValue(rawValue, pointUnit ?? props.unit)
+}
+
+// Format an already-scaled (canonical) value through Checkmk's own unit-format
+// library — the data is pre-scaled by `_plot`, so format with scale 1 to avoid
+// scaling twice. Mirrored series carry a negated value; show its magnitude.
+function _fmt(canonicalValue: number, key: string): string {
+  const v = hasMirrored.value ? Math.abs(canonicalValue) : canonicalValue
+  const spec = props.unitMap?.[key]
+  return renderMetricValue(v, spec ? { ...spec, scale: 1 } : null, props.unit ?? '')
 }
 
 function _buildTooltip(rawParams: TooltipParam | TooltipParam[]): string {
@@ -83,24 +103,16 @@ function _buildTooltip(rawParams: TooltipParam | TooltipParam[]): string {
   const rows = items
     .map(
       (p) =>
-        `${p.marker}<span style="font-size:9px"> ${p.seriesName}: <b>${_fmtVal(p.value[1])}</b></span>`
+        `${p.marker}<span style="font-size:9px"> ${p.seriesName}: <b>${_fmt(p.value[1], p.seriesName)}</b></span>`
     )
     .join('<br/>')
   return `<div style="font-size:9px;opacity:0.7;margin-bottom:2px">${_fmtTime(ts)}</div>${rows}`
 }
 
-// Converts perf_data raw value to base unit. Needed because ECharts handles its own
-// axis scaling, so all data must be in consistent base units (e.g. bytes not kB).
-function _norm(v: number, unitHint?: string): number {
-  const u = unitHint ?? props.unit
-  return normalizeMetricValue(v, u)
-}
-
-// Y-axis formatter: render the unit inline on every tick so the SI prefix folds into
-// the base unit symbol ("60.0 MB/s", not "60.0M" with a separate "B/s" floating in
-// the corner). Keeps the tooltip and the axis visually consistent.
+// Y-axis formatter: render the unit inline on every tick. All series of a graph
+// share a unit, so the first metric's spec drives the axis.
 function _fmtAxis(v: number): string {
-  return fmtValueWithUnit(hasMirrored.value ? Math.abs(v) : v, props.unit)
+  return _fmt(v, props.metricKeys[0] ?? '')
 }
 
 const option = computed((): EOption => {
@@ -127,14 +139,14 @@ const option = computed((): EOption => {
     if (!multiSeries && i === 0 && props.thresholds) {
       if (props.thresholds.warn !== null) {
         markLineItems.push({
-          yAxis: _norm(props.thresholds.warn) * sign,
+          yAxis: _plot(props.thresholds.warn, key) * sign,
           lineStyle: { color: 'rgb(255,208,0)', type: 'dashed', width: 1, opacity: 0.75 },
           label: { show: false }
         })
       }
       if (props.thresholds.crit !== null) {
         markLineItems.push({
-          yAxis: _norm(props.thresholds.crit) * sign,
+          yAxis: _plot(props.thresholds.crit, key) * sign,
           lineStyle: {
             color: 'rgb(248,113,113)',
             type: 'dashed',
@@ -165,7 +177,7 @@ const option = computed((): EOption => {
           ]
         }
       },
-      data: pts.map((p) => [p.ts * 1000, _norm(p.value, p.unit) * sign]),
+      data: pts.map((p) => [p.ts * 1000, _plot(p.value, key, p.unit) * sign]),
       ...(markLineItems.length > 0
         ? {
             markLine: {

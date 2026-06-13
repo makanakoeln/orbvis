@@ -1762,8 +1762,10 @@ class LivestatusConnection(ConnectionBase):
         # CMC returns each rrddata column as a flat list:
         #   [actual_start, actual_end, actual_step, v0, v1, ..., vN]
         # A value of None means no RRD file / metric exists for this column.
-        metric_scales = load_cmk_graphing_data().scales
-        metric_units = load_cmk_graphing_data().units
+        # Raw values + raw unit are returned as-is; the canonical scale and unit
+        # are applied client-side from the metric registry (useMetricUnits), the
+        # same path gadgets and line labels use — avoids a duplicate scale here.
+        name_map = translate_metric_names(perf_data, check_command)
         series: dict[str, list[tuple[float, float, str]]] = {}
         titles: dict[str, str] = {}
         row = rows[0]
@@ -1779,31 +1781,19 @@ class LivestatusConnection(ConnectionBase):
                 values = rrd[3:]
                 label = m["label"]
                 perf_unit = m["unit"]
-                # CMK translations (e.g. ScaleBy(1048576) for fs_used) convert check-plugin
-                # units (MiB) to the canonical graphing unit (bytes) at display time; apply
-                # the same factor here. Guard: values ≥1e9 are already in bytes (Linux mem
-                # checks), so skip scaling even when a Windows translation matches the name.
-                scale = metric_scales.get(label, 0.0) if perf_unit == "" else 0.0
-                if scale > 0:
-                    first = next((float(v) for v in values if v is not None), None)
-                    if first is not None and abs(first) >= 1e9:
-                        scale = 0.0
-                unit = metric_units.get(label, perf_unit) if perf_unit == "" else perf_unit
-                points: list[tuple[float, float, str]] = []
-                for j, v in enumerate(values):
-                    if v is not None:
-                        ts = actual_start + j * actual_step
-                        val = float(v) * scale if scale > 0 else float(v)
-                        points.append((ts, val, unit))
+                points: list[tuple[float, float, str]] = [
+                    (actual_start + j * actual_step, float(v), perf_unit)
+                    for j, v in enumerate(values)
+                    if v is not None
+                ]
                 if points:
                     series[label] = points
-                    titles[label] = _cmk_metric_title(label)
+                    titles[label] = _cmk_metric_title(name_map.get(label, label))
             except (IndexError, TypeError, ValueError) as exc:
                 logger.debug("rrddata: failed to parse metric %r: %s, raw=%r", m["label"], exc, rrd)
                 continue
 
         logger.debug("rrddata: returning %d metrics for %r/%r", len(series), host, service)
-        name_map = translate_metric_names(perf_data, check_command)
         return MetricHistoryResult(
             series=series,
             titles=titles,
