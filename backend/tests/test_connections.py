@@ -208,6 +208,33 @@ def test_match_graphs_mirrored_drops_unavailable_metrics(monkeypatch):
     assert groups[0].mirrored == []
 
 
+def test_match_graphs_translates_raw_perfvars_to_canonical(monkeypatch):
+    """Raw perfvars (interface in/out) match a canonical template via the name map,
+    and the result stays in raw names so it lines up with the series keys."""
+    from app.integrations.cmk_plugins import CMKGraphingData
+
+    data = CMKGraphingData(
+        graphs={
+            "bandwidth": (
+                "Bandwidth",
+                ["if_in_bps", "if_out_bps"],
+                frozenset(),
+                frozenset({"if_out_bps"}),
+            )
+        }
+    )
+    monkeypatch.setattr("app.connections.livestatus.load_cmk_graphing_data", lambda: data)
+
+    # Without translation the raw perfvars don't match the canonical template.
+    assert _match_graphs({"in", "out"}) == []
+
+    name_map = {"in": "if_in_bps", "out": "if_out_bps"}
+    groups = _match_graphs({"in", "out"}, name_map)
+    assert len(groups) == 1
+    assert sorted(groups[0].metrics) == ["in", "out"]
+    assert groups[0].mirrored == ["out"]
+
+
 def test_apply_extra_host_columns_map_correctly():
     """Verify _apply_extra reads the correct column offsets after schema changes.
 

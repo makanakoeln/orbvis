@@ -53,7 +53,7 @@ from app.schemas.state import (
     ObjectState,
     ServicesSummary,
 )
-from app.services.perfometer_service import metric_title, metric_titles
+from app.services.perfometer_service import metric_title, metric_titles, translate_metric_names
 
 logger = logging.getLogger(__name__)
 
@@ -80,13 +80,31 @@ _auth_user_ctx: ContextVar[str | None] = ContextVar("_auth_user_ctx", default=No
 _folder_scope_ctx: ContextVar[FolderScope | None] = ContextVar("_folder_scope_ctx", default=None)
 
 
-def _match_graphs(available: set[str]) -> list[GraphGroup]:
+def _match_graphs(available: set[str], name_map: dict[str, str] | None = None) -> list[GraphGroup]:
     """Return CMK graph groups whose compound metrics overlap with ``available``.
 
-    Graphs with conflicting metrics present in ``available`` are excluded.
-    When multiple graphs share the same title, only the best-matching one
-    (most metrics covered) is kept.
+    ``available`` holds the metric ids present in the series. CMK graph templates
+    key on *canonical* metric names, but a service's perfvars often differ from
+    those (interface ``in`` / ``out`` vs ``if_in_octets`` / ``if_out_octets``).
+    ``name_map`` (raw → canonical, from ``translate_metric_names``) bridges that:
+    matching runs on canonical names, but the returned ``metrics`` / ``mirrored``
+    stay in the original (raw) names so they line up with the series keys.
+
+    Graphs with conflicting metrics present are excluded. When multiple graphs
+    share the same title, only the best-matching one (most metrics) is kept.
     """
+    if name_map:
+        canon_to_raw: dict[str, str] = {}
+        for raw in available:
+            canon_to_raw.setdefault(name_map.get(raw, raw), raw)
+        canon_available = set(canon_to_raw)
+    else:
+        canon_to_raw = {}
+        canon_available = available
+
+    def to_raw(canon: str) -> str:
+        return canon_to_raw.get(canon, canon)
+
     candidates: list[GraphGroup] = []
     for graph_id, (
         title,
@@ -94,16 +112,16 @@ def _match_graphs(available: set[str]) -> list[GraphGroup]:
         conflicting,
         mirrored,
     ) in load_cmk_graphing_data().graphs.items():
-        if conflicting & available:
+        if conflicting & canon_available:
             continue
-        matching = [m for m in metrics if m in available]
+        matching = [m for m in metrics if m in canon_available]
         if matching:
             candidates.append(
                 GraphGroup(
                     id=graph_id,
                     title=title,
-                    metrics=matching,
-                    mirrored=[m for m in matching if m in mirrored],
+                    metrics=[to_raw(m) for m in matching],
+                    mirrored=[to_raw(m) for m in matching if m in mirrored],
                 )
             )
 
@@ -1507,14 +1525,15 @@ class LivestatusConnection(ConnectionBase):
     async def get_graph_templates(self, host: str, service: str | None) -> list[GraphGroup]:
         try:
             if service:
-                state = await self.get_service_state(host, service)
+                perf_data, check_command = await self.get_service_perf_and_cmd(host, service)
             else:
-                state = await self.get_host_state(host)
+                perf_data, check_command = (await self.get_host_state(host)).perf_data or "", ""
             metrics = {
                 part[: part.index("=")].strip("'")
-                for part in re.findall(r"(?:'[^']+'|[^\s]+)=[^\s]*", state.perf_data)
+                for part in re.findall(r"(?:'[^']+'|[^\s]+)=[^\s]*", perf_data)
             }
-            return _match_graphs(metrics)
+            name_map = translate_metric_names(perf_data, check_command)
+            return _match_graphs(metrics, name_map)
         except Exception as exc:
             logger.debug("Graph template lookup failed for %s/%s: %s", host, service, exc)
             return []
@@ -1685,14 +1704,16 @@ class LivestatusConnection(ConnectionBase):
 
         try:
             if service:
-                state = await self.get_service_state(host, service)
+                # perf_data + check_command in one query; check_command drives the
+                # perfvar → canonical translation that lets graph templates match.
+                perf_data, check_command = await self.get_service_perf_and_cmd(host, service)
             else:
-                state = await self.get_host_state(host)
+                perf_data, check_command = (await self.get_host_state(host)).perf_data or "", ""
         except Exception as exc:
             logger.warning("rrddata: failed to get state for %r/%r: %s", host, service, exc)
             return MetricHistoryResult()
 
-        metrics = _parse_metrics_from_perf(state.perf_data or "")
+        metrics = _parse_metrics_from_perf(perf_data)
         if not metrics:
             logger.debug("rrddata: no metrics in perf_data for %r/%r", host, service)
             return MetricHistoryResult()
@@ -1782,10 +1803,11 @@ class LivestatusConnection(ConnectionBase):
                 continue
 
         logger.debug("rrddata: returning %d metrics for %r/%r", len(series), host, service)
+        name_map = translate_metric_names(perf_data, check_command)
         return MetricHistoryResult(
             series=series,
             titles=titles,
-            graphs=_match_graphs(set(series.keys())),
+            graphs=_match_graphs(set(series.keys()), name_map),
         )
 
     async def is_available(self) -> bool:

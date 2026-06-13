@@ -745,6 +745,35 @@ def _ensure_cmk_graphing_registered() -> bool:
     return True
 
 
+def translate_metric_names(perf_data_str: str, check_command: str) -> dict[str, str]:
+    """Map each raw perfdata label to its canonical Checkmk metric name, using
+    Checkmk's own per-check-command translation (CMK mode only). This is what lets
+    a service whose perfvars differ from the registry name (e.g. interface ``in`` /
+    ``out`` → ``if_in_octets`` / ``if_out_octets``) match Checkmk graph templates.
+    Labels Checkmk can't translate are omitted; empty outside CMK mode."""
+    if not perf_data_str.strip() or not _ensure_cmk_graphing_registered():
+        return {}
+    try:
+        from cmk.gui.graphing._legacy import check_metrics
+        from cmk.gui.graphing._translated_metrics import (
+            find_matching_translation,
+            lookup_metric_translations_for_check_command,
+        )
+        from cmk.utils.metrics import MetricName
+    except ImportError:
+        return {}
+    translations = lookup_metric_translations_for_check_command(check_metrics, check_command)
+    out: dict[str, str] = {}
+    for label in _parse_perf_data(perf_data_str):
+        try:
+            out[label] = find_matching_translation(
+                MetricName(label.replace(".", "_")), translations
+            ).name
+        except Exception:
+            continue
+    return out
+
+
 def metric_titles(perf_data_str: str, check_command: str) -> dict[str, str]:
     """Map each raw perfdata label to its Checkmk metric title using Checkmk's own
     translation + metric registry (CMK mode only). Keys are the RAW labels (what
