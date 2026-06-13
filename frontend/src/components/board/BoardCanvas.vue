@@ -457,14 +457,18 @@ const canvasStyle = computed(() => {
       height: `${canvasHeight.value}px`
     }
     if (userZoom.value !== 1) base.zoom = String(userZoom.value)
+  } else if (userZoom.value !== 1 && pane.width && pane.height) {
+    // Zoomed: anchor to the pane's pixel size so CSS `zoom` grows the element
+    // visually (see note above) and the scroll container can pan it.
+    base = { width: `${pane.width}px`, height: `${pane.height}px`, zoom: String(userZoom.value) }
   } else {
-    base =
-      pane.width && pane.height
-        ? { width: `${pane.width}px`, height: `${pane.height}px` }
-        : { width: '100%', height: '100%' }
-    if (userZoom.value !== 1) {
-      base.zoom = String(userZoom.value)
-    }
+    // Fit (zoom 1): size via CSS 100% so the canvas tracks the pane without a
+    // JS resize round-trip. Driving the pixel size from the observed pane size
+    // lets a space-stealing scrollbar toggle the pane → re-size the canvas →
+    // re-toggle the scrollbar, a flicker seen in Chrome fullscreen.
+    base = { width: '100%', height: '100%' }
+    // Only reachable while zoomed if the pane hasn't been measured yet.
+    if (userZoom.value !== 1) base.zoom = String(userZoom.value)
   }
   if (color) base.backgroundColor = color
   if (bg) {

@@ -177,3 +177,64 @@ describe('BoardCanvas – smoke with real BoardObject', () => {
     expect(wrapper.find('.orb-obj__state-svg circle').attributes('fill')).toBe('rgb(239,68,68)')
   })
 })
+
+// Wheel-zoom interaction (view mode). Locks the zoom range [1×, 4×], the
+// pannable-cursor state that tracks it, and that zoom is disabled while editing.
+describe('BoardCanvas – wheel zoom', () => {
+  const stubs = { HoverMenu: true, ContextMenu: true, BoardObject: true, BoardLine: true }
+  let pinia: ReturnType<typeof createPinia>
+
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+  })
+
+  function mountCanvas(overrides: Partial<typeof baseProps> = {}) {
+    const wrapper = mount(BoardCanvas, {
+      props: { ...baseProps, ...overrides },
+      global: { plugins: [pinia], stubs }
+    })
+    return { wrapper, canvas: wrapper.find('.orb-canvas') }
+  }
+
+  // No clientX/Y: the handler only reads them when a scroll ancestor exists,
+  // which a detached test mount has not — and test-utils can't set them anyway.
+  const zoomIn = (canvas: ReturnType<typeof mountCanvas>['canvas']) =>
+    canvas.trigger('wheel', { deltaY: -100 })
+  const zoomOut = (canvas: ReturnType<typeof mountCanvas>['canvas']) =>
+    canvas.trigger('wheel', { deltaY: 100 })
+
+  it('starts at fit (no zoom, not pannable)', () => {
+    const { canvas } = mountCanvas()
+    expect(canvas.classes()).not.toContain('orb-canvas--pannable')
+    expect(canvas.attributes('style') ?? '').not.toContain('zoom')
+  })
+
+  it('zooms in on wheel-up and marks the canvas pannable', async () => {
+    const { canvas } = mountCanvas()
+    await zoomIn(canvas)
+    expect(canvas.classes()).toContain('orb-canvas--pannable')
+    expect(canvas.attributes('style')).toContain('zoom')
+  })
+
+  it('clamps zoom-in at 4×', async () => {
+    const { canvas } = mountCanvas()
+    for (let i = 0; i < 40; i++) await zoomIn(canvas)
+    expect(canvas.attributes('style')).toMatch(/zoom:\s*4\b/)
+  })
+
+  it('clamps zoom-out back to fit and clears the pannable cursor', async () => {
+    const { canvas } = mountCanvas()
+    for (let i = 0; i < 10; i++) await zoomIn(canvas)
+    for (let i = 0; i < 40; i++) await zoomOut(canvas)
+    expect(canvas.classes()).not.toContain('orb-canvas--pannable')
+    expect(canvas.attributes('style') ?? '').not.toContain('zoom')
+  })
+
+  it('does not zoom while editing', async () => {
+    const { canvas } = mountCanvas({ editMode: true })
+    await zoomIn(canvas)
+    expect(canvas.classes()).not.toContain('orb-canvas--pannable')
+    expect(canvas.attributes('style') ?? '').not.toContain('zoom')
+  })
+})
