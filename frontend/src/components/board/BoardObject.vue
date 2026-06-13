@@ -91,6 +91,7 @@
               :metric-keys="Object.keys(group.data)"
               :mirrored-keys="group.mirrored"
               :unit-map="chartMetricUnits"
+              :titles="chartTitleMap"
               :window-secs="(object.graph_time_window ?? 60) * 60"
               :thresholds="chartThresholds"
               :unit="Object.values(group.data)[0]?.at(-1)?.unit"
@@ -652,6 +653,7 @@ const chartMetricKeys = computed(() => Object.keys(chartData.value))
 const chartMetricLabels = computed(() =>
   chartMetricKeys.value.map((key) => statesStore.metricTitles[props.object.id]?.[key] ?? key)
 )
+const chartTitleMap = computed(() => statesStore.metricTitles[props.object.id] ?? {})
 const chartHeaderName = computed(() => {
   const o = props.object
   // Prefer the graph template group title (e.g. "RAM (Total, cached, buffers)") over host/service

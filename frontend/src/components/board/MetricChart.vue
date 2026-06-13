@@ -43,6 +43,8 @@ const props = defineProps<{
   // translation scale (e.g. interface octets ×8 → bits/s) and the unit symbol,
   // so the chart reads exactly like Checkmk's own graph instead of raw counts.
   unitMap?: MetricUnitMap
+  // Display title per metric key (e.g. in → "Input bandwidth") for the tooltip.
+  titles?: Record<string, string>
   windowSecs: number
   thresholds: { warn: number | null; crit: number | null } | null
   unit: string | undefined
@@ -101,10 +103,10 @@ function _buildTooltip(rawParams: TooltipParam | TooltipParam[]): string {
   if (head === undefined) return ''
   const ts = head.value[0]
   const rows = items
-    .map(
-      (p) =>
-        `${p.marker}<span style="font-size:9px"> ${p.seriesName}: <b>${_fmt(p.value[1], p.seriesName)}</b></span>`
-    )
+    .map((p) => {
+      const name = props.titles?.[p.seriesName] ?? p.seriesName
+      return `${p.marker}<span style="font-size:9px"> ${name}: <b>${_fmt(p.value[1], p.seriesName)}</b></span>`
+    })
     .join('<br/>')
   return `<div style="font-size:9px;opacity:0.7;margin-bottom:2px">${_fmtTime(ts)}</div>${rows}`
 }
@@ -220,7 +222,10 @@ const option = computed((): EOption => {
         fontSize: 8,
         fontFamily: 'ui-monospace,monospace',
         formatter: _fmtAxis,
-        showMaxLabel: false
+        // Hide the padded min/max extents (e.g. the −4.58 Mbit/s headroom edge);
+        // the round interior ticks read cleanly.
+        showMaxLabel: false,
+        showMinLabel: false
       },
       splitLine: { lineStyle: { color: gridColor } },
       splitNumber: 4,
@@ -237,6 +242,10 @@ const option = computed((): EOption => {
     },
     tooltip: {
       trigger: 'axis',
+      // Render at body level and keep on screen so a tall multi-series tooltip
+      // isn't clipped by the small graph container.
+      appendToBody: true,
+      confine: true,
       axisPointer: {
         type: 'cross',
         label: { show: false },
