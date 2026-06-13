@@ -833,6 +833,8 @@ export interface MetricGraphGroup {
   id: string
   title: string
   metrics: string[]
+  // Metrics CMK draws mirrored below the x-axis (a Bidirectional graph's lower half).
+  mirrored?: string[]
 }
 
 export interface MetricChoice {

@@ -36,11 +36,17 @@ interface TooltipParam {
 const props = defineProps<{
   data: Record<string, MetricPoint[]>
   metricKeys: string[]
+  mirroredKeys?: string[]
   windowSecs: number
   thresholds: { warn: number | null; crit: number | null } | null
   unit: string | undefined
   dark: boolean
 }>()
+
+// Metrics CMK draws below the x-axis (a Bidirectional graph's lower half, e.g.
+// interface out vs. in): negate their values and centre the axis on zero.
+const mirroredSet = computed(() => new Set(props.mirroredKeys ?? []))
+const hasMirrored = computed(() => props.metricKeys.some((k) => mirroredSet.value.has(k)))
 
 function _fmtTime(ms: number): string {
   const d = new Date(ms)
@@ -65,7 +71,8 @@ function _hexToRgba(hex: string, alpha: number): string {
 }
 
 function _fmtVal(normalized: number): string {
-  return fmtValueWithUnit(normalized, props.unit)
+  // Mirrored series carry a negated value; show its magnitude like CMK does.
+  return fmtValueWithUnit(hasMirrored.value ? Math.abs(normalized) : normalized, props.unit)
 }
 
 function _buildTooltip(rawParams: TooltipParam | TooltipParam[]): string {
@@ -93,7 +100,7 @@ function _norm(v: number, unitHint?: string): number {
 // the base unit symbol ("60.0 MB/s", not "60.0M" with a separate "B/s" floating in
 // the corner). Keeps the tooltip and the axis visually consistent.
 function _fmtAxis(v: number): string {
-  return fmtValueWithUnit(v, props.unit)
+  return fmtValueWithUnit(hasMirrored.value ? Math.abs(v) : v, props.unit)
 }
 
 const option = computed((): EOption => {
@@ -113,20 +120,21 @@ const option = computed((): EOption => {
     const pts = props.data[key] ?? []
     // CHART_PALETTE is a non-empty constant, so `i % length` is always in bounds.
     const color = CHART_PALETTE[i % CHART_PALETTE.length]!
+    const sign = mirroredSet.value.has(key) ? -1 : 1
 
     // Build threshold markLines for single-series charts only
     const markLineItems: NonNullable<NonNullable<LineSeriesOption['markLine']>['data']> = []
     if (!multiSeries && i === 0 && props.thresholds) {
       if (props.thresholds.warn !== null) {
         markLineItems.push({
-          yAxis: _norm(props.thresholds.warn),
+          yAxis: _norm(props.thresholds.warn) * sign,
           lineStyle: { color: 'rgb(255,208,0)', type: 'dashed', width: 1, opacity: 0.75 },
           label: { show: false }
         })
       }
       if (props.thresholds.crit !== null) {
         markLineItems.push({
-          yAxis: _norm(props.thresholds.crit),
+          yAxis: _norm(props.thresholds.crit) * sign,
           lineStyle: {
             color: 'rgb(248,113,113)',
             type: 'dashed',
@@ -157,7 +165,7 @@ const option = computed((): EOption => {
           ]
         }
       },
-      data: pts.map((p) => [p.ts * 1000, _norm(p.value, p.unit)]),
+      data: pts.map((p) => [p.ts * 1000, _norm(p.value, p.unit) * sign]),
       ...(markLineItems.length > 0
         ? {
             markLine: {
@@ -205,7 +213,15 @@ const option = computed((): EOption => {
       splitLine: { lineStyle: { color: gridColor } },
       splitNumber: 4,
       min: (extent: { min: number; max: number }): number =>
-        Math.max(0, extent.min - (extent.max - extent.min) * 0.15)
+        hasMirrored.value
+          ? -Math.max(Math.abs(extent.min), Math.abs(extent.max)) * 1.1
+          : Math.max(0, extent.min - (extent.max - extent.min) * 0.15),
+      ...(hasMirrored.value
+        ? {
+            max: (extent: { min: number; max: number }): number =>
+              Math.max(Math.abs(extent.min), Math.abs(extent.max)) * 1.1
+          }
+        : {})
     },
     tooltip: {
       trigger: 'axis',

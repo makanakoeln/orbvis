@@ -101,7 +101,11 @@ def _extract_quantity_metrics(qty: object) -> Iterator[str]:
 @dataclass
 class CMKGraphingData:
     titles: dict[str, str] = field(default_factory=dict)
-    graphs: dict[str, tuple[str, list[str], frozenset[str]]] = field(default_factory=dict)
+    # graph_id → (title, metric_names, conflicting, mirrored). ``mirrored`` are the
+    # metrics CMK draws below the x-axis (a Bidirectional graph's ``lower`` half).
+    graphs: dict[str, tuple[str, list[str], frozenset[str], frozenset[str]]] = field(
+        default_factory=dict
+    )
     units: dict[str, str] = field(default_factory=dict)
     # scale factor per source metric name (0.0 = conflict sentinel → don't scale)
     scales: dict[str, float] = field(default_factory=dict)
@@ -133,7 +137,32 @@ def load_cmk_graphing_data() -> CMKGraphingData:
                 if names:
                     try:
                         conflicting: frozenset[str] = frozenset(getattr(obj, "conflicting", ()))
-                        data.graphs[obj.name] = (obj.title.localize(_identity), names, conflicting)
+                        data.graphs[obj.name] = (
+                            obj.title.localize(_identity),
+                            names,
+                            conflicting,
+                            frozenset(),
+                        )
+                    except Exception:
+                        pass
+            elif attr.startswith("graph_") and isinstance(obj, _gg.Bidirectional):
+                # CMK draws a Bidirectional's ``lower`` half mirrored below the
+                # x-axis (e.g. interface out vs. in). Merge both halves and flag
+                # the lower metrics so OrbVis negates them the same way.
+                upper = _extract_graph_metric_names(obj.upper)
+                lower = [m for m in _extract_graph_metric_names(obj.lower) if m not in upper]
+                names = upper + lower
+                if names:
+                    try:
+                        conflicting = frozenset(getattr(obj.upper, "conflicting", ())) | frozenset(
+                            getattr(obj.lower, "conflicting", ())
+                        )
+                        data.graphs[obj.name] = (
+                            obj.title.localize(_identity),
+                            names,
+                            conflicting,
+                            frozenset(lower),
+                        )
                     except Exception:
                         pass
             elif attr.startswith("translation_") and hasattr(obj, "translations"):

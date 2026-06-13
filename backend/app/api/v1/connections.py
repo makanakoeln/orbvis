@@ -580,6 +580,7 @@ class GraphGroupResponse(BaseModel):
     id: str
     title: str
     metrics: list[str]
+    mirrored: list[str] = []
 
 
 class MetricHistoryResponse(BaseModel):
@@ -617,7 +618,10 @@ async def get_metric_history(
             for label, pts in raw.series.items()
         },
         titles=raw.titles,
-        graphs=[GraphGroupResponse(id=g.id, title=g.title, metrics=g.metrics) for g in raw.graphs],
+        graphs=[
+            GraphGroupResponse(id=g.id, title=g.title, metrics=g.metrics, mirrored=g.mirrored)
+            for g in raw.graphs
+        ],
     )
 
 
@@ -654,7 +658,10 @@ async def get_graph_templates_for_object(
         return []
     async with _auth_scope(connection, user):
         groups = await connection.get_graph_templates(host, service)
-    return [GraphGroupResponse(id=g.id, title=g.title, metrics=g.metrics) for g in groups]
+    return [
+        GraphGroupResponse(id=g.id, title=g.title, metrics=g.metrics, mirrored=g.mirrored)
+        for g in groups
+    ]
 
 
 @router.get("/{connection_id}/object-details", response_model=ObjectDetails | None)

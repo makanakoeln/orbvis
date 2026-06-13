@@ -97,6 +97,7 @@
               class="orb-obj__chart-canvas"
               :data="group.data"
               :metric-keys="Object.keys(group.data)"
+              :mirrored-keys="group.mirrored"
               :window-secs="(object.graph_time_window ?? 60) * 60"
               :thresholds="chartThresholds"
               :unit="Object.values(group.data)[0]?.at(-1)?.unit"
@@ -719,7 +720,8 @@ const chartGroups = computed(() => {
   // graph_metric and graph_id filtering is already applied in chartData.
   // If no template groups, render chartData as a single ungrouped chart.
   if (!groups.length || props.object.graph_id || props.object.graph_metric?.length) {
-    return [{ id: '_all', title: '', data: chartData.value }]
+    const pinned = props.object.graph_id ? groups.find((g) => g.id === props.object.graph_id) : null
+    return [{ id: '_all', title: '', data: chartData.value, mirrored: pinned?.mirrored ?? [] }]
   }
   // When multiple graph template groups exist but no specific group is pinned via
   // graph_id, show only the first group that has data. Showing all groups at once
@@ -731,10 +733,10 @@ const chartGroups = computed(() => {
       if (pts) data[m] = pts
     }
     if (Object.keys(data).length > 0) {
-      return [{ id: g.id, title: g.title, data }]
+      return [{ id: g.id, title: g.title, data, mirrored: g.mirrored ?? [] }]
     }
   }
-  return [{ id: '_all', title: '', data: chartData.value }]
+  return [{ id: '_all', title: '', data: chartData.value, mirrored: [] }]
 })
 
 // ---- Graph: URL embed ----

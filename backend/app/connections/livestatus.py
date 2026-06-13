@@ -88,12 +88,24 @@ def _match_graphs(available: set[str]) -> list[GraphGroup]:
     (most metrics covered) is kept.
     """
     candidates: list[GraphGroup] = []
-    for graph_id, (title, metrics, conflicting) in load_cmk_graphing_data().graphs.items():
+    for graph_id, (
+        title,
+        metrics,
+        conflicting,
+        mirrored,
+    ) in load_cmk_graphing_data().graphs.items():
         if conflicting & available:
             continue
         matching = [m for m in metrics if m in available]
         if matching:
-            candidates.append(GraphGroup(id=graph_id, title=title, metrics=matching))
+            candidates.append(
+                GraphGroup(
+                    id=graph_id,
+                    title=title,
+                    metrics=matching,
+                    mirrored=[m for m in matching if m in mirrored],
+                )
+            )
 
     # Deduplicate by title: keep the group with the most matching metrics
     best: dict[str, GraphGroup] = {}

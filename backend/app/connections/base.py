@@ -147,6 +147,8 @@ class GraphGroup:
     id: str
     title: str
     metrics: list[str]  # ordered metric labels
+    # Subset of ``metrics`` CMK draws mirrored below the x-axis (Bidirectional lower half).
+    mirrored: list[str] = field(default_factory=list)
 
 
 class FolderInfo(TypedDict):

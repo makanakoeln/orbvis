@@ -8,6 +8,7 @@ from app.connections.livestatus import (
     LivestatusConnection,
     _apply_extra,
     _default_site_id,
+    _match_graphs,
     _walk_wato_folders,
 )
 from app.connections.test import TestConnection
@@ -162,6 +163,49 @@ async def test_test_backend_host_state_carries_alias_and_timing():
     assert state.next_check > state.last_check
     assert state.state_type == "HARD"
     assert state.max_attempts == 3
+
+
+def test_match_graphs_carries_mirrored_metrics(monkeypatch):
+    """A Bidirectional graph's lower metrics survive into GraphGroup.mirrored."""
+    from app.integrations.cmk_plugins import CMKGraphingData
+
+    data = CMKGraphingData(
+        graphs={
+            "bandwidth": (
+                "Bandwidth",
+                ["if_in_bps", "if_out_bps"],
+                frozenset(),
+                frozenset({"if_out_bps"}),
+            )
+        }
+    )
+    monkeypatch.setattr("app.connections.livestatus.load_cmk_graphing_data", lambda: data)
+
+    groups = _match_graphs({"if_in_bps", "if_out_bps"})
+    assert len(groups) == 1
+    assert groups[0].metrics == ["if_in_bps", "if_out_bps"]
+    assert groups[0].mirrored == ["if_out_bps"]
+
+
+def test_match_graphs_mirrored_drops_unavailable_metrics(monkeypatch):
+    """Mirrored is intersected with the available series, like metrics is."""
+    from app.integrations.cmk_plugins import CMKGraphingData
+
+    data = CMKGraphingData(
+        graphs={
+            "bandwidth": (
+                "Bandwidth",
+                ["if_in_bps", "if_out_bps"],
+                frozenset(),
+                frozenset({"if_out_bps"}),
+            )
+        }
+    )
+    monkeypatch.setattr("app.connections.livestatus.load_cmk_graphing_data", lambda: data)
+
+    groups = _match_graphs({"if_in_bps"})
+    assert groups[0].metrics == ["if_in_bps"]
+    assert groups[0].mirrored == []
 
 
 def test_apply_extra_host_columns_map_correctly():
