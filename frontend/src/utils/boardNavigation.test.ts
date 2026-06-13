@@ -18,20 +18,27 @@ describe('svcStateOn / hostStateOn', () => {
 describe('buildServiceStateViewUrl', () => {
   const cmk = 'http://h/SITE/check_mk/'
 
+  // The link is wrapped in index.py?start_url=… to keep Checkmk's chrome; the
+  // real view.py target lives (relative) inside the decoded start_url param.
+  function innerView(url: string | null): string {
+    expect(url).toContain('/SITE/check_mk/index.py')
+    return new URL(url!, 'http://h').searchParams.get('start_url') ?? ''
+  }
+
   it('builds the host-scoped allservices view with the state checkbox on', () => {
-    const url = buildServiceStateViewUrl(cmk, { host: 'web01' }, 'CRITICAL')
-    expect(url).toContain('/SITE/check_mk/view.py?')
-    expect(url).toContain('view_name=allservices')
-    expect(url).toContain('host=web01')
-    expect(url).toContain('st2=on')
-    expect(url).toContain('_active=svcstate%3Bhost')
+    const inner = innerView(buildServiceStateViewUrl(cmk, { host: 'web01' }, 'CRITICAL'))
+    expect(inner).toContain('view.py?')
+    expect(inner).toContain('view_name=allservices')
+    expect(inner).toContain('host=web01')
+    expect(inner).toContain('st2=on')
+    expect(inner).toContain('_active=svcstate%3Bhost')
   })
 
   it('switches to the site filter for site targets', () => {
-    const url = buildServiceStateViewUrl(cmk, { site: 'remote1' }, 'WARNING')
-    expect(url).toContain('site=remote1')
-    expect(url).toContain('st1=on')
-    expect(url).toContain('_active=svcstate%3Bsite')
+    const inner = innerView(buildServiceStateViewUrl(cmk, { site: 'remote1' }, 'WARNING'))
+    expect(inner).toContain('site=remote1')
+    expect(inner).toContain('st1=on')
+    expect(inner).toContain('_active=svcstate%3Bsite')
   })
 
   it('returns null outside a Checkmk deployment or without a target', () => {
@@ -40,10 +47,10 @@ describe('buildServiceStateViewUrl', () => {
   })
 
   it('links PENDING to the svcstate "stp" checkbox', () => {
-    const url = buildServiceStateViewUrl(cmk, { host: 'web01' }, 'PENDING')
-    expect(url).toContain('view_name=allservices')
-    expect(url).toContain('host=web01')
-    expect(url).toContain('stp=on')
+    const inner = innerView(buildServiceStateViewUrl(cmk, { host: 'web01' }, 'PENDING'))
+    expect(inner).toContain('view_name=allservices')
+    expect(inner).toContain('host=web01')
+    expect(inner).toContain('stp=on')
   })
 
   it('returns null for states the svcstate filter cannot express', () => {
