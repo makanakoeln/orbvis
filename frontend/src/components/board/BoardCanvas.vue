@@ -985,17 +985,58 @@ interface Footprint {
   halfY: number
 }
 
-// Centre + board-coord half-extents of an object. The icon size is in display
-// px, so divide by the canvas scale to convert each half-extent into the
-// board coordinate space the line endpoints live in.
 function objectFootprintById(id: string): Footprint | null {
   const pos = objectPosById(id)
   if (!pos) return null
+  // Touch canvasDisplaySize so the measurement re-runs on mount/resize.
+  void canvasDisplaySize.value
+  const m = measuredIconOffset(id)
+  // Anchor on the live position plus the measured icon offset: the offset is
+  // layout-stable, so a dragged object's line follows without a frame of lag.
+  if (m) return { x: pos.x + m.offX, y: pos.y + m.offY, halfX: m.halfX, halfY: m.halfY }
   const o = props.config.objects.find((obj) => obj.id === id)
   if (!o) return null
   const size = objectRenderSize(o)
   const { sx, sy } = canvasScale.value
   return { x: pos.x, y: pos.y, halfX: size / 2 / sx, halfY: size / 2 / sy }
+}
+
+// Board-coord offset of an object's *visible* icon from its (x, y) anchor, plus
+// the icon's half-extents — read from the rendered DOM. A caption shifts the
+// icon up inside the centred stack, so a line bound to the anchor would end in
+// the icon's centre instead of on its edge. The icon is the stack's first
+// child; the caption (last child) is excluded.
+function measuredIconOffset(
+  id: string
+): { offX: number; offY: number; halfX: number; halfY: number } | null {
+  const canvas = canvasEl.value
+  if (!canvas) return null
+  const wrapper = canvas.querySelector<HTMLElement>(
+    `.orb-canvas__object[data-object-id="${CSS.escape(id)}"]`
+  )
+  const icon = wrapper?.querySelector('.orb-obj__stack')?.firstElementChild
+  if (!wrapper || !icon) return null
+  const ir = icon.getBoundingClientRect()
+  if (ir.width === 0 || ir.height === 0) return null
+  const crect = canvas.getBoundingClientRect()
+  const wr = wrapper.getBoundingClientRect()
+  // The wrapper is centred on (x, y) by default, or top-left-anchored in classic
+  // mode — match that so the offset is measured against the same anchor point.
+  const anchorX = isNagvisClassic.value ? wr.left : wr.left + wr.width / 2
+  const anchorY = isNagvisClassic.value ? wr.top : wr.top + wr.height / 2
+  const anchor = viewportToNative(anchorX - crect.left, anchorY - crect.top, crect)
+  const centre = viewportToNative(
+    ir.left + ir.width / 2 - crect.left,
+    ir.top + ir.height / 2 - crect.top,
+    crect
+  )
+  const dim = viewportToNative(ir.width, ir.height, crect)
+  return {
+    offX: centre.x - anchor.x,
+    offY: centre.y - anchor.y,
+    halfX: dim.x / 2,
+    halfY: dim.y / 2
+  }
 }
 
 // Point on the footprint's edge along the ray from its centre toward

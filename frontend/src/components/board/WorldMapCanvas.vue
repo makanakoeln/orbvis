@@ -591,6 +591,8 @@ function onMarqueeStart(e: L.LeafletMouseEvent) {
   document.addEventListener('mouseup', onMarqueeUp, true)
 }
 
+// Geo lines anchor on the marker's coordinate (its centre); unlike static
+// boards there is no icon-edge inset, since a marker sits at a single lat/lng.
 function boundEndpoint(refId: string | null | undefined): [number, number] | null {
   if (!refId) return null
   const live = _liveObjPos.get(refId)
