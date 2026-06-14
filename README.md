@@ -3,9 +3,11 @@
 A modern monitoring-visualisation platform — a community successor to
 NagVis, designed primarily for use **inside Checkmk**. Real-time live
 updates over Server-Sent Events, native Checkmk integration with
-main-menu entry and sidebar snapin, force-directed topology and geo
-boards. Built with **FastAPI** · **Vue 3** · **TypeScript** · **Vite** ·
-**Pinia** · **D3.js**, on the Checkmk design system.
+main-menu entry and sidebar snapin, and a full board lineup — static,
+geo, force-directed topology, severity radar, SETUP folder tree and a
+design-first presentation editor. Built with **FastAPI** · **Vue 3** ·
+**TypeScript** · **Vite** · **Pinia** · **D3.js**, on the Checkmk design
+system.
 
 > **Status:** early release. OrbVis is primarily designed as a Checkmk
 > integration and runs wherever Checkmk itself is supported. The

@@ -4,6 +4,56 @@ All notable changes to OrbVis are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-06-12
+
+Iterative release on top of 0.5.0. A new design-first **Presentation board**
+joins the lineup, metric rendering moves onto Checkmk's own unit-format registry
+across every board and the detail drawer, a broad security pass replaces
+tokens-in-URLs with short-lived stream tickets and gates Livestatus on the
+caller's visibility, and a large internal refactor splits the heavy views into
+focused, individually tested composables.
+
+### Features
+
+- **Presentation board (new, experimental)**: a design-first editor — template gallery, **connect-data mode** with a guided host → service → metric walkthrough, a drag-and-drop data browser, and a docked inspector with tabbed panels and explicit save. Elements bind to hosts, services, hostgroups, servicegroups and BI aggregations; slide background images upload straight from the inspector
+- **Checkmk-native metric rendering**: values across all boards and the detail drawer format through Checkmk's unit-format registry, so they read exactly as they do in Checkmk; metric pickers and object-detail titles source Checkmk's own metric titles
+- **Native metric graphs**: the on-board chart now reads like Checkmk's own — axis and legend in Checkmk's registry units (interface traffic in Mbit/s, not raw octets), series titled from the registry ("Input bandwidth"), graph templates matched through Checkmk's perfvar translation, and bidirectional graphs (interface in/out, disk read/write, …) mirrored below a zero-centred axis; tooltips title their rows and stay on-screen
+- **Gadgets**: new **raw-value gadget** (NagVis `rawNumbers`) with a Checkmk time-formatted fallback; perfometer-backed gauge fill; threshold-only metrics render as an absolute value with proportional fill; gadgets show Checkmk's rendered value instead of a percentage faked from a bare `max`
+- **Geo board**: bundle selected markers into a single worst-state **location icon**; multi-select editing parity with static boards (group move, marquee, layering)
+- **Weathermap / lines**: two-way (bidirectional) weathermap links, working connector labels and dashes, sticky connectors, and bound-line endpoints anchored on the object edge so arrowheads stay visible
+- **Unified interaction model**: hover, click and context-menu behaviour are now consistent across every board type; dynamic groups surface linked host and service member pills
+- Home overview gains presentation and folder board card previews
+
+### Changed
+
+- **Large internal refactor**: the heavy views were split into ~40 focused composables and utils (flow, detail drawer, folder tree, worldmap, presentation editor), and the Checkmk URL builders, Livestatus command builders, auth scoping and BI maps were consolidated to remove duplication
+- Presentation object pickers render as cmk dropdowns and tabs
+- Topology wire types moved out of the API layer into the schema layer (service-layer dependency-inversion fix)
+- The cmk graphing-data loader moved to `cmk_plugins`, dropping a duplicate title walk
+- stylelint documented as droppable OrbVis-only tooling; dead disables removed
+
+### Security
+
+- SSE and map-tile URLs use short-lived **stream tickets** instead of access tokens carried in the URL; the tile proxy now requires auth and caps its disk cache
+- Livestatus commands are gated on **AuthUser-scoped target visibility**; monitoring detail endpoints are scoped to the caller's contact groups; object edit context-menu actions are gated to edit mode
+- XSS: a control-character bypass in board URL validation is closed via a scheme allowlist, and regex metacharacters are escaped in the autocomplete Livestatus filter
+- Upload hardening: SVG uploads pass through XXE/script guards (DOCTYPE / internal-use / data-raster allowed), GIFs are rejected by magic bytes, built-in icons are protected from overwrite, and upload stems are sanitised
+- The graph iframe drops `allow-same-origin` and guards embed sinks to http(s)
+- `settings.json` / `connections.json` read-modify-write is serialised against lost updates; a runtime instance is unregistered when its connection is deleted
+- User rename returns 409 on conflict, self-service fields are restricted, and command separators are rejected in host/service action names
+
+### Fixed
+
+- Login no longer double-submits or raises an unhandled rejection on failure, and now triggers on click/Enter (CmkButton fires no native submit)
+- The board autocomplete dropdown is teleported so the inspector panel can no longer clip it
+- A presentation element's gadget/flow metric resets when its binding changes
+- The legacy board settings modal adopts the save response, so a stale alias/version no longer 409s on the next save
+- Hover PENDING pill links to the Checkmk `svcstate` stp filter
+- Board import validates the board name so unsafe names can't silently vanish on flush
+- NagVis import resolves `line_type` from template/global and defaults weathermap metrics
+- Static board no longer flickers at the default (fit) zoom in fullscreen — the canvas is sized via CSS at fit so a space-stealing scrollbar can't oscillate it
+- Dragging a static-board object to an edge no longer re-anchors every other object on the next reload — the editor persists the canvas size so the percent-positioning divisor stays identical between editing and reload
+
 ## [0.5.0] - 2026-06-07
 
 Iterative release on top of 0.4.1. The Folder board graduates into a fast,

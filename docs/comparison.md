@@ -50,6 +50,7 @@ Legend: ✅ done · 🟡 partial / different · ❌ not yet · ➕ new in OrbVis
 | Force-directed topology (Flow board)            | ❌     | ➕     |
 | Severity grid (Radar board)                     | ❌     | ➕     |
 | Folder tree as treemap (Folder board)           | ❌     | ➕     |
+| Design-first slide editor (Presentation board)  | 🟡 [^3] | ➕     |
 | Multi-select + bulk move                        | ❌     | ➕     |
 | Drag-drop reorder of boards on home screen      | ❌     | ➕     |
 | Inline edit panel (vs. modal-only edit)         | ❌     | ➕     |
@@ -57,6 +58,10 @@ Legend: ✅ done · 🟡 partial / different · ❌ not yet · ➕ new in OrbVis
 [^2]: NagVis has *Worldmap* (OpenStreetMap-backed) but lat/lng support
 is limited to point objects; lines between two geo coordinates are
 OrbVis-only.
+
+[^3]: NagVis places shapes and gadgets on a map background, but OrbVis's
+Presentation board is a dedicated design-first editor (template gallery,
+connect-data walkthrough, drag-and-drop data browser). Experimental in 0.6.0.
 
 ### Live data
 
