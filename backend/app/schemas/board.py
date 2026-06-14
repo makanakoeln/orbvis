@@ -433,6 +433,11 @@ class BoardConfig(BaseModel):
     # client's ``If-Match`` header on update; mismatch returns 409 Conflict so
     # two operators editing the same board don't silently lose changes.
     version: int = 0
+    # Locks the percent-positioning divisor: without a persisted size the reload
+    # re-derives a larger one from padded extents, re-anchoring every object when
+    # one was dragged to an edge. None on legacy boards → derived from extents.
+    canvas_width: int | None = None
+    canvas_height: int | None = None
     view: BoardView = Field(default_factory=StaticView)
     objects: list[BoardObject] = Field(default_factory=list)
 
@@ -468,6 +473,8 @@ class BoardUpdate(BaseModel):
     show_in_lists: bool | None = None
     render_mode: RenderMode | None = None
     default_z: int | None = None
+    canvas_width: int | None = None
+    canvas_height: int | None = None
 
 
 class BoardOrderItem(BaseModel):

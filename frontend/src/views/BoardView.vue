@@ -502,9 +502,10 @@
               }
             "
             @objects-drag-end="
-              (moves) => {
+              async (moves) => {
                 isDragging = false
-                editor.saveObjectPositions(moves)
+                await editor.saveObjectPositions(moves)
+                void persistCanvasSize()
               }
             "
             @object-click="onObjectClick"
@@ -1860,6 +1861,19 @@ const bulkAckModal = ref<{
 
 async function onObjectDragEnd(id: string, x: number, y: number) {
   await editor.saveObjectPosition(id, x, y)
+  void persistCanvasSize()
+}
+
+// Lock the canvas size after any edit that can grow the content extents so the
+// next reload reuses the editor's divisor (see BoardConfig.canvas_width). Only
+// the default renderer positions by percentage; nagvis_classic sizes to the bg
+// image and needs no lock. nextTick lets the sticky extents settle after adds.
+async function persistCanvasSize() {
+  const cfg = boardConfig.value
+  if (!cfg || cfg.render_mode === 'nagvis_classic') return
+  await nextTick()
+  const size = canvasRef.value?.getNativeSize?.()
+  if (size) await editor.ensureCanvasSize(size.w, size.h)
 }
 
 function onObjectClick(obj: BoardObject, event?: MouseEvent) {
@@ -1915,6 +1929,7 @@ async function onCanvasClick(event: MouseEvent) {
   const pos = canvasRef.value?.getMapPosition(event)
   if (pos) {
     await editor.placeAt(pos.x, pos.y)
+    void persistCanvasSize()
     if (selectedObject.value) openPropsModal(selectedObject.value)
   }
 }
@@ -1925,6 +1940,7 @@ async function onContainerClick(event: MouseEvent) {
   const pos = canvasRef.value?.getMapPosition(event)
   if (pos) {
     await editor.placeAt(pos.x, pos.y)
+    void persistCanvasSize()
     if (selectedObject.value) openPropsModal(selectedObject.value)
   }
 }
@@ -1946,6 +1962,7 @@ async function onGraphResizeEnd(id: string, width: number, height: number) {
   obj.graph_width = width
   obj.graph_height = height
   await editor.updateObjectProperties(id, { graph_width: width, graph_height: height })
+  void persistCanvasSize()
 }
 
 // ---- Worldmap event handlers ----

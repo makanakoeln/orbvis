@@ -178,6 +178,47 @@ describe('BoardCanvas – smoke with real BoardObject', () => {
   })
 })
 
+// Persisted canvas size locks the percent-positioning divisor so a board
+// reloads with the same geometry the editor saw (no edge-drop re-anchoring).
+describe('BoardCanvas – persisted canvas size', () => {
+  const stubs = { HoverMenu: true, ContextMenu: true, BoardObject: true, BoardLine: true }
+  const cfgWith = (extra: Partial<BoardConfig>): BoardConfig => ({
+    ...sampleConfig,
+    objects: [{ ...sampleConfig.objects[0]!, x: 1000, y: 700 }],
+    ...extra
+  })
+  const nativeSize = (cfg: BoardConfig) => {
+    const canvas = mount(BoardCanvas, {
+      props: { ...baseProps, config: cfg },
+      global: { stubs }
+    }).find('.orb-canvas')
+    return {
+      w: Number(canvas.attributes('data-native-width')),
+      h: Number(canvas.attributes('data-native-height'))
+    }
+  }
+
+  it('derives the divisor from padded extents when unset (legacy boards)', () => {
+    // x=1000 (+150 padding) → 1150; y=700 (+150) → 850.
+    expect(nativeSize(cfgWith({}))).toEqual({ w: 1150, h: 850 })
+  })
+
+  it('uses a persisted size verbatim instead of re-inflating it', () => {
+    expect(nativeSize(cfgWith({ canvas_width: 1200, canvas_height: 900 }))).toEqual({
+      w: 1200,
+      h: 900
+    })
+  })
+
+  it('clamps a too-small persisted size up to raw coords, without re-adding padding', () => {
+    // Persisted < an object's raw coord → grow to the coord (1000/700), not +150.
+    expect(nativeSize(cfgWith({ canvas_width: 900, canvas_height: 600 }))).toEqual({
+      w: 1000,
+      h: 700
+    })
+  })
+})
+
 // Wheel-zoom interaction (view mode). Locks the zoom range [1×, 4×], the
 // pannable-cursor state that tracks it, and that zoom is disabled while editing.
 describe('BoardCanvas – wheel zoom', () => {

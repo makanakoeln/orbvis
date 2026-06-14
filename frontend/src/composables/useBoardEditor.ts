@@ -353,6 +353,30 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     }
   }
 
+  // Snapshot the renderer's current canvas size onto the board so a later reload
+  // reuses this exact divisor instead of re-deriving a larger one. Idempotent: a
+  // no-op once the stored size matches. PUT without If-Match — object saves don't
+  // lock either, so there's no version to race.
+  async function ensureCanvasSize(width: number, height: number) {
+    const board = boardsStore.currentBoard
+    if (!board) return
+    const w = Math.round(width)
+    const h = Math.round(height)
+    if (!w || !h || (board.canvas_width === w && board.canvas_height === h)) return
+    try {
+      const updated = await boardsApi.update(
+        mapName.value,
+        { canvas_width: w, canvas_height: h },
+        auth.accessToken!
+      )
+      board.canvas_width = w
+      board.canvas_height = h
+      if (typeof updated.version === 'number') board.version = updated.version
+    } catch (e) {
+      _reportError(_t('Saving the board size failed'), e)
+    }
+  }
+
   function _avoidOverlap(id: string, x: number, y: number, objects: readonly BoardObject[]) {
     const COLLISION_RADIUS = 12
     const STEP = 28
@@ -848,6 +872,7 @@ export function useBoardEditor(mapName: Ref<string>, onMapChange: () => Promise<
     lineDragPositions,
     saveObjectPosition,
     saveObjectPositions,
+    ensureCanvasSize,
     startLineDrag,
     updateObjectProperties,
     placing,

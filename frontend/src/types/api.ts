@@ -462,6 +462,9 @@ export interface BoardConfig {
   default_z?: number
   show_in_lists?: boolean
   version?: number
+  // Persisted percent-positioning divisor; see BoardConfig.canvas_width (backend).
+  canvas_width?: number | null
+  canvas_height?: number | null
   view: BoardView
   objects: BoardObject[]
 }

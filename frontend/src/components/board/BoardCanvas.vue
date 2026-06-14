@@ -360,27 +360,31 @@ const isNagvisClassic = computed(() => props.config.render_mode === 'nagvis_clas
 function _setIfChanged(ref_: typeof _bboxW, next: number) {
   if (ref_.value !== next) ref_.value = next
 }
+// A persisted size is authoritative — using it verbatim is what keeps the reload
+// divisor equal to the editor's. Only clamp up past it for stray objects placed
+// beyond the canvas (e.g. via the API), using raw coords so the +150 padding
+// can't silently re-inflate the locked size.
+const _derivedW = () =>
+  props.config.canvas_width != null
+    ? props.config.objects.reduce((m, o) => Math.max(m, o.x), props.config.canvas_width)
+    : props.config.objects.reduce((m, o) => Math.max(m, _widthExtent(o)), 800)
+const _derivedH = () =>
+  props.config.canvas_height != null
+    ? props.config.objects.reduce((m, o) => Math.max(m, o.y), props.config.canvas_height)
+    : props.config.objects.reduce((m, o) => Math.max(m, _heightExtent(o)), 600)
 watch(
   () => props.config,
   () => {
-    _setIfChanged(
-      _bboxW,
-      props.config.objects.reduce((m, o) => Math.max(m, _widthExtent(o)), 800)
-    )
-    _setIfChanged(
-      _bboxH,
-      props.config.objects.reduce((m, o) => Math.max(m, _heightExtent(o)), 600)
-    )
+    _setIfChanged(_bboxW, _derivedW())
+    _setIfChanged(_bboxH, _derivedH())
   },
   { immediate: true }
 )
 watch(
   () => props.config.objects.length,
   () => {
-    for (const o of props.config.objects) {
-      _setIfChanged(_bboxW, Math.max(_bboxW.value, _widthExtent(o)))
-      _setIfChanged(_bboxH, Math.max(_bboxH.value, _heightExtent(o)))
-    }
+    _setIfChanged(_bboxW, Math.max(_bboxW.value, _derivedW()))
+    _setIfChanged(_bboxH, Math.max(_bboxH.value, _derivedH()))
   }
 )
 
@@ -1146,7 +1150,12 @@ function getMapPosition(event: MouseEvent): { x: number; y: number } {
   return viewportToNative(event.clientX - rect.left, event.clientY - rect.top, rect)
 }
 
-defineExpose({ getCanvasEl: () => canvasEl.value, getMapPosition, resetZoom })
+defineExpose({
+  getCanvasEl: () => canvasEl.value,
+  getMapPosition,
+  resetZoom,
+  getNativeSize: () => ({ w: canvasWidth.value, h: canvasHeight.value })
+})
 </script>
 
 <style scoped>
