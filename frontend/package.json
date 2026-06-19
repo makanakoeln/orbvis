@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.55.1",
+    "@playwright/test": "^1.61.0",
     "@tabler/icons": "^3.44.0",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@tsconfig/node22": "^22.0.5",
