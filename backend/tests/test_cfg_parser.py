@@ -679,3 +679,48 @@ def test_fixture_url_target_frameset_rewritten_to_blank(all_objects_board):
     assert o["url"] == "https://example.com/dashboard"
     # url_target=main is a legacy frameset target → rewritten to _blank
     assert o["url_target"] == "_blank"
+
+
+# ---------------------------------------------------------------------------
+# Geographic maps (worldmap / geomap) + container
+# ---------------------------------------------------------------------------
+
+
+def test_worldmap_global_becomes_geo_view():
+    text = (
+        "define global {\n object_id=0\n sources=worldmap\n"
+        " worldmap_center=50.868,10.217\n worldmap_zoom=6\n worldmap_tiles_saturate=33\n}\n"
+    )
+    board = cfg_to_board(text, "wm")
+    assert board["view"] == {
+        "type": "worldmap",
+        "lat": 50.868,
+        "lng": 10.217,
+        "zoom": 6,
+        "tile_saturate": 33.0,
+    }
+    # Markers live in a sidecar file the text-only import can't read.
+    assert board["objects"] == []
+
+
+def test_geomap_global_becomes_geo_view():
+    board = cfg_to_board("define global {\n sources=geomap\n geomap_zoom=7\n}\n", "gm")
+    assert board["view"]["type"] == "worldmap"
+    assert board["view"]["zoom"] == 7
+
+
+def test_dynmap_is_not_converted_to_geo():
+    board = cfg_to_board("define global {\n sources=dynmap\n}\n", "dm")
+    assert board["view"]["type"] == "static"
+
+
+def test_container_imports_as_graph_iframe():
+    text = (
+        "define container {\n object_id=c1\n x=100\n y=50\n"
+        " url=http://example.com/dash\n w=300\n h=200\n}\n"
+    )
+    board = cfg_to_board(text, "c")
+    obj = board["objects"][0]
+    assert obj["type"] == "graph"
+    assert obj["graph_embed_type"] == "iframe"
+    assert obj["graph_width"] == 300 and obj["graph_height"] == 200

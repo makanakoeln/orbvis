@@ -311,6 +311,7 @@ _BLOCK_TYPES = frozenset(
         "shape",
         "line",
         "textbox",
+        "container",
         "aggr",
     }
 )
@@ -341,6 +342,46 @@ _GLOBAL_BOARD_KEYS = frozenset(
 )
 
 
+# NagVis geographic map sources that become an OrbVis worldmap (geo) board.
+# ``dynmap`` is excluded — it is a dynamic-filter map, not geographic.
+_GEO_SOURCES = {"worldmap", "geomap"}
+_GEO_DEFAULT_LAT = 51.0
+_GEO_DEFAULT_LNG = 10.0
+_GEO_DEFAULT_ZOOM = 5
+
+
+def _parse_latlng(value: str | None) -> tuple[float, float] | None:
+    """Parse a NagVis ``worldmap_center`` value (``"lat,lng"``) into floats."""
+    if not value:
+        return None
+    parts = [s.strip() for s in value.split(",")]
+    if len(parts) != 2:
+        return None
+    try:
+        return float(parts[0]), float(parts[1])
+    except ValueError:
+        return None
+
+
+def _geo_view(p: dict[str, str]) -> dict[str, object]:
+    """Build an OrbVis worldmap view from a NagVis worldmap/geomap global block.
+
+    Worldmap objects live in ``etc/worldmap.db`` and geomap hosts in a CSV — both
+    are sidecar files the text-only board import can't read, so the UI import
+    produces a correctly-framed but empty geo board. The CLI importer
+    (tools/cfg_importer.py) fills the markers in from those sidecars.
+    """
+    view: dict[str, object] = {"type": "worldmap"}
+    center = _parse_latlng(p.get("worldmap_center"))
+    view["lat"], view["lng"] = center if center else (_GEO_DEFAULT_LAT, _GEO_DEFAULT_LNG)
+    zoom = p.get("worldmap_zoom") or p.get("geomap_zoom")
+    view["zoom"] = _int(zoom, _GEO_DEFAULT_ZOOM) if zoom else _GEO_DEFAULT_ZOOM
+    saturate = p.get("worldmap_tiles_saturate")
+    if saturate not in (None, ""):
+        view["tile_saturate"] = float(max(0, min(100, _int(saturate, 100))))
+    return view
+
+
 def _apply_global(board: dict[str, object], p: dict[str, str]) -> None:
     if "alias" in p:
         board["alias"] = p["alias"]
@@ -363,6 +404,8 @@ def _apply_global(board: dict[str, object], p: dict[str, str]) -> None:
         if "parent_layers" in p:
             view["parent_layers"] = _int(p["parent_layers"], 0)
         board["view"] = view
+    elif sources & _GEO_SOURCES:
+        board["view"] = _geo_view(p)
 
 
 def _line_obj_common(p: dict[str, str], raw_id: str) -> dict[str, object]:
@@ -457,6 +500,30 @@ def _handle_shape(p: dict[str, str], raw_id: str) -> dict[str, object]:
         "x": x.value,
         "y": y.value,
         "image_src": p.get("icon") or None,
+        "label": {"show": False},
+    }
+    _set_explicit_z(obj, p)
+    _attach_pending(obj, x=x, y=y)
+    return obj
+
+
+def _handle_container(p: dict[str, str], raw_id: str) -> dict[str, object]:
+    """NagVis ``container`` (embeds a URL's content) → OrbVis ``graph`` iframe.
+
+    OrbVis has no dedicated container type; the graph object is the structural
+    match — an iframe box at x/y with width/height. ``graph_url`` is validated on
+    the schema, so the raw NagVis URL is safe to pass through here.
+    """
+    x, y = _parse_coord(p.get("x", "0")), _parse_coord(p.get("y", "0"))
+    obj: dict[str, object] = {
+        "id": f"graph_{raw_id}",
+        "type": "graph",
+        "x": x.value,
+        "y": y.value,
+        "graph_url": p.get("url") or None,
+        "graph_embed_type": "iframe",
+        "graph_width": _int(p.get("w"), 400),
+        "graph_height": _int(p.get("h"), 200),
         "label": {"show": False},
     }
     _set_explicit_z(obj, p)
@@ -656,6 +723,8 @@ def _handle_object_block(
         return _handle_shape(p, raw_id)
     if block_type == "textbox":
         return _handle_textbox(p, raw_id)
+    if block_type == "container":
+        return _handle_container(p, raw_id)
     return _handle_monitor_block(block_type, p, raw_id)
 
 
@@ -728,7 +797,10 @@ def cfg_to_board(content: str, map_name: str) -> dict[str, object]:
     _resolve_pending_refs(objects)
 
     view = board.get("view")
-    if isinstance(view, dict) and view.get("type") == "flow":
+    if isinstance(view, dict) and view.get("type") in ("flow", "worldmap"):
+        # Flow auto-populates from topology; worldmap markers come from a sidecar
+        # file (worldmap.db / geomap CSV) the text-only import can't read, so the
+        # board is framed here and filled by the CLI importer.
         objects = []
     board["objects"] = objects
     return board

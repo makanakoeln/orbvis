@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
+import sqlite3
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -470,6 +472,7 @@ _BLOCK_TYPES = frozenset(
         "shape",
         "line",
         "textbox",
+        "container",
         "aggr",
     }
 )
@@ -501,6 +504,220 @@ _GLOBAL_BOARD_KEYS = frozenset(
 )
 
 
+# NagVis geographic map sources that become an OrbVis worldmap (geo) board.
+# ``dynmap`` is intentionally excluded — it is a dynamic-filter map, not geographic.
+_GEO_SOURCES = {"worldmap", "geomap"}
+# Fallback framing when the .cfg carries no center (e.g. geomap, which auto-fits
+# from its host CSV) — matches OrbVis' WorldmapView defaults (central Europe).
+_GEO_DEFAULT_LAT = 51.0
+_GEO_DEFAULT_LNG = 10.0
+_GEO_DEFAULT_ZOOM = 5
+
+
+def _parse_latlng(value: str | None) -> tuple[float, float] | None:
+    """Parse a NagVis ``worldmap_center`` value (``"lat,lng"``) into floats."""
+    if not value:
+        return None
+    parts = [s.strip() for s in value.split(",")]
+    if len(parts) != 2:
+        return None
+    try:
+        return float(parts[0]), float(parts[1])
+    except ValueError:
+        return None
+
+
+def _geo_view(p: dict[str, str]) -> dict[str, Any]:
+    """Build an OrbVis worldmap view from a NagVis worldmap/geomap global block.
+
+    ``worldmap_center``/``worldmap_zoom``/``worldmap_tiles_saturate`` map directly;
+    geomap has no explicit center (it auto-fits from its host CSV), so it starts
+    on the defaults and the CLI sidecar pass re-frames it from the host bounds.
+    """
+    view: dict[str, Any] = {"type": "worldmap"}
+    center = _parse_latlng(p.get("worldmap_center"))
+    view["lat"], view["lng"] = center if center else (_GEO_DEFAULT_LAT, _GEO_DEFAULT_LNG)
+    zoom = p.get("worldmap_zoom") or p.get("geomap_zoom")
+    view["zoom"] = _int(zoom, _GEO_DEFAULT_ZOOM) if zoom else _GEO_DEFAULT_ZOOM
+    saturate = p.get("worldmap_tiles_saturate")
+    if saturate not in (None, ""):
+        view["tile_saturate"] = float(max(0, min(100, _int(saturate, 100))))
+    return view
+
+
+def _geo_label(text: str | None) -> dict[str, Any]:
+    """A minimal LabelConfig for a geo marker (NagVis classic bottom-anchored)."""
+    return {
+        "show": True,
+        "text": text,
+        "x": 0,
+        "y": 22,
+        "size": 11,
+        "color": "#000000",
+        "background": "transparent",
+        "width": None,
+    }
+
+
+def _read_geomap_csv(path: Path) -> list[dict[str, Any]]:
+    """Parse a NagVis geomap host CSV (``hostname;alias;lat;lng``, no header).
+
+    Lines starting with ``;``/``#``/``/`` are comments (mirrors geomap.php); rows
+    with fewer than 4 fields or unparseable coordinates are skipped.
+    """
+    locations: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line[0] in ";#/":
+            continue
+        parts = line.split(";")
+        if len(parts) < 4:
+            continue
+        try:
+            lat = float(parts[2].strip())
+            lng = float(parts[3].strip())
+        except ValueError:
+            continue
+        locations.append(
+            {"name": parts[0].strip(), "alias": parts[1].strip(), "lat": lat, "lng": lng}
+        )
+    return locations
+
+
+def _geomap_objects(locations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One OrbVis host marker per geomap CSV location."""
+    objects: list[dict[str, Any]] = []
+    for i, loc in enumerate(locations):
+        objects.append(
+            {
+                "id": f"geo_host_{i}",
+                "type": "host",
+                "x": 0,
+                "y": 0,
+                "lat": loc["lat"],
+                "lng": loc["lng"],
+                "host_name": loc["name"],
+                "label": _geo_label(loc["alias"] or loc["name"]),
+                "display": {"mode": "icon"},
+            }
+        )
+    return objects
+
+
+def _zoom_for_span(lat_span: float, lng_span: float) -> int:
+    """Pick an OSM zoom that frames a lat/lng bounding box (web-mercator: the
+    visible span halves per zoom level). Clamped to NagVis' 2–20 range, biased
+    one step out so edge markers aren't clipped."""
+    span = max(lat_span, lng_span, 1e-6)
+    zoom = math.floor(math.log2(360.0 / span)) - 1
+    return max(2, min(18, zoom))
+
+
+def _autofit_geo(
+    view: dict[str, Any], objects: list[dict[str, Any]], *, explicit_zoom: bool
+) -> None:
+    """Center the view on the markers' midpoint; derive zoom from their spread
+    unless the source already specified one."""
+    pts = [
+        (o["lat"], o["lng"])
+        for o in objects
+        if o.get("lat") is not None and o.get("lng") is not None
+    ]
+    if not pts:
+        return
+    lats = [p[0] for p in pts]
+    lngs = [p[1] for p in pts]
+    view["lat"] = (min(lats) + max(lats)) / 2
+    view["lng"] = (min(lngs) + max(lngs)) / 2
+    if not explicit_zoom:
+        view["zoom"] = _zoom_for_span(max(lats) - min(lats), max(lngs) - min(lngs))
+
+
+def _worldmap_object(
+    object_id: str, lat: float, lng: float, lat2: float | None, lng2: float | None, data: dict
+) -> dict[str, Any] | None:
+    """Map one worldmap.db row + its JSON blob to an OrbVis geo object.
+
+    The blob is a full NagVis object definition, so route it through the same
+    per-type handler the static importer uses — that way every object type
+    (host/service/groups/map/line/shape/textbox/container/dyngroup/aggr) is
+    covered — then replace the integer canvas coords with the row's geographic
+    lat/lng (the static pipeline can't carry float coordinates).
+    """
+    nv_type = str(data.get("type", "")).lower()
+    if not nv_type or nv_type == "global" or nv_type not in _BLOCK_TYPES:
+        return None
+    props = {k: str(v) for k, v in data.items() if k != "type" and v is not None}
+    obj = _handle_object_block(nv_type, props, object_id)
+    obj["x"] = 0
+    obj["y"] = 0
+    obj["lat"] = float(lat)
+    obj["lng"] = float(lng)
+    if obj.get("type") == "line" and lat2 is not None and lng2 is not None:
+        obj["x2"] = 0
+        obj["y2"] = 0
+        obj["lat2"] = float(lat2)
+        obj["lng2"] = float(lng2)
+    obj.pop("_pending_refs", None)
+    return obj
+
+
+def _read_worldmap_db(path: Path) -> list[dict[str, Any]]:
+    """Read all objects from a NagVis worldmap SQLite store (read-only)."""
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    try:
+        rows = conn.execute(
+            "SELECT object_id, lat, lng, lat2, lng2, object FROM objects"
+        ).fetchall()
+    finally:
+        conn.close()
+    objects: list[dict[str, Any]] = []
+    for object_id, lat, lng, lat2, lng2, blob in rows:
+        try:
+            data = json.loads(blob) if blob else {}
+        except (ValueError, TypeError):
+            data = {}
+        obj = _worldmap_object(str(object_id), lat, lng, lat2, lng2, data)
+        if obj is not None:
+            objects.append(obj)
+    return objects
+
+
+def _enrich_geo_board(
+    board: dict[str, Any], cfg_path: Path, global_props: dict[str, str]
+) -> str | None:
+    """Populate a geo board's markers from its NagVis sidecar file (CLI only).
+
+    Worldmap objects live in ``etc/worldmap.db`` and geomap hosts in
+    ``etc/geomap/<source_file>.csv`` — both siblings of the maps dir. Returns a
+    human-readable note when the sidecar is missing/unreadable (board stays a
+    correctly-framed but empty geo board), else ``None``.
+    """
+    sources = {s.strip().lower() for s in global_props.get("sources", "").split(",") if s.strip()}
+    view = board.get("view", {})
+    etc_dir = cfg_path.parent.parent
+    if "geomap" in sources:
+        source_file = (global_props.get("source_file") or "").strip()
+        if not source_file:
+            return "geomap defines no source_file — add hosts manually"
+        csv_path = etc_dir / "geomap" / f"{source_file}.csv"
+        if not csv_path.is_file():
+            return f"geomap CSV not found ({csv_path}) — add hosts manually"
+        objects = _geomap_objects(_read_geomap_csv(csv_path))
+        board["objects"] = objects
+        _autofit_geo(view, objects, explicit_zoom=bool(global_props.get("geomap_zoom")))
+        return None
+    if "worldmap" in sources:
+        db_path = etc_dir / "worldmap.db"
+        if not db_path.is_file():
+            return f"worldmap.db not found ({db_path}) — its objects can't be imported; copy it next to etc/maps and re-run"
+        try:
+            board["objects"] = _read_worldmap_db(db_path)
+        except sqlite3.Error as exc:
+            return f"worldmap.db unreadable ({exc}) — re-place objects manually"
+        return None
+    return None
+
+
 def _apply_global(board: dict[str, Any], p: dict[str, str]) -> None:
     if "alias" in p:
         board["alias"] = p["alias"]
@@ -528,10 +745,15 @@ def _apply_global(board: dict[str, Any], p: dict[str, str]) -> None:
         if "parent_layers" in p:
             view["parent_layers"] = _int(p["parent_layers"], 0)
         board["view"] = view
-    elif sources & {"geomap", "dynmap", "worldmap"}:
-        unsupported = sorted(sources & {"geomap", "dynmap", "worldmap"})
+    elif sources & _GEO_SOURCES:
+        board["view"] = _geo_view(p)
+    elif "dynmap" in sources:
+        # dynmap is a dynamic host/servicegroup map, not a geographic one —
+        # it has no OrbVis geo equivalent. Leave the board empty; the closest
+        # match is a dynamic-group object or a radar board, set up by hand.
         print(
-            f"  ⚠  source {','.join(unsupported)} not yet supported — board will be empty",
+            "  ⚠  source dynmap is a dynamic-filter map (not geographic) — "
+            "rebuild as a dyngroup/radar board manually",
             file=sys.stderr,
         )
 
@@ -627,6 +849,31 @@ def _handle_shape(p: dict[str, str], raw_id: str) -> dict[str, Any]:
         "x": x.value,
         "y": y.value,
         "image_src": p.get("icon") or None,
+        "label": {"show": False},
+    }
+    _set_explicit_z(obj, p)
+    _attach_pending_refs(obj, x=x, y=y)
+    return obj
+
+
+def _handle_container(p: dict[str, str], raw_id: str) -> dict[str, Any]:
+    """NagVis ``container`` (embeds a URL's content) → OrbVis ``graph`` iframe.
+
+    OrbVis has no dedicated container type; the graph object is the structural
+    match — an iframe box at x/y with width/height. ``graph_url`` is sanitized on
+    board load, so the raw NagVis URL is safe to pass through here.
+    """
+    x = _parse_coord(p.get("x", "0"))
+    y = _parse_coord(p.get("y", "0"))
+    obj: dict[str, Any] = {
+        "id": f"graph_{raw_id}",
+        "type": "graph",
+        "x": x.value,
+        "y": y.value,
+        "graph_url": p.get("url") or None,
+        "graph_embed_type": "iframe",
+        "graph_width": _int(p.get("w"), 400),
+        "graph_height": _int(p.get("h"), 200),
         "label": {"show": False},
     }
     _set_explicit_z(obj, p)
@@ -766,6 +1013,8 @@ def _handle_object_block(legacy_type: str, p: dict[str, str], raw_id: str) -> di
         obj = _handle_shape(p, raw_id)
     elif legacy_type == "textbox":
         obj = _handle_textbox(p, raw_id)
+    elif legacy_type == "container":
+        obj = _handle_container(p, raw_id)
     else:
         # _handle_monitor_block already applies the backend override.
         return _handle_monitor_block(legacy_type, p, raw_id)
@@ -885,7 +1134,10 @@ def blocks_to_board_json(blocks: list[CfgBlock], map_name: str) -> dict[str, Any
     _resolve_pending_refs(objects)
 
     view = board.get("view")
-    if isinstance(view, dict) and view.get("type") == "flow":
+    if isinstance(view, dict) and view.get("type") in ("flow", "worldmap"):
+        # Flow auto-populates from topology; worldmap objects carry float
+        # lat/lng that the integer static-coord pipeline can't represent, so
+        # they come from the geomap CSV / worldmap.db sidecar instead.
         objects = []
     board["objects"] = objects
     return board
@@ -901,11 +1153,21 @@ def convert_file(cfg_path: Path, output_dir: Path) -> Path:
     blocks = parse_cfg_file(cfg_path)
     board = blocks_to_board_json(blocks, map_name)
 
+    # Geo boards (worldmap/geomap) carry their markers in a sidecar file next to
+    # etc/maps, not in the .cfg — fill them in now that we know the source path.
+    note: str | None = None
+    view = board.get("view")
+    if isinstance(view, dict) and view.get("type") == "worldmap":
+        global_props = next((b.properties for b in blocks if b.block_type == "global"), {})
+        note = _enrich_geo_board(board, cfg_path, global_props)
+
     output_dir.mkdir(parents=True, exist_ok=True)
     out_path = output_dir / f"{map_name}.json"
     out_path.write_text(json.dumps(board, indent=2, ensure_ascii=False), encoding="utf-8")
 
     print(f"✓  {cfg_path.name}  →  {out_path}  ({len(board['objects'])} objects)")
+    if note:
+        print(f"  ⚠  {note}", file=sys.stderr)
     return out_path
 
 

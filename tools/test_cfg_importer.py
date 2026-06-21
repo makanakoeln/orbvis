@@ -696,3 +696,214 @@ def test_comment_handling(tmp_path: Path):
     assert len(blocks) == 2
     global_block = next(b for b in blocks if b.block_type == "global")
     assert global_block.properties["alias"] == "Test"
+
+
+# ---------------------------------------------------------------------------
+# Geographic maps (worldmap / geomap) → OrbVis geo boards
+# ---------------------------------------------------------------------------
+
+
+def _worldmap_db(path: Path, rows: list[tuple]) -> None:
+    """Create a minimal NagVis worldmap.db with the given object rows."""
+    import sqlite3
+
+    conn = sqlite3.connect(path)
+    conn.execute(
+        "CREATE TABLE objects (object_id VARCHAR(20), lat REAL, lng REAL, "
+        "lat2 REAL, lng2 REAL, object TEXT, PRIMARY KEY(object_id))"
+    )
+    conn.executemany("INSERT INTO objects VALUES (?,?,?,?,?,?)", rows)
+    conn.commit()
+    conn.close()
+
+
+def test_worldmap_global_becomes_geo_view(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define global {
+            object_id=0
+            sources=worldmap
+            worldmap_center=50.868,10.217
+            worldmap_zoom=6
+            worldmap_tiles_saturate=33
+        }
+    """)
+    cfg = tmp_path / "wm.cfg"
+    cfg.write_text(cfg_text)
+    board = blocks_to_board_json(parse_cfg_file(cfg), "wm")
+    assert board["view"] == {
+        "type": "worldmap",
+        "lat": 50.868,
+        "lng": 10.217,
+        "zoom": 6,
+        "tile_saturate": 33.0,
+    }
+    # Markers live in worldmap.db, not the .cfg, so the board is framed but empty.
+    assert board["objects"] == []
+
+
+def test_geomap_global_uses_defaults_without_center(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define global {
+            object_id=0
+            sources=geomap
+            geomap_zoom=7
+        }
+    """)
+    cfg = tmp_path / "gm.cfg"
+    cfg.write_text(cfg_text)
+    view = blocks_to_board_json(parse_cfg_file(cfg), "gm")["view"]
+    assert view["type"] == "worldmap"
+    assert view["zoom"] == 7
+    assert view["lat"] == 51.0 and view["lng"] == 10.0
+
+
+def test_dynmap_is_not_converted_to_geo(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define global {
+            object_id=0
+            sources=dynmap
+        }
+    """)
+    cfg = tmp_path / "dm.cfg"
+    cfg.write_text(cfg_text)
+    board = blocks_to_board_json(parse_cfg_file(cfg), "dm")
+    # dynmap is a dynamic-filter map, not geographic — must not become a worldmap.
+    assert board["view"]["type"] == "static"
+
+
+def test_geomap_csv_enrichment_creates_host_markers(tmp_path: Path):
+    maps = tmp_path / "etc" / "maps"
+    geomap = tmp_path / "etc" / "geomap"
+    maps.mkdir(parents=True)
+    geomap.mkdir(parents=True)
+    (geomap / "locs.csv").write_text(
+        "; a comment line\nham;Hamburg;53.55;9.99\nmuc;Munich;48.14;11.55\n",
+        encoding="utf-8",
+    )
+    (maps / "geo.cfg").write_text(
+        textwrap.dedent("""
+            define global {
+                object_id=0
+                sources=geomap
+                source_file=locs
+            }
+        """),
+        encoding="utf-8",
+    )
+    out = convert_file(maps / "geo.cfg", tmp_path / "out")
+    board = json.loads(out.read_text())
+    assert len(board["objects"]) == 2
+    ham = next(o for o in board["objects"] if o["host_name"] == "ham")
+    assert ham["type"] == "host"
+    assert ham["lat"] == 53.55 and ham["lng"] == 9.99
+    assert ham["label"]["text"] == "Hamburg"
+    # Center auto-fits to the midpoint of the two hosts.
+    assert board["view"]["lat"] == (53.55 + 48.14) / 2
+
+
+def test_worldmap_db_imports_every_object_type(tmp_path: Path):
+    maps = tmp_path / "etc" / "maps"
+    maps.mkdir(parents=True)
+    (maps / "wm.cfg").write_text(
+        "define global {\n object_id=0\n sources=worldmap\n worldmap_zoom=6\n}\n",
+        encoding="utf-8",
+    )
+    rows = [
+        ("o1", 53.5, 10.0, None, None, json.dumps({"type": "host", "host_name": "h1"})),
+        (
+            "o2",
+            52.0,
+            9.0,
+            None,
+            None,
+            json.dumps({"type": "service", "host_name": "h1", "service_description": "CPU"}),
+        ),
+        ("o3", 51.0, 8.0, None, None, json.dumps({"type": "hostgroup", "hostgroup_name": "muc"})),
+        (
+            "o4",
+            50.0,
+            7.0,
+            None,
+            None,
+            json.dumps({"type": "servicegroup", "servicegroup_name": "db"}),
+        ),
+        ("o5", 49.0, 6.0, None, None, json.dumps({"type": "map", "map_name": "sub"})),
+        ("o6", 48.0, 5.0, None, None, json.dumps({"type": "textbox", "text": "Hi"})),
+        ("o7", 47.0, 4.0, None, None, json.dumps({"type": "shape", "icon": "x.png"})),
+        ("o8", 46.0, 3.0, 45.0, 2.0, json.dumps({"type": "line", "line_type": "11"})),
+        (
+            "o9",
+            44.0,
+            1.0,
+            None,
+            None,
+            json.dumps(
+                {"type": "dyngroup", "object_types": "host", "object_filter": "Filter: name ~ web"}
+            ),
+        ),
+        ("o10", 43.0, 0.0, None, None, json.dumps({"type": "aggr", "aggr_name": "agg1"})),
+        (
+            "o11",
+            42.0,
+            1.0,
+            None,
+            None,
+            json.dumps({"type": "container", "url": "http://ex.com", "w": "300", "h": "200"}),
+        ),
+    ]
+    _worldmap_db(tmp_path / "etc" / "worldmap.db", rows)
+
+    out = convert_file(maps / "wm.cfg", tmp_path / "out")
+    board = json.loads(out.read_text())
+    assert len(board["objects"]) == 11
+    # Every NagVis object type maps onto an OrbVis type and carries geo coords.
+    types = {o["type"] for o in board["objects"]}
+    assert types == {
+        "host",
+        "service",
+        "hostgroup",
+        "servicegroup",
+        "map",
+        "textbox",
+        "image",
+        "line",
+        "dyngroup",
+        "aggregation",
+        "graph",
+    }
+    assert all(o["lat"] is not None and o["lng"] is not None for o in board["objects"])
+    line = next(o for o in board["objects"] if o["type"] == "line")
+    assert line["lat2"] == 45.0 and line["lng2"] == 2.0
+
+
+def test_worldmap_without_db_frames_empty_board(tmp_path: Path):
+    maps = tmp_path / "etc" / "maps"
+    maps.mkdir(parents=True)
+    (maps / "wm.cfg").write_text(
+        "define global {\n object_id=0\n sources=worldmap\n worldmap_center=52,13\n worldmap_zoom=8\n}\n",
+        encoding="utf-8",
+    )
+    out = convert_file(maps / "wm.cfg", tmp_path / "out")
+    board = json.loads(out.read_text())
+    assert board["view"] == {"type": "worldmap", "lat": 52.0, "lng": 13.0, "zoom": 8}
+    assert board["objects"] == []
+
+
+def test_container_imports_as_graph_iframe(tmp_path: Path):
+    cfg_text = textwrap.dedent("""
+        define container {
+            object_id=c1
+            x=100
+            y=50
+            url=http://example.com/dash
+            w=300
+            h=200
+        }
+    """)
+    cfg = tmp_path / "c.cfg"
+    cfg.write_text(cfg_text)
+    obj = blocks_to_board_json(parse_cfg_file(cfg), "c")["objects"][0]
+    assert obj["type"] == "graph"
+    assert obj["graph_url"] == "http://example.com/dash"
+    assert obj["graph_embed_type"] == "iframe"
+    assert obj["graph_width"] == 300 and obj["graph_height"] == 200

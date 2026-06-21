@@ -22,6 +22,10 @@ mode, via Checkmk).
 | `define textbox { … }`        | Textbox object                                     |
 | `define shape { … }`          | Image object                                       |
 | `define map { … }`            | Board-link object                                  |
+| `define dyngroup { … }`       | Dynamic-group object                               |
+| `define aggr { … }`           | BI-aggregation object                              |
+| `define container { … }`      | Graph object (iframe embed of the container URL)   |
+| `sources=worldmap` / `geomap` | Geo board (`view.type = worldmap`) — see below     |
 | `iconset` (e.g. `std_medium`) | `icon_size` (24 px, etc.) — see `ICONSET_SIZE` map |
 | `line_type` integer           | `line_style` shape + `line_perfdata_label` + `line_weather_color` |
 | `line_label_in` / `line_label_out` | `weathermap_metric` / `weathermap_metric_out` |
@@ -38,6 +42,30 @@ The `line_type` integer decomposes into three orthogonal OrbVis attributes:
 | `13`        | `arrow_inward`  | `percent`             | `true`               |
 | `14`        | `arrow_inward`  | `both`                | `true`               |
 | `15`        | `arrow_inward`  | `bandwidth`           | `true`               |
+
+## Geographic maps (worldmap / geomap)
+
+NagVis `sources=worldmap` and `sources=geomap` maps become OrbVis **geo boards**
+(`view.type = worldmap`). The `.cfg` only carries the framing
+(`worldmap_center` → center, `worldmap_zoom` → zoom,
+`worldmap_tiles_saturate` → tile saturation); the actual markers live in a
+**sidecar file** next to `etc/`:
+
+- **worldmap** — objects are stored in `etc/worldmap.db` (a SQLite file). Every
+  object type (host, service, host/servicegroup, map, line, shape, textbox,
+  container, dyngroup, aggregation) is imported with its geographic
+  coordinates.
+- **geomap** — hosts come from `etc/geomap/<source_file>.csv`
+  (`hostname;alias;lat;lng`); each row becomes a host marker, and the view
+  auto-fits to the hosts' bounding box.
+
+Because these sidecars are separate files, only the **CLI importer** can read
+them — point it at the map and it locates `etc/worldmap.db` /
+`etc/geomap/*.csv` relative to the maps directory. The on-the-fly **Import
+Board** button only sees the `.cfg` text, so it produces a correctly-framed but
+**empty** geo board; copy the sidecar file and re-run the CLI to fill in the
+markers. `sources=dynmap` is a dynamic-filter map (not geographic) and has no
+geo equivalent — rebuild it as a dynamic-group or radar board by hand.
 
 ## What does **not** carry over automatically
 
