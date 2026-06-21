@@ -785,7 +785,6 @@ function onCanvasPointerMove(event: PointerEvent) {
     return
   }
 
-  // Handle graph resize
   const rid = _resizeId.value
   if (rid) {
     const w = Math.max(50, _resizeInitW.value + (event.clientX - _resizeStartX.value))
@@ -863,7 +862,6 @@ function onCanvasPointerUp(event: PointerEvent) {
     return
   }
 
-  // Finalize graph resize
   const rid = _resizeId.value
   if (rid) {
     _resizeId.value = null

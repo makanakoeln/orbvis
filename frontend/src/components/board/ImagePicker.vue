@@ -51,7 +51,6 @@
       </svg>
     </button>
 
-    <!-- Dropdown panel -->
     <Transition
       enter-from-class="orb-imgpick__panel-enter-from"
       enter-active-class="orb-imgpick__panel-enter-active"
@@ -59,12 +58,10 @@
       leave-active-class="orb-imgpick__panel-leave-active"
     >
       <div v-if="open" class="orb-imgpick__panel">
-        <!-- Search -->
         <div class="orb-imgpick__search-wrap">
           <input v-model="query" :placeholder="searchLabel" class="orb-field orb-imgpick__search" />
         </div>
 
-        <!-- Loading -->
         <div v-if="loading" class="orb-imgpick__loading">
           <svg class="orb-imgpick__spinner" fill="none" viewBox="0 0 24 24">
             <circle
@@ -165,7 +162,6 @@
           </Transition>
         </template>
 
-        <!-- No search match -->
         <div v-else-if="!filtered.length" class="orb-imgpick__no-match">
           {{ _t('No boards match "%{q}"', { q: query }) }}
         </div>

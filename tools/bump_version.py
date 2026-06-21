@@ -101,14 +101,12 @@ def build_entry(version: str, commits: list[tuple[str, str]]) -> str:
     sections: dict[str, list[str]] = {cat: [] for cat in CATEGORY_ORDER}
 
     for _hash, subject in commits:
-        # Derive scope
         scope_match = re.match(r"^([\w/-]+):", subject)
         scope = scope_match.group(1).lower() if scope_match else ""
         if scope in SKIP_SCOPES:
             continue
 
         category, entry = categorize(subject)
-        # Capitalize first letter
         entry = entry[0].upper() + entry[1:]
         sections[category].append(f"- {entry}")
 

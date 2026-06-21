@@ -3,7 +3,6 @@
     <div v-if="loading" class="orb-radar__loading">
       <CmkLoading />
     </div>
-    <!-- Empty state -->
     <div v-else-if="!sortedStates.length" class="orb-radar__empty">
       <div class="orb-radar__empty-icon">
         <svg
@@ -47,7 +46,6 @@
       </p>
     </div>
 
-    <!-- Summary bar -->
     <template v-else>
       <div class="orb-radar__summary">
         <span class="orb-radar__count"
@@ -70,7 +68,6 @@
         </div>
       </div>
 
-      <!-- Grid -->
       <div
         class="orb-radar__grid"
         :class="compact ? 'orb-radar__grid--compact' : ''"
@@ -87,7 +84,6 @@
           :class="[cardClass(state.state), compact ? 'orb-radar__card--compact' : '']"
           @click="onCardClick(state, $event)"
         >
-          <!-- Name -->
           <div class="orb-radar__card-head">
             <span
               class="orb-radar__name"
@@ -95,7 +91,6 @@
             >
               {{ displayName(state) }}
             </span>
-            <!-- Ack / Downtime icons -->
             <div v-if="!compact" class="orb-radar__flags">
               <span v-if="state.acknowledged" title="Acknowledged" class="orb-radar__flag">
                 <svg
@@ -130,7 +125,6 @@
             </div>
           </div>
 
-          <!-- State badge -->
           <span
             class="orb-radar__badge"
             :class="[badgeClass(state.state), compact ? 'orb-radar__badge--compact' : '']"
@@ -139,7 +133,6 @@
             {{ state.state }}
           </span>
 
-          <!-- Output -->
           <p
             v-if="state.output && !compact"
             class="orb-radar__output"

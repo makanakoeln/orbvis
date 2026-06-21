@@ -17,7 +17,6 @@
       <!-- Custom template — sanitized via sanitizeTemplateHtml before rendering -->
       <div v-else-if="renderedTemplate" class="orb-hover__template" v-html="renderedTemplate" />
 
-      <!-- Default content -->
       <template v-else>
         <!-- Header: hostname + state on one line — operator reads
                      "localhost — UP since 2d 11h" as a single headline. -->
@@ -117,7 +116,6 @@
             </div>
           </div>
 
-          <!-- Output -->
           <div v-if="state?.output" class="orb-hover__output">
             {{ state.output }}
           </div>

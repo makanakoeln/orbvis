@@ -2644,7 +2644,6 @@ class LivestatusConnection(ConnectionBase):
         raise AssertionError("unreachable")  # pragma: no cover
 
     async def _query_raw(self, query: str) -> list[LivestatusRow]:
-        """Send a Livestatus query and return parsed rows."""
         lql = query.rstrip("\n") + "\nOutputFormat: json\nResponseHeader: fixed16\n"
         auth_user = _auth_user_ctx.get()
         if auth_user:

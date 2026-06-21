@@ -17,7 +17,6 @@
       <!-- Group: Defaults applied when creating a new board -->
       <h3 class="orb-group-heading">{{ _t('When creating a new board') }}</h3>
       <div class="orb-gset__cards">
-        <!-- New board defaults -->
         <section class="orb-gset__card">
           <button
             class="orb-gset__card-toggle"
@@ -72,7 +71,6 @@
       <!-- Group: Defaults applied to objects rendered on a board -->
       <h3 class="orb-group-heading">{{ _t('When rendering objects on a board') }}</h3>
       <div class="orb-gset__cards">
-        <!-- Icon defaults -->
         <section class="orb-gset__card">
           <button
             class="orb-gset__card-toggle"
@@ -129,7 +127,6 @@
           </CmkCollapsible>
         </section>
 
-        <!-- Line defaults -->
         <section class="orb-gset__card">
           <button
             class="orb-gset__card-toggle"
@@ -264,7 +261,6 @@
           </CmkCollapsible>
         </section>
 
-        <!-- Templates -->
         <section class="orb-gset__card">
           <button
             class="orb-gset__card-toggle"
@@ -426,7 +422,6 @@ const lineStyleOpts = computed(() => ({
 }))
 const dirty = computed(() => JSON.stringify(form) !== JSON.stringify(store.settings))
 
-// Sync form when store finishes loading
 watch(
   () => store.settings,
   (val) => Object.assign(form, val),

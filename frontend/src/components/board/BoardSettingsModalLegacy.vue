@@ -25,7 +25,6 @@
           <div class="board-settings__scroll">
             <!-- General -->
             <div v-if="activeTab === 'general'" class="board-settings__form">
-              <!-- Alias -->
               <div class="board-settings__field">
                 <CmkLabel>{{ _t('Display name') }}</CmkLabel>
                 <!-- aria-label keeps the field addressable like the FormSpec
@@ -34,7 +33,6 @@
                 <CmkInput v-model="form.alias" field-size="FILL" :aria-label="_t('Display name')" />
               </div>
 
-              <!-- Connection -->
               <div class="board-settings__field">
                 <CmkLabel>{{ _t('Connection') }}</CmkLabel>
                 <CmkDropdown
@@ -515,7 +513,6 @@
                 </div>
               </div>
 
-              <!-- Click action -->
               <div
                 v-if="form.map_type !== 'presentation'"
                 class="board-settings__subsection board-settings__field"
@@ -560,7 +557,6 @@
                 />
               </div>
 
-              <!-- Show in lists toggle -->
               <div class="board-settings__subsection board-settings__row-between">
                 <CmkLabel :help="_t('When disabled, this board is hidden from regular users')">{{
                   _t('Show in board list')
@@ -1308,11 +1304,10 @@ async function savePermissions() {
     for (const act of ['view', 'edit'] as const) {
       if (hasWildcard(role, act)) continue
       const key = `${role.role_id}-${act}`
-      if (!permDraft.has(key)) continue // no change
+      if (!permDraft.has(key)) continue
       const desired = permDraft.get(key)!
       const hasServer = hasDirectPerm(role, act)
       if (desired && !hasServer) {
-        // add
         let existingPerm: PermissionRead | null = null
         for (const r of permRoles.value) {
           const p = r.permissions.find(
@@ -1333,7 +1328,6 @@ async function savePermissions() {
         }
         await rolesApi.assignPermission(role.role_id, existingPerm.perm_id, auth.accessToken!)
       } else if (!desired && hasServer) {
-        // remove
         const perm = role.permissions.find(
           (p) => p.mod === 'map' && p.act === act && p.obj === props.board.name
         )!

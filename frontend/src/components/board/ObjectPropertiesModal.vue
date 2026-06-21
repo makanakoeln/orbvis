@@ -17,7 +17,6 @@
         :class="isPopover ? 'orb-props__card--popover' : 'orb-props__card--modal'"
         :style="cardStyle"
       >
-        <!-- Header -->
         <div
           class="orb-props__header"
           :class="dragging ? 'orb-props__header--dragging' : ''"
@@ -45,7 +44,6 @@
           </button>
         </div>
 
-        <!-- Scrollable body -->
         <CmkScrollContainer class="orb-props__body">
           <!-- === MONITORING OBJECT === -->
           <section
@@ -541,7 +539,6 @@
                   "
                 />
               </div>
-              <!-- Weather-color toggle -->
               <div class="field-row">
                 <CmkCheckbox
                   v-model="form.line_weather_color"
@@ -634,7 +631,6 @@
                   </div>
                 </template>
               </div>
-              <!-- Label -->
               <div class="field-row">
                 <label class="field-label">{{ _t('Show label') }}</label>
                 <CmkCheckbox v-model="form.label.show" />
@@ -1023,7 +1019,6 @@
           </section>
         </CmkScrollContainer>
 
-        <!-- Footer -->
         <div class="orb-props__footer">
           <div>
             <CmkButton variant="danger" @click="confirmDelete = true">{{ _t('Delete') }}</CmkButton>

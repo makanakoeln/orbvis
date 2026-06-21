@@ -1414,11 +1414,10 @@ async function savePermissions() {
     for (const act of ['view', 'edit'] as const) {
       if (hasWildcard(role, act)) continue
       const key = `${role.role_id}-${act}`
-      if (!permDraft.has(key)) continue // no change
+      if (!permDraft.has(key)) continue
       const desired = permDraft.get(key)!
       const hasServer = hasDirectPerm(role, act)
       if (desired && !hasServer) {
-        // add
         let existingPerm: PermissionRead | null = null
         for (const r of permRoles.value) {
           const p = r.permissions.find(
@@ -1439,7 +1438,6 @@ async function savePermissions() {
         }
         await rolesApi.assignPermission(role.role_id, existingPerm.perm_id, auth.accessToken!)
       } else if (!desired && hasServer) {
-        // remove
         const perm = role.permissions.find(
           (p) => p.mod === 'map' && p.act === act && p.obj === props.board.name
         )!

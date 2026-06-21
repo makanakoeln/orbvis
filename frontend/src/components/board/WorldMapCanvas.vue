@@ -453,7 +453,6 @@ function syncMarkers() {
     }
   }
 
-  // Remove stale markers
   for (const [id, marker] of markers) {
     if (!currentIds.has(id)) {
       marker.remove()

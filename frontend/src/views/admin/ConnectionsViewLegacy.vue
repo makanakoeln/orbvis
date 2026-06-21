@@ -60,7 +60,6 @@
         </thead>
         <tbody class="orb-connlist__body">
           <tr v-for="b in store.connections" :key="b.id" class="orb-connlist__row">
-            <!-- Status -->
             <td class="orb-connlist__td">
               <button
                 :disabled="statusLoading[b.id]"
@@ -232,7 +231,6 @@
             />
           </div>
 
-          <!-- Unix socket -->
           <div v-if="livestatusMode === 'socket'" class="connections-dialog__field">
             <label class="connections-dialog__label">{{ _t('Unix socket path') }}</label>
             <CmkInput
@@ -243,7 +241,6 @@
             />
           </div>
 
-          <!-- TCP Host + Port -->
           <div v-else class="connections-dialog__row connections-dialog__row--host-port">
             <div class="connections-dialog__field">
               <label class="connections-dialog__label">{{ _t('TCP host') }}</label>
