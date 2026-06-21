@@ -1,11 +1,29 @@
+import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
 
 import { useAuthStore } from '@/stores/auth'
 import type { BoardConfig, PresentationView } from '@/types/api'
 import { createElement } from '@/utils/presentationElements'
 
 import { usePresentationDocument } from './usePresentationDocument'
+
+// The composable registers onBeforeUnmount, so it must run inside a component
+// setup — calling it bare warns. Run it in a throwaway component and hand back
+// the returned document API.
+function withDoc(): ReturnType<typeof usePresentationDocument> {
+  let doc!: ReturnType<typeof usePresentationDocument>
+  mount(
+    defineComponent({
+      setup() {
+        doc = usePresentationDocument(makeConfig)
+        return () => h('div')
+      }
+    })
+  )
+  return doc
+}
 
 const { mockBoardsApi } = vi.hoisted(() => ({
   mockBoardsApi: {
@@ -43,7 +61,7 @@ describe('usePresentationDocument', () => {
   })
 
   it('mutate records a history step; undo restores elements and theme together', () => {
-    const doc = usePresentationDocument(makeConfig)
+    const doc = withDoc()
     const el = createElement('rect', 10, 10)
 
     doc.mutate(() => {
@@ -63,7 +81,7 @@ describe('usePresentationDocument', () => {
 
   it('debounces saves and adopts the returned version', async () => {
     mockBoardsApi.update.mockResolvedValue({ name: 'pres1', version: 4, view: {} })
-    const doc = usePresentationDocument(makeConfig)
+    const doc = withDoc()
 
     doc.mutate(() => doc.setElements([createElement('rect', 0, 0)]))
     doc.mutate(() => doc.setElements([...doc.elements.value, createElement('text', 0, 0)]))
@@ -78,7 +96,7 @@ describe('usePresentationDocument', () => {
   it('realigns to the canonical version after a conflicting save', async () => {
     mockBoardsApi.update.mockRejectedValue(new Error('409'))
     mockBoardsApi.get.mockResolvedValue({ name: 'pres1', version: 9, view: {} })
-    const doc = usePresentationDocument(makeConfig)
+    const doc = withDoc()
 
     doc.mutate(() => doc.setElements([createElement('rect', 0, 0)]))
     await vi.advanceTimersByTimeAsync(500)
@@ -90,7 +108,7 @@ describe('usePresentationDocument', () => {
   })
 
   it('exposes shared lookups (byId, topLevelId, nextZ)', () => {
-    const doc = usePresentationDocument(makeConfig)
+    const doc = withDoc()
     const a = createElement('rect', 0, 0)
     a.z = 5
     const group = createElement('rect', 0, 0)

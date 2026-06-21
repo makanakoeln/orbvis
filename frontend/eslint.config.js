@@ -57,6 +57,15 @@ export default [
     },
   },
 
+  // Unit-Tests definieren legitimerweise mehrere kleine Stub-Komponenten pro
+  // Datei (CMK-Widget-Ersatz für isoliertes Component-Mounting).
+  {
+    files: ['**/*.test.ts'],
+    rules: {
+      'vue/one-component-per-file': 'off',
+    },
+  },
+
   {
     // Disable security rules with prohibitively high false-positive rates in TypeScript:
     // detect-object-injection fires on every obj[key] bracket access (extremely common in TS).

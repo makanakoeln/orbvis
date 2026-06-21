@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { buildServiceStateViewUrl, hostStateOn, openUrl, svcStateOn } from './boardNavigation'
 
@@ -83,6 +83,9 @@ describe('openUrl', () => {
   })
 
   it('refuses javascript: URLs even with embedded control characters', () => {
+    // Each refusal warns about the blocked scheme; capture it so the warning is
+    // asserted rather than leaking to the console.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const hrefs = clickedHrefs(() => {
       openUrl('javascript:alert(1)', '_blank')
       openUrl('java\tscript:alert(1)', '_blank')
@@ -90,5 +93,7 @@ describe('openUrl', () => {
       openUrl('data:text/html,<script>alert(1)</script>', '_blank')
     })
     expect(hrefs).toHaveLength(0)
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
   })
 })

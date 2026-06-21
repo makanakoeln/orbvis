@@ -231,7 +231,18 @@ describe('useAuthStore', () => {
       })
     }
 
+    // init() logs the failed SSO probe (401 / "No valid Checkmk session") on
+    // purpose; swallow those expected warnings for this block's error paths.
+    let warnSpy: ReturnType<typeof vi.spyOn>
+    let errorSpy: ReturnType<typeof vi.spyOn>
+    beforeEach(() => {
+      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    })
+
     afterEach(() => {
+      warnSpy.mockRestore()
+      errorSpy.mockRestore()
       Object.defineProperty(window, 'location', {
         configurable: true,
         value: originalLocation
