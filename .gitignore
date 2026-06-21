@@ -77,3 +77,6 @@ audit/
 orbvis-cmk-*.mkp
 orbvis-cmk-*.zip
 frontend/locale/messages.pot
+
+# Internal review-prep dossiers — not for the public repo
+docs-internal/

@@ -85,6 +85,5 @@ For context, the following hardening is implemented and tested:
 - Secret redaction in API responses and logs
 - `pip-audit`, `bandit`, `npm audit`, `gitleaks` in CI
 
-A control-by-control map (with the implementing module and its test), the
-dependency surface relative to Checkmk, and the current scan baseline are in
-[`docs/security-assessment.md`](docs/security-assessment.md).
+See `backend/tests/test_security_hardening.py`, `test_csrf.py`,
+`test_middleware.py` and `test_security.py` for the current test coverage.
