@@ -219,15 +219,15 @@ export default defineConfig({
         'src/vendor/**', // third-party CMK stubs
         'src/cmk-stubs/**'
       ],
-      // Baseline aus current state (~7% wenn Vue-Views mitgezaehlt werden —
-      // viele views/* und components/* sind komplett untested). Folge-PRs heben
-      // die Schwellen inkrementell an, Ziel 30%. Schwellen mit ~1pp Puffer
-      // unter den aktuellen Ist-Werten, damit kleine PRs nicht zufällig brechen.
+      // Stand ~25% (viele views/* und components/* sind noch untested).
+      // Folge-PRs heben die Schwellen inkrementell an, Ziel 30%. Schwellen mit
+      // ~1pp Puffer unter den aktuellen Ist-Werten, damit kleine PRs nicht
+      // zufällig brechen.
       thresholds: {
-        lines: 6,
-        functions: 4,
-        branches: 3,
-        statements: 6
+        lines: 24,
+        functions: 18,
+        branches: 16,
+        statements: 24
       }
     }
   }

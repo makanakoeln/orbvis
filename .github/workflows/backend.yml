@@ -84,13 +84,13 @@ jobs:
           pip-audit .
 
       - name: Test + coverage gate
-        # Baseline ~50%; Folge-PRs heben die Schwelle stufenweise in Richtung 75%.
-        # Gate bewusst unter dem aktuellen Stand, damit kein Zufallsbruch.
+        # Stand ~71%; Folge-PRs heben die Schwelle stufenweise in Richtung 75%.
+        # Gate bewusst knapp unter dem aktuellen Stand, damit kein Zufallsbruch.
         # PYTHONPATH only exported here so pytest can import cmk.rulesets.v1
         # for the FormSpec test suite — mypy/ruff/bandit ran above without it.
         env:
           PYTHONPATH: ${{ env.CMK_APIS }}
-        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=45
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=68
 
   docker-build-backend:
     runs-on: ubuntu-latest
