@@ -68,19 +68,23 @@ Out of scope:
 
 For context, the following hardening is implemented and tested:
 
-- JWT access + refresh token rotation with per-process blocklist
+- JWT access + refresh token rotation with per-process logout blocklist
+- Short-lived stream tickets (5 min) for SSE / map-tile URLs, so access
+  tokens are never carried in a URL
 - bcrypt password hashing (with htpasswd-compatible verification for
-  Checkmk SSO)
+  Checkmk SSO; 2FA-aware session validation)
 - Login throttling (5 attempts / 15 min / IP) with constant-time dummy
   verification to prevent username enumeration
-- CSRF protection on state-changing endpoints
+- CSRF Origin check on cookie-authed state-changing endpoints
 - SSRF prevention on backend URLs, image uploads, and board URL fields
   (rejects `javascript:`, `file:`, `data:`, metadata IPs, path traversal)
 - SVG upload sanitisation via `defusedxml` (rejects DTDs, scripts,
   `foreignObject`, `on*` attributes, `javascript:` / `data:` hrefs)
-- WebSocket origin checks, auth-on-connect, rate limiting
+- Livestatus queries scoped to the caller's contact groups (`AuthUser`);
+  commands gated on Checkmk command permissions
 - Secret redaction in API responses and logs
-- `pip-audit`, `bandit`, `gitleaks` in CI
+- `pip-audit`, `bandit`, `npm audit`, `gitleaks` in CI
 
-See `backend/tests/test_security_hardening.py`, `test_csrf.py`,
-`test_websocket.py` for the current test coverage.
+A control-by-control map (with the implementing module and its test), the
+dependency surface relative to Checkmk, and the current scan baseline are in
+[`docs/security-assessment.md`](docs/security-assessment.md).
