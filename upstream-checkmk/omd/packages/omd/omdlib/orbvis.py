@@ -20,6 +20,8 @@ def write_orbvis_apache_conf(_site_name: str, site_home: Path, config: Config) -
 
 
 def _write_orbvis_port_conf(site_name: str, site_home: Path, config: Config) -> None:
+    if config["ORBVIS"] != "on":
+        return
     port = config["ORBVIS_PORT"]
     # The REST API and the Server-Sent-Events state stream are proxied to the
     # loopback daemon. SSE needs unbuffered, long-lived forwarding: flushpackets
