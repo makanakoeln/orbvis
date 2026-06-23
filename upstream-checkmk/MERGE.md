@@ -42,6 +42,43 @@ Still to finalize at merge time (need an OMD site to verify):
 - SSE through OMD's double-Apache: SSE is plain chunked HTTP (no Upgrade), so the
   outer system Apache should pass it through; verify no buffering/timeout cutoff.
 
+## GUI Monitor/Setup integration (workstream C1)
+
+New mirror files (rsync as-is): `cmk/gui/orbvis/{_maps,_orbvis_auth,_pages,
+_monitor_menu,_setup,__init__}.py` (the sidebar snapin `_orbvis_maps.py` and
+`_boards.py` were removed). Frontend bundle is loaded from
+`web_dir/htdocs/cmk-orbvis-frontend/.manifest.json`.
+
+Edits to existing files:
+
+- `cmk/gui/community_registration.py`:
+  - import `orbvis` and call `orbvis.register(permission_section_registry,
+    permission_registry, page_registry, main_module_topic_registry,
+    main_module_registry)` (new signature — no snapin).
+  - **Monitor topic composition:** Checkmk has no plugin hook to add a topic to
+    the existing Monitor menu, so compose the `view_menu_topics` callback passed
+    to `sidebar.register(...)`. Replace
+    `view_menu_topics=sidebar.default_view_menu_topics` with a small wrapper:
+    ```python
+    def _view_menu_topics(user_permissions):
+        return [
+            *sidebar.default_view_menu_topics(user_permissions),
+            *orbvis.orbvis_monitor_topics(user_permissions),
+        ]
+    ```
+    and pass `view_menu_topics=_view_menu_topics`. The same composition is needed
+    in the nonfree edition registrations (`cmk.gui.nonfree.{pro,ultimate,
+    ultimatemt}.registration`) — internal tree.
+- `cmk/gui/orbvis/BUILD`: complete the `deps` for the new imports (see the NOTE
+  in that file) — Bazel-validated at merge.
+
+To verify at merge (built site): page `check_mk/orbvis.py` renders the SPA shell,
+manifest bundle loads, `window.__ORBVIS_BASE__` injected; Monitor shows a "Maps"
+topic listing permitted maps; Setup shows a "Maps" module; `IconNames`
+(topic_visualization/dashboard/save_dashboard), the `MainModuleTopic.icon_name`
+and the registry membership in `test_registration.py` resolve. The page handler's
+`make_header(...)` call mirrors `cmk/gui/message.py`.
+
 ## Build / edition wiring (workstream E)
 
 - `cmk/gui/BUILD`, `omd/BUILD` edition `select()`s (pkg_tar + skel.permissions),

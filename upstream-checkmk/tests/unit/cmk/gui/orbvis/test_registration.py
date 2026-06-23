@@ -6,24 +6,29 @@
 import pytest
 
 import cmk.gui.orbvis
-import cmk.gui.sidebar._snapin._registry
 from cmk.gui.orbvis import _orbvis_auth
-from cmk.gui.orbvis._orbvis_maps import OrbVisBoards
+from cmk.gui.pages import PageRegistry
 from cmk.gui.permissions import PermissionRegistry, PermissionSectionRegistry
-from cmk.gui.sidebar._snapin._registry import SnapinRegistry
+from cmk.gui.watolib.main_menu import MainModuleRegistry, MainModuleTopicRegistry
 
 
 def test_register(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(_orbvis_auth, "declare_dynamic_permissions", lambda func: None)
-    monkeypatch.setattr(
-        cmk.gui.sidebar._snapin._registry, "permission_registry", PermissionRegistry()
-    )
     permission_section_registry = PermissionSectionRegistry()
     permission_registry = PermissionRegistry()
-    snapin_registry = SnapinRegistry()
+    page_registry = PageRegistry()
+    main_module_topic_registry = MainModuleTopicRegistry()
+    main_module_registry = MainModuleRegistry()
 
-    cmk.gui.orbvis.register(permission_section_registry, permission_registry, snapin_registry)
+    cmk.gui.orbvis.register(
+        permission_section_registry,
+        permission_registry,
+        page_registry,
+        main_module_topic_registry,
+        main_module_registry,
+    )
 
     assert "orbvis" in permission_section_registry
     assert "orbvis.use" in permission_registry
-    assert snapin_registry["orbvis_boards"] is OrbVisBoards
+    assert "orbvis.configure" in permission_registry
+    assert "orbvis" in page_registry

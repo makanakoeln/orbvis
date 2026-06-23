@@ -3,17 +3,26 @@
 # This file is part of Checkmk (https://checkmk.com). It is subject to the terms and
 # conditions defined in the file COPYING, which is part of this source code package.
 
+from cmk.gui.pages import PageRegistry
 from cmk.gui.permissions import PermissionRegistry, PermissionSectionRegistry
-from cmk.gui.sidebar._snapin._registry import SnapinRegistry
+from cmk.gui.watolib.main_menu import MainModuleRegistry, MainModuleTopicRegistry
 
-from . import _orbvis_auth
-from ._orbvis_maps import OrbVisBoards
+from . import _orbvis_auth, _pages, _setup
+from ._monitor_menu import orbvis_monitor_topics
+
+# Re-exported so community_registration can compose it into the Monitor menu's
+# view_menu_topics callback (Checkmk has no plugin hook to add a topic to the
+# existing Monitor mega-menu). See MERGE.md.
+__all__ = ["orbvis_monitor_topics", "register"]
 
 
 def register(
     permission_section_registry: PermissionSectionRegistry,
     permission_registry: PermissionRegistry,
-    snapin_registry_: SnapinRegistry,
+    page_registry: PageRegistry,
+    main_module_topic_registry: MainModuleTopicRegistry,
+    main_module_registry: MainModuleRegistry,
 ) -> None:
     _orbvis_auth.register(permission_section_registry, permission_registry)
-    snapin_registry_.register(OrbVisBoards)
+    _pages.register(page_registry)
+    _setup.register(main_module_topic_registry, main_module_registry)

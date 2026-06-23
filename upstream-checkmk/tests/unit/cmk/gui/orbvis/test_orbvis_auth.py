@@ -34,7 +34,7 @@ def test_register(monkeypatch: pytest.MonkeyPatch) -> None:
     assert list(registry["orbvis.view_all"].defaults) == ["admin", "user"]
     assert list(registry["orbvis.edit_all"].defaults) == ["admin"]
     assert list(registry["orbvis.configure"].defaults) == ["admin"]
-    assert dynamic_declarations == [_orbvis_auth.declare_board_permissions]
+    assert dynamic_declarations == [_orbvis_auth.declare_map_permissions]
 
 
 @pytest.fixture(name="permission_registry")
@@ -45,53 +45,53 @@ def fixture_permission_registry(monkeypatch: pytest.MonkeyPatch) -> PermissionRe
     monkeypatch.setattr(cmk.gui.permissions, "permission_section_registry", section_registry)
     monkeypatch.setattr(cmk.gui.permissions, "permission_registry", registry)
     monkeypatch.setattr(_orbvis_auth, "permission_registry", registry)
-    monkeypatch.setattr(_orbvis_auth, "_declared_board_permissions", set())
+    monkeypatch.setattr(_orbvis_auth, "_declared_map_permissions", set())
     section_registry.register(_orbvis_auth.PERMISSION_SECTION_ORBVIS)
     return registry
 
 
-@pytest.fixture(name="boards_dir")
-def fixture_boards_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+@pytest.fixture(name="maps_dir")
+def fixture_maps_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(cmk.utils.paths, "omd_root", tmp_path)
-    directory = tmp_path / "var" / "orbvis" / "boards"
+    directory = tmp_path / "var" / "orbvis" / "maps"
     directory.mkdir(parents=True)
     return directory
 
 
-def test_declare_board_permissions(
-    permission_registry: PermissionRegistry, boards_dir: Path
+def test_declare_map_permissions(
+    permission_registry: PermissionRegistry, maps_dir: Path
 ) -> None:
-    (boards_dir / "network.json").write_text(
+    (maps_dir / "network.json").write_text(
         json.dumps({"name": "network", "alias": "Network overview"})
     )
-    (boards_dir / "demo-flow.json").write_text("{}")
+    (maps_dir / "demo-flow.json").write_text("{}")
 
-    _orbvis_auth.declare_board_permissions()
+    _orbvis_auth.declare_map_permissions()
 
     assert sorted(permission_registry.keys()) == [
         "orbvis.edit_network",
         "orbvis.view_network",
     ]
     view_permission = permission_registry["orbvis.view_network"]
-    assert view_permission.title == "View board 'Network overview'"
+    assert view_permission.title == "View map 'Network overview'"
     assert list(view_permission.defaults) == ["admin", "user"]
     edit_permission = permission_registry["orbvis.edit_network"]
-    assert edit_permission.title == "Edit board 'Network overview'"
+    assert edit_permission.title == "Edit map 'Network overview'"
     assert list(edit_permission.defaults) == ["admin"]
 
 
-def test_declare_board_permissions_drops_deleted_boards(
-    permission_registry: PermissionRegistry, boards_dir: Path
+def test_declare_map_permissions_drops_deleted_maps(
+    permission_registry: PermissionRegistry, maps_dir: Path
 ) -> None:
-    board_path = boards_dir / "network.json"
-    board_path.write_text("{}")
-    (boards_dir / "flow.json").write_text("{}")
+    map_path = maps_dir / "network.json"
+    map_path.write_text("{}")
+    (maps_dir / "flow.json").write_text("{}")
 
-    _orbvis_auth.declare_board_permissions()
+    _orbvis_auth.declare_map_permissions()
     assert "orbvis.view_network" in permission_registry
 
-    board_path.unlink()
-    _orbvis_auth.declare_board_permissions()
+    map_path.unlink()
+    _orbvis_auth.declare_map_permissions()
 
     assert sorted(permission_registry.keys()) == [
         "orbvis.edit_flow",
