@@ -1,5 +1,8 @@
 # Local system config (machine-specific, install manually)
 etc/
+# ...but the cmk-orbvis-backend daemon ships skel runtime files under etc/
+!upstream-checkmk/packages/cmk-orbvis-backend/skel/etc/
+!upstream-checkmk/packages/cmk-orbvis-backend/skel/etc/**
 
 # Data
 data/

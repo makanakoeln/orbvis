@@ -1,0 +1,126 @@
+#!/bin/bash
+# Copyright (C) 2026 Checkmk GmbH - License: GNU General Public License v2
+# This file is part of Checkmk (https://checkmk.com). It is subject to the terms and
+# conditions defined in the file COPYING, which is part of this source code package.
+
+# Start/stop the OrbVis (Checkmk Maps) backend daemon. It serves the Maps
+# REST API plus the live WebSocket/SSE state push, bound to the loopback
+# interface; the site Apache reverse-proxies /<site>/orbvis to it.
+
+PIDFILE="$OMD_ROOT/tmp/run/orbvis-backend.pid"
+PID=$(cat "$PIDFILE" 2>/dev/null)
+
+# shellcheck disable=SC1090,SC1091
+. "$OMD_ROOT/etc/omd/site.conf"
+if [ "$CONFIG_ORBVIS" != on ]; then
+    exit 5
+fi
+
+# Backend configuration. The FastAPI app reads these from the environment
+# (app.core.config). Auth runs exclusively through the Checkmk session; the
+# secret signs the short-lived WebSocket/SSE stream tickets and is provisioned
+# per site under etc/orbvis.
+export CHECKMK_OMD_ROOT="$OMD_ROOT"
+export CHECKMK_SITE="$OMD_SITE"
+export ENVIRONMENT="production"
+export MAPS_DIR="$OMD_ROOT/var/orbvis/maps"
+# shellcheck disable=SC1090,SC1091
+[ -r "$OMD_ROOT/etc/orbvis/orbvis.env" ] && . "$OMD_ROOT/etc/orbvis/orbvis.env"
+
+if ping -c1 ::1 &>/dev/null; then
+    ANY_ADDRESS="[::1]"
+else
+    ANY_ADDRESS="127.0.0.1"
+fi
+
+process_is_running() {
+    [ -e "$PIDFILE" ] && kill -0 "$PID" 2>/dev/null
+}
+
+await_process_stop() {
+    max=$(("${1}" * 10))
+    for N in $(seq "${max}"); do
+        process_is_running || return 0
+        [ $((N % 10)) -eq 0 ] && printf "."
+        sleep 0.1
+    done
+    return 1
+}
+
+exit_successfully() {
+    printf "%s\n" "${1}"
+    exit 0
+}
+
+exit_failure() {
+    printf "%s\n" "${1}"
+    exit 1
+}
+
+case "$1" in
+
+    start)
+        echo -en "Starting orbvis-backend..."
+        if process_is_running; then
+            exit_successfully 'already running.'
+        fi
+        if gunicorn -D -p "$PIDFILE" \
+            -c "$OMD_ROOT/etc/orbvis-backend/gunicorn.conf.py" \
+            -b "${ANY_ADDRESS}:${CONFIG_ORBVIS_PORT}" \
+            'cmk.orbvis_backend.main:app'; then
+            exit_successfully 'OK'
+        fi
+        exit_failure 'failed'
+        ;;
+
+    stop)
+        echo -n "Stopping orbvis-backend..."
+        if [ -z "$PID" ]; then
+            exit_successfully 'not running.'
+        fi
+        if ! kill -0 "$PID" >/dev/null 2>&1; then
+            rm -f "$PIDFILE"
+            exit_successfully 'not running (PID file orphaned)'
+        fi
+        echo -n "killing $PID..."
+        kill "$PID" 2>/dev/null
+        if await_process_stop 60; then
+            exit_successfully 'OK'
+        fi
+        kill -9 "$PID" 2>/dev/null
+        if await_process_stop 10; then
+            exit_successfully 'OK'
+        fi
+        exit_failure 'failed'
+        ;;
+
+    restart | reload)
+        $0 stop
+        $0 start
+        ;;
+
+    logrotate)
+        echo -n 'Rotating logs of orbvis-backend...'
+        if [ -z "$PID" ]; then
+            exit_failure 'not running.'
+        else
+            echo "killing $PID with SIGUSR1..."
+            kill -USR1 "$PID"
+        fi
+        ;;
+
+    status)
+        echo -n 'Checking status of orbvis-backend...'
+        if [ -z "$PID" ]; then
+            exit_failure 'not running (PID file missing)'
+        fi
+        if ! kill -0 "$PID"; then
+            exit_failure 'not running (PID file orphaned)'
+        fi
+        exit_successfully 'running'
+        ;;
+    *)
+        exit_failure "Usage: ${0} {start|stop|restart|reload|logrotate|status}"
+        ;;
+
+esac
