@@ -15,6 +15,9 @@
 #   3. Rewrite imports: '@/vendor/cmk/...' -> '@cmk/...' plus explicit
 #      renames where upstream master reorganized files, plus redirects
 #      for the owned files.
+#   3e/3f. Rename the OrbVis "board" domain term to "map" (the built-in
+#      product is "Checkmk Maps"), after disambiguating pre-existing
+#      unrelated "map" names (e.g. the d3 treemap component).
 #   4. Verify every '@cmk/...' import resolves against the real
 #      cmk-frontend-vue source tree -- upstream refactors surface here
 #      as a hard error instead of a broken monorepo build.
@@ -28,7 +31,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$REPO_ROOT/frontend"
-DEST="$REPO_ROOT/upstream-checkmk/packages/cmk-orbvis-frontend"
+DEST="${ORBVIS_UPSTREAM_DEST:-$REPO_ROOT/upstream-checkmk/packages/cmk-orbvis-frontend}"
 CMK_SRC="${CMK_FRONTEND_VUE_SRC:-$HOME/git/checkmk/packages/cmk-frontend-vue/src}"
 
 CHECK=0
@@ -177,6 +180,26 @@ apply_fixup() {
 
 # (none right now — the 2026-06-06 vendor refresh aligned the vendored
 # tree with master, dropping the codeTxt/ButtonVariants fixups)
+
+# --- 3e. disambiguate pre-existing "map" concepts --------------------------
+# The repo already uses "map" for things unrelated to the board domain that
+# would collide with the board->map rename below. Give them unambiguous names
+# first, so the codemod's collision guard does not (rightly) abort.
+#   components/board/FolderTreeMap.vue is the d3 *treemap* embedded by
+#   FolderTreeBoard.vue -- not a board. -> FolderTreeTreemap.vue
+while IFS= read -r -d '' f; do
+    sed -i 's/FolderTreeMap/FolderTreeTreemap/g' "$f"
+done < <(find "$stage/src" -type f \( -name '*.ts' -o -name '*.vue' \) -print0)
+mv "$stage/src/components/board/FolderTreeMap.vue" \
+   "$stage/src/components/board/FolderTreeTreemap.vue"
+
+# --- 3f. board -> map domain rename ----------------------------------------
+# The built-in Checkmk product is "Maps"; rename the OrbVis board domain term
+# across the whole staged tree (sources, locale catalog, index.html). The
+# codemod is identifier-boundary aware and aborts on collision-word drift or
+# path clashes -- see scripts/rename-board-to-map.py.
+note "applying board->map rename"
+python3 "$REPO_ROOT/scripts/rename-board-to-map.py" "$stage"
 
 # --- 4. verify every @cmk import resolves ----------------------------------
 fail=0
