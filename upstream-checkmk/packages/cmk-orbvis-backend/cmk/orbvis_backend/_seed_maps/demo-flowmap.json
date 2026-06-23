@@ -1,0 +1,13 @@
+{
+  "name": "demo-flowmap",
+  "alias": "Flow Map (Demo)",
+  "readonly": true,
+  "connection_id": "test",
+  "icon_size": 30,
+  "rotation_interval": 0,
+  "hover_template": null,
+  "context_template": null,
+  "background_image": null,
+  "view": { "type": "flow" },
+  "objects": []
+}

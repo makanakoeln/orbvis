@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 Checkmk GmbH - License: GNU General Public License v2
+# This file is part of Checkmk (https://checkmk.com). It is subject to the terms and
+# conditions defined in the file COPYING, which is part of this source code package.
+"""User schemas."""
+
+from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, Field, model_validator
+
+if TYPE_CHECKING:
+    from cmk.orbvis_backend.models.user import User as UserModel
+
+
+class RoleRef(BaseModel):
+    role_id: int
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
+class PermissionRef(BaseModel):
+    perm_id: int
+    mod: str
+    act: str
+    obj: str
+
+    model_config = {"from_attributes": True}
+
+
+class UserBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    is_active: bool = True
+    is_admin: bool = False
+    must_change_password: bool = False
+    theme: str = "system"
+    language: str = "en"
+
+
+class UserCreate(UserBase):
+    password: str = Field(..., min_length=6)
+
+
+class UserUpdate(BaseModel):
+    name: str | None = None
+    password: str | None = Field(None, min_length=6)
+    is_active: bool | None = None
+    is_admin: bool | None = None
+    must_change_password: bool | None = None
+    theme: str | None = None
+    language: str | None = None
+
+
+class UserRead(UserBase):
+    user_id: int
+    roles: list[RoleRef] = []
+    permissions: list[PermissionRef] = []
+    cmk_theme: str | None = None  # populated at runtime from ui_theme.mk, not stored in DB
+    cmk_language: str | None = None  # populated at runtime from language.mk, not stored in DB
+    cmk_inline_help: bool = False  # mirrors LoggedInUser.inline_help_as_text
+    can_configure: bool = False  # may manage connections, images and settings (runtime)
+    can_create_maps: bool = False  # may create/delete maps (runtime)
+    command_permissions: list[str] = []  # host/service action verbs the user may run (runtime)
+
+    model_config = {"from_attributes": True}
+
+    @model_validator(mode="before")
+    @classmethod
+    def _collect_permissions(
+        cls, data: "dict[str, object] | UserModel"
+    ) -> "dict[str, object] | UserModel":
+        """Flatten permissions from all assigned roles into a deduplicated list."""
+        if isinstance(data, dict):
+            return data
+        if not hasattr(data, "roles"):
+            return data
+        seen: set[int] = set()
+        perms: list[object] = []
+        for role in data.roles or []:
+            for perm in role.permissions or []:
+                if perm.perm_id not in seen:
+                    seen.add(perm.perm_id)
+                    perms.append(perm)
+        return {
+            "user_id": data.user_id,
+            "name": data.name,
+            "is_active": data.is_active,
+            "is_admin": data.is_admin,
+            "must_change_password": data.must_change_password,
+            "theme": getattr(data, "theme", "system"),
+            "language": getattr(data, "language", "en"),
+            "roles": data.roles or [],
+            "permissions": perms,
+        }

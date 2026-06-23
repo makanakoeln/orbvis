@@ -1,0 +1,76 @@
+{
+  "name": "demo-world",
+  "alias": "Geo Map (Demo)",
+  "readonly": true,
+  "connection_id": "test",
+  "icon_size": 28,
+  "rotation_interval": 0,
+  "hover_template": null,
+  "context_template": null,
+  "background_image": null,
+  "view": { "type": "worldmap", "lat": 51.3, "lng": 10.5, "zoom": 6 },
+  "objects": [
+    {
+      "id": "wh-hamburg",
+      "type": "host",
+      "x": 0,
+      "y": 0,
+      "lat": 53.55,
+      "lng": 10.0,
+      "z": 1,
+      "host_name": "router01",
+      "label": { "show": true, "text": "router01\nHamburg", "x": 0, "y": 0, "size": 11, "color": "#ffffff", "background": "transparent" },
+      "display": { "mode": "icon" }
+    },
+    {
+      "id": "ws-hamburg-cpu",
+      "type": "service",
+      "x": 0,
+      "y": 0,
+      "lat": 53.62,
+      "lng": 10.12,
+      "z": 1,
+      "host_name": "router01",
+      "service_description": "CPU Load",
+      "label": { "show": true, "text": "CPU Load", "x": 0, "y": 0, "size": 10, "color": "#ffffff", "background": "transparent" },
+      "display": { "mode": "gadget", "gadget_type": "gauge" }
+    },
+    {
+      "id": "wh-muenchen",
+      "type": "host",
+      "x": 0,
+      "y": 0,
+      "lat": 48.14,
+      "lng": 11.58,
+      "z": 1,
+      "host_name": "mailserver",
+      "label": { "show": true, "text": "mailserver\nM\u00fcnchen", "x": 0, "y": 0, "size": 11, "color": "#ffffff", "background": "transparent" },
+      "display": { "mode": "icon" }
+    },
+    {
+      "id": "wh-bedburg",
+      "type": "host",
+      "x": 0,
+      "y": 0,
+      "lat": 51.0,
+      "lng": 6.59,
+      "z": 1,
+      "host_name": "fileserver",
+      "label": { "show": true, "text": "fileserver\nBedburg (Erft)", "x": 0, "y": 0, "size": 11, "color": "#ffffff", "background": "transparent" },
+      "display": { "mode": "icon" }
+    },
+    {
+      "id": "ws-bedburg-disk",
+      "type": "service",
+      "x": 0,
+      "y": 0,
+      "lat": 50.94,
+      "lng": 6.65,
+      "z": 1,
+      "host_name": "fileserver",
+      "service_description": "Disk /",
+      "label": { "show": true, "text": "Disk /", "x": 0, "y": 0, "size": 10, "color": "#ffffff", "background": "transparent" },
+      "display": { "mode": "icon" }
+    }
+  ]
+}

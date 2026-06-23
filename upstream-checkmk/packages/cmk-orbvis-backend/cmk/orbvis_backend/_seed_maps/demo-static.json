@@ -1,0 +1,377 @@
+{
+  "name": "demo-static",
+  "alias": "Static Map (Demo)",
+  "readonly": true,
+  "connection_id": "test",
+  "icon_size": 28,
+  "rotation_interval": 0,
+  "hover_template": null,
+  "context_template": null,
+  "background_image": "demo.svg",
+  "view": {
+    "type": "static"
+  },
+  "objects": [
+    {
+      "id": "host-localhost",
+      "type": "host",
+      "x": 270,
+      "y": 190,
+      "z": 1,
+      "host_name": "localhost",
+      "label": {
+        "show": true,
+        "text": "localhost",
+        "x": 0,
+        "y": 0,
+        "size": 11,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "icon"
+      }
+    },
+    {
+      "id": "host-router01",
+      "type": "host",
+      "x": 570,
+      "y": 190,
+      "z": 1,
+      "host_name": "router01",
+      "label": {
+        "show": true,
+        "text": "router01",
+        "x": 0,
+        "y": 0,
+        "size": 11,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "icon"
+      }
+    },
+    {
+      "id": "host-fileserver",
+      "type": "host",
+      "x": 420,
+      "y": 380,
+      "z": 1,
+      "host_name": "fileserver",
+      "label": {
+        "show": true,
+        "text": "fileserver",
+        "x": 0,
+        "y": 0,
+        "size": 11,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "icon"
+      }
+    },
+    {
+      "id": "line-loc-rtr",
+      "type": "line",
+      "x": 270,
+      "y": 190,
+      "z": 1,
+      "x2": 570,
+      "y2": 190,
+      "line_style": "plain",
+      "label": {
+        "show": false
+      }
+    },
+    {
+      "id": "wm-loc-fs",
+      "type": "line",
+      "x": 270,
+      "y": 190,
+      "z": 1,
+      "host_name": "localhost",
+      "service_description": "Interface eth0",
+      "x2": 420,
+      "y2": 380,
+      "line_style": "arrow_inward",
+      "label": {
+        "show": false
+      },
+      "line_perfdata_label": "bandwidth",
+      "line_weather_color": true
+    },
+    {
+      "id": "wm-rtr-fs",
+      "type": "line",
+      "x": 570,
+      "y": 190,
+      "z": 1,
+      "host_name": "router01",
+      "service_description": "Interface eth0",
+      "x2": 420,
+      "y2": 380,
+      "line_style": "arrow_inward",
+      "label": {
+        "show": false
+      },
+      "line_perfdata_label": "bandwidth",
+      "line_weather_color": true
+    },
+    {
+      "id": "svc-http",
+      "type": "service",
+      "x": 760,
+      "y": 190,
+      "z": 1,
+      "host_name": "localhost",
+      "service_description": "HTTP",
+      "label": {
+        "show": true,
+        "text": null,
+        "x": 0,
+        "y": 0,
+        "size": 10,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "icon"
+      }
+    },
+    {
+      "id": "svc-ping",
+      "type": "service",
+      "x": 925,
+      "y": 190,
+      "z": 1,
+      "host_name": "router01",
+      "service_description": "PING",
+      "label": {
+        "show": true,
+        "text": null,
+        "x": 0,
+        "y": 0,
+        "size": 10,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "icon"
+      }
+    },
+    {
+      "id": "svc-cpu-gauge",
+      "type": "service",
+      "x": 760,
+      "y": 355,
+      "z": 1,
+      "host_name": "localhost",
+      "service_description": "CPU Load",
+      "label": {
+        "show": true,
+        "text": "CPU Load",
+        "x": 0,
+        "y": 0,
+        "size": 10,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "gadget",
+        "gadget_type": "gauge"
+      }
+    },
+    {
+      "id": "svc-disk-bar",
+      "type": "service",
+      "x": 925,
+      "y": 355,
+      "z": 1,
+      "host_name": "fileserver",
+      "service_description": "Disk /",
+      "label": {
+        "show": true,
+        "text": "Disk /",
+        "x": 0,
+        "y": 0,
+        "size": 10,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "gadget",
+        "gadget_type": "bar"
+      }
+    },
+    {
+      "id": "svc-memory-tl",
+      "type": "service",
+      "x": 842,
+      "y": 520,
+      "z": 1,
+      "host_name": "mailserver",
+      "service_description": "Memory",
+      "label": {
+        "show": true,
+        "text": "Memory",
+        "x": 0,
+        "y": 0,
+        "size": 10,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "gadget",
+        "gadget_type": "trafficlight"
+      }
+    },
+    {
+      "id": "hg-linux",
+      "type": "hostgroup",
+      "x": 1092,
+      "y": 190,
+      "z": 1,
+      "group_name": "linux-servers",
+      "label": {
+        "show": true,
+        "text": "linux-servers",
+        "x": 0,
+        "y": 0,
+        "size": 11,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "icon"
+      }
+    },
+    {
+      "id": "sg-web",
+      "type": "servicegroup",
+      "x": 1092,
+      "y": 380,
+      "z": 1,
+      "group_name": "web-services",
+      "label": {
+        "show": true,
+        "text": "web-services",
+        "x": 0,
+        "y": 0,
+        "size": 11,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "icon"
+      }
+    },
+    {
+      "id": "shape-logo",
+      "type": "image",
+      "x": 1265,
+      "y": 190,
+      "z": 1,
+      "image_src": "cloud-computing.svg",
+      "label": {
+        "show": true,
+        "text": "image",
+        "x": 0,
+        "y": 0,
+        "size": 10,
+        "color": "#ffffff",
+        "background": "transparent"
+      }
+    },
+    {
+      "id": "map-self",
+      "type": "map",
+      "x": 1265,
+      "y": 380,
+      "z": 1,
+      "map_name": "demo-world",
+      "label": {
+        "show": true,
+        "text": "map \u2192 World",
+        "x": 0,
+        "y": 0,
+        "size": 10,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "icon"
+      }
+    },
+    {
+      "id": "graph-cpu",
+      "type": "graph",
+      "x": 1537,
+      "y": 190,
+      "z": 1,
+      "host_name": "localhost",
+      "service_description": "CPU Load",
+      "graph_metric": [
+        "load1"
+      ],
+      "graph_time_window": 60,
+      "graph_width": 185,
+      "graph_height": 120,
+      "label": {
+        "show": true,
+        "text": "CPU Load",
+        "x": 0,
+        "y": 126,
+        "size": 10,
+        "color": "#ffffff",
+        "background": "transparent"
+      }
+    },
+    {
+      "id": "graph-disk",
+      "type": "graph",
+      "x": 1537,
+      "y": 380,
+      "z": 1,
+      "host_name": "fileserver",
+      "service_description": "Disk /",
+      "graph_metric": [
+        "used"
+      ],
+      "graph_time_window": 60,
+      "graph_width": 185,
+      "graph_height": 120,
+      "label": {
+        "show": true,
+        "text": "Disk /",
+        "x": 0,
+        "y": 126,
+        "size": 10,
+        "color": "#ffffff",
+        "background": "transparent"
+      }
+    },
+    {
+      "id": "aggr-web",
+      "type": "aggregation",
+      "x": 425,
+      "y": 520,
+      "z": 1,
+      "aggregation_id": "demo_web",
+      "expand_depth": 1,
+      "label": {
+        "show": true,
+        "text": "Web stack",
+        "x": 0,
+        "y": 0,
+        "size": 11,
+        "color": "#ffffff",
+        "background": "transparent"
+      },
+      "display": {
+        "mode": "icon"
+      }
+    }
+  ]
+}
