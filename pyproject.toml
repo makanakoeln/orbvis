@@ -97,6 +97,7 @@ first-party-not-cmk = ["app"]
 "backend/app/seed_*.py" = ["T20"]
 "backend/app/integrations/**/*.py" = ["T20"]
 "tools/**/*.py" = ["T20"]
+"scripts/**/*.py" = ["T20"]                                         # migration-CLI tooling prints progress
 "cmk_plugins_23/**/*.py" = ["BLE001", "SLF001", "ARG001"]           # Checkmk-API-Zugriffe + Kompat-Brücken
 "cmk_plugins/cmk/gui/plugins/**/*.py" = ["BLE001", "SLF001", "ARG001"]
 
