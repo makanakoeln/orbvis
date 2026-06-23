@@ -24,14 +24,15 @@ export const SETTINGS_DEFAULTS: GlobalSettings = {
   default_render_mode: 'default',
   hover_template: null,
   context_template: null,
-  board_list_view: 'cards'
+  map_list_view: 'cards'
 }
 
 export const SYSTEM_DEFAULTS: SystemSettings = {
   log_level: null,
   checkmk_url: null,
-  enable_folder_boards: false,
-  enable_graph_objects: true
+  enable_folder_maps: false,
+  enable_graph_objects: true,
+  enable_presentation_maps: false
 }
 
 export const useSettingsStore = defineStore('settings', () => {

@@ -1,5 +1,5 @@
 /**
- * Kanonische Zustandsfarben — eine Quelle für BoardLine, WorldMapCanvas und BoardObject.
+ * Kanonische Zustandsfarben — eine Quelle für MapLine, WorldMapCanvas und MapObject.
  * SVG-Attribute können kein var() nutzen, daher bleiben die Hex-Werte hier als JS-Map.
  * Die CSS-Vars in style.css (--color-warning etc.) müssen mit diesen Werten übereinstimmen.
  */
@@ -14,13 +14,13 @@ export const STATE_COLORS: Record<string, string> = {
   UNKNOWN: '#fb923c',
   WARNING: '#ffd000',
   PENDING: PENDING_COLOR,
-  // Object referenced on the board doesn't exist in monitoring data — neutral
+  // Object referenced on the map doesn't exist in monitoring data — neutral
   // dim grey, paired with a dashed outline + "?" badge for clear differentiation.
   NOT_FOUND: '#71717a'
 }
 
 // Tailwind blue-500 / amber-400 — kept in sync with the badges rendered
-// directly via Tailwind classes in BoardObject.vue (downtime/ack indicators).
+// directly via Tailwind classes in MapObject.vue (downtime/ack indicators).
 export const DOWNTIME_COLOR = '#3b82f6'
 export const ACKNOWLEDGED_COLOR = '#fbbf24'
 

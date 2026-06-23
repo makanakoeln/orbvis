@@ -59,7 +59,7 @@ function isActive(path: string): boolean {
 const breadcrumbItems = computed<BreadcrumbItem[]>(() => {
   const current = adminNavItems.value.find((item) => isActive(item.to))
   const items: BreadcrumbItem[] = [
-    { title: _t('Boards'), to: '/' },
+    { title: _t('Maps'), to: '/' },
     { title: _t('Administration') }
   ]
   if (current) items.push({ title: current.label })

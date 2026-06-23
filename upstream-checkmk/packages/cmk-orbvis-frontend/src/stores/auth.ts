@@ -2,13 +2,12 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 
-import { ApiError, authApi } from '@/api/client'
+import { ACCESS_TOKEN_KEY, ApiError, authApi } from '@/api/client'
 import { setLanguage } from '@/i18n'
 import router from '@/router'
 import { useSettingsStore } from '@/stores/settings'
 import type { UserRead } from '@/types/api'
 
-const ACCESS_TOKEN_KEY = 'orbvis_access_token'
 const REFRESH_TOKEN_KEY = 'orbvis_refresh_token'
 const SSO_ACTIVE_KEY = 'orbvis_sso'
 // Guards against a redirect loop if we return from Checkmk still 2FA-pending.
@@ -77,8 +76,8 @@ export const useAuthStore = defineStore('auth', () => {
   // orbvis.configure / orbvis.edit_all permissions so non-admin roles can be
   // granted access; they fall back to is_admin for older backends.
   const canConfigure = computed(() => user.value?.can_configure ?? user.value?.is_admin ?? false)
-  const canCreateBoards = computed(
-    () => user.value?.can_create_boards ?? user.value?.is_admin ?? false
+  const canCreateMaps = computed(
+    () => user.value?.can_create_maps ?? user.value?.is_admin ?? false
   )
 
   function mayCommand(verb: string): boolean {
@@ -145,44 +144,39 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function _loadUser(token: string) {
+    user.value = await authApi.me(token)
+    const lang =
+      ssoActive.value && user.value.cmk_language
+        ? user.value.cmk_language
+        : (user.value.language ?? 'en')
+    void setLanguage(lang)
+    applyInlineHelp(user.value.cmk_inline_help)
+    // Load global settings so they're available for new map/object creation
+    useSettingsStore()
+      .load()
+      .catch((e) => console.warn('[OrbVis] Failed to load settings:', e))
+    // Load object-option registry (line styles, …) so dropdowns
+    // in the EditPanel / Global Settings stay in sync. Lazy import
+    // keeps the auth store free of a circular dep through pinia.
+    import('@/stores/objectOptions').then((m) => {
+      m.useObjectOptionsStore()
+        .ensureLoaded()
+        .catch((e) => console.warn('[OrbVis] Failed to load object options:', e))
+    })
+  }
+
   async function fetchCurrentUser() {
     if (!accessToken.value) return
     try {
-      user.value = await authApi.me(accessToken.value)
-      const lang =
-        ssoActive.value && user.value.cmk_language
-          ? user.value.cmk_language
-          : (user.value.language ?? 'en')
-      void setLanguage(lang)
-      applyInlineHelp(user.value.cmk_inline_help)
-      // Load global settings so they're available for new map/object creation
-      useSettingsStore()
-        .load()
-        .catch((e) => console.warn('[OrbVis] Failed to load settings:', e))
-      // Load object-option registry (line styles, …) so dropdowns
-      // in the EditPanel / Global Settings stay in sync. Lazy import
-      // keeps the auth store free of a circular dep through pinia.
-      import('@/stores/objectOptions').then((m) => {
-        m.useObjectOptionsStore()
-          .ensureLoaded()
-          .catch((e) => console.warn('[OrbVis] Failed to load object options:', e))
-      })
+      await _loadUser(accessToken.value)
     } catch {
       // Access token may be expired — try refresh before giving up
       if (refreshToken.value) {
         const ok = await refreshAccessToken()
         if (ok && accessToken.value) {
           try {
-            user.value = await authApi.me(accessToken.value)
-            const lang2 =
-              ssoActive.value && user.value.cmk_language
-                ? user.value.cmk_language
-                : (user.value.language ?? 'en')
-            void setLanguage(lang2)
-            applyInlineHelp(user.value.cmk_inline_help)
-            useSettingsStore()
-              .load()
-              .catch((e) => console.warn('[OrbVis] Failed to load settings:', e))
+            await _loadUser(accessToken.value)
             return
           } catch {
             /* fall through to clearAuth */
@@ -194,6 +188,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(username: string, password: string) {
+    // Guard against a double submit (e.g. Enter firing both the input's keydown
+    // handler and the form's implicit submission) re-entering mid-request.
+    if (loading.value) return
     loading.value = true
     error.value = null
     try {
@@ -203,12 +200,16 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token)
       sessionStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token)
       await fetchCurrentUser()
-      const redirect = router.currentRoute.value.query.redirect as string | undefined
-      const target: RouteLocationRaw = redirect ? { path: redirect } : { name: 'home' }
+      // query params can be string[] (?redirect=a&redirect=b) — only honor a
+      // plain single value, anything else lands on home.
+      const redirect = router.currentRoute.value.query.redirect
+      const target: RouteLocationRaw =
+        typeof redirect === 'string' && redirect ? { path: redirect } : { name: 'home' }
       router.push(target)
     } catch (e: unknown) {
+      // Communicated via `error` (LoginView renders it) — re-throwing would
+      // only produce an unhandled rejection in the submit handler.
       error.value = e instanceof Error ? e.message : 'Login failed'
-      throw e
     } finally {
       loading.value = false
     }
@@ -265,7 +266,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     canConfigure,
-    canCreateBoards,
+    canCreateMaps,
     mayCommand,
     ssoActive,
     isCheckmkDeployment,

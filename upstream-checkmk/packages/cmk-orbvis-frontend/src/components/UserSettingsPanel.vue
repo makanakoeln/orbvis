@@ -333,7 +333,7 @@ const tourResetDone = ref(false)
 
 function resetTour() {
   localStorage.removeItem(`orbvis_onboarded_${props.userId}`)
-  localStorage.removeItem(`orbvis_board_toured_${props.userId}`)
+  localStorage.removeItem(`orbvis_map_toured_${props.userId}`)
   tourResetDone.value = true
 }
 

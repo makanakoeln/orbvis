@@ -5,7 +5,7 @@ Upstream renders a bare <textarea> that picks up no theme background or
 border — in dark mode it ends up as a near-invisible black rectangle on
 a near-black surface. This override duplicates the upstream template
 and adds the OrbVis theme styles in a scoped block so the styling never
-leaks into other textareas (e.g. the textbox-board widget).
+leaks into other textareas (e.g. the textbox-map widget).
 Registered through ``orbFormComponents``; the vendored upstream file
 stays byte-identical.
 -->

@@ -1,5 +1,22 @@
 import sanitizeHtml from 'sanitize-html'
 
+// Single source for every URL sink fed by map data (template hrefs here,
+// click navigation in mapNavigation.ts). Mirrors the backend allowlist in
+// backend/app/schemas/_validators.py — keep the three in sync. The remote
+// access schemes (ssh/rdp/…) are user-mediated OS handlers monitoring maps
+// traditionally link on host objects; none of them is script-capable.
+export const SAFE_URL_SCHEMES = [
+  'http',
+  'https',
+  'mailto',
+  'tel',
+  'ssh',
+  'telnet',
+  'rdp',
+  'vnc',
+  'ftp'
+]
+
 // Allowlist for user-defined hover/context templates. Interpolated monitoring
 // data (plugin output, host names) must never become a script vector. Beyond
 // the former DOMPurify set this covers table layouts and inline icons, which
@@ -67,7 +84,7 @@ const TEMPLATE_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
       'max-height': SAFE_STYLE_VALUE
     }
   },
-  allowedSchemes: ['http', 'https', 'mailto', 'tel']
+  allowedSchemes: SAFE_URL_SCHEMES
 }
 
 export function sanitizeTemplateHtml(html: string): string {

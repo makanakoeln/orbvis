@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getMetric, parsePerfData, utilPercent } from './perf'
+import { fmtSI, getMetric, parsePerfData, utilPercent } from './perf'
 
 describe('parsePerfData', () => {
   it('returns empty array for empty string', () => {
@@ -114,5 +114,35 @@ describe('utilPercent', () => {
       max: null
     }
     expect(utilPercent(m)).toBe(100)
+  })
+})
+
+describe('fmtSI', () => {
+  it('keeps percent values plain', () => {
+    expect(fmtSI(53.88, '%')).toBe('54%')
+  })
+
+  it('scales large values with SI prefixes', () => {
+    expect(fmtSI(8927830016, 'B')).toBe('8.93 GB')
+    expect(fmtSI(244340, '')).toBe('244k')
+    expect(fmtSI(1500000, 'bit/s')).toBe('1.5 Mbit/s')
+  })
+
+  it('keeps small values unscaled', () => {
+    expect(fmtSI(0.02, 'ms')).toBe('0.02 ms')
+    expect(fmtSI(25, '')).toBe('25')
+  })
+
+  it('trims trailing zeros only after the decimal point', () => {
+    expect(fmtSI(5, 'KB')).toBe('5 KB')
+    expect(fmtSI(5.1, 'KB')).toBe('5.1 KB')
+    // Integers ending in zero must keep their digits (regression: "250" → "25").
+    expect(fmtSI(250e9, 'B')).toBe('250 GB')
+    expect(fmtSI(100000, '')).toBe('100k')
+  })
+
+  it('does not stack SI prefixes onto already-prefixed units', () => {
+    expect(fmtSI(2048, 'MB')).toBe('2048 MB')
+    expect(fmtSI(1.5, 'GiB')).toBe('1.5 GiB')
   })
 })

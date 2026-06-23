@@ -44,11 +44,6 @@ export function baseUnit(unit: string | null | undefined): string {
   return unit
 }
 
-export function fmtMagnitude(v: number): string {
-  const { num, prefix } = splitMagnitude(v)
-  return num + prefix
-}
-
 // Splits a value into its scaled numeric part and the SI prefix character.
 // Lets callers concatenate the prefix onto a base unit symbol so the resulting
 // label reads as one composite unit ("60.4" + " " + "M" + "B/s" → "60.4 MB/s")

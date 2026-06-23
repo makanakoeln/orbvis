@@ -3,7 +3,7 @@
     <main class="orb-home__main">
       <div class="orb-home__toolbar">
         <h2 class="orb-home__title">
-          {{ _t('Boards') }}
+          {{ _t('Maps') }}
         </h2>
         <div class="orb-home__search">
           <svg
@@ -21,7 +21,7 @@
           </svg>
           <input
             v-model="searchQuery"
-            :placeholder="_t('Search boards…')"
+            :placeholder="_t('Search maps…')"
             class="orb-home__search-input"
             :style="searchQuery ? 'padding-right: var(--dimension-8)' : ''"
           />
@@ -42,7 +42,7 @@
             </svg>
           </button>
         </div>
-        <div v-if="boardsStore.boards.length > 0" class="home-view-toggle">
+        <div v-if="mapsStore.maps.length > 0" class="home-view-toggle">
           <CmkToggleButtonGroup
             v-if="capabilities.formSpecs"
             :model-value="viewMode"
@@ -104,8 +104,8 @@
           </div>
         </div>
         <button
-          v-if="auth.canCreateBoards"
-          data-tour="new-board"
+          v-if="auth.canCreateMaps"
+          data-tour="new-map"
           class="orb-home__new-btn"
           @click="showCreate = true"
         >
@@ -118,12 +118,12 @@
           >
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          {{ _t('New Board') }}
+          {{ _t('New Map') }}
         </button>
       </div>
 
       <!-- Loading -->
-      <div v-if="boardsStore.loading" class="orb-home__loading">
+      <div v-if="mapsStore.loading" class="orb-home__loading">
         <svg class="orb-home__spinner" fill="none" viewBox="0 0 24 24">
           <circle
             class="orb-home__spinner-track"
@@ -143,12 +143,12 @@
       </div>
 
       <!-- Error -->
-      <div v-else-if="boardsStore.error" class="orb-home__error">
-        {{ boardsStore.error }}
+      <div v-else-if="mapsStore.error" class="orb-home__error">
+        {{ mapsStore.error }}
       </div>
 
       <!-- Empty state -->
-      <div v-else-if="boardsStore.boards.length === 0" class="orb-home__empty">
+      <div v-else-if="mapsStore.maps.length === 0" class="orb-home__empty">
         <div class="orb-home__empty-icon">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path
@@ -158,22 +158,22 @@
             />
           </svg>
         </div>
-        <p class="orb-home__empty-title">{{ _t('No boards configured') }}</p>
+        <p class="orb-home__empty-title">{{ _t('No maps configured') }}</p>
         <p class="orb-home__empty-hint">
-          <span v-if="auth.canCreateBoards" class="orb-home__empty-cta">{{
-            _t('Create your first board')
+          <span v-if="auth.canCreateMaps" class="orb-home__empty-cta">{{
+            _t('Create your first map')
           }}</span>
           <span v-else>{{ _t('Contact your administrator') }}</span>
         </p>
       </div>
 
-      <!-- Board grid -->
-      <div v-else-if="viewMode === 'cards'" data-tour="boards-grid" class="orb-home__grid">
-        <p v-if="searchQuery && !filteredBoards.length" class="orb-home__no-results">
-          {{ _t('No boards match "%{q}"', { q: searchQuery }) }}
+      <!-- Map grid -->
+      <div v-else-if="viewMode === 'cards'" data-tour="maps-grid" class="orb-home__grid">
+        <p v-if="searchQuery && !filteredMaps.length" class="orb-home__no-results">
+          {{ _t('No maps match "%{q}"', { q: searchQuery }) }}
         </p>
         <div
-          v-for="(map, index) in draggableBoards"
+          v-for="(map, index) in draggableMaps"
           :key="map.name"
           :class="[
             isDragEnabled ? 'orb-home__card--draggable' : '',
@@ -186,14 +186,14 @@
           @drop="onDrop"
           @dragend="onDragEnd"
         >
-          <router-link :to="`/boards/${map.name}`" class="orb-home__card-link">
+          <router-link :to="`/maps/${map.name}`" class="orb-home__card-link">
             <!-- Thumbnail -->
             <div class="orb-home__thumb">
               <img
                 v-if="
                   map.background_image && !map.name.startsWith('demo-') && !bgImageFailed[map.name]
                 "
-                :src="`${baseUrl}boards/backgrounds/${map.background_image}`"
+                :src="`${baseUrl}maps/backgrounds/${map.background_image}`"
                 :alt="map.alias || map.name"
                 class="orb-home__thumb-img"
                 draggable="false"
@@ -207,7 +207,7 @@
                 :zoom="worldmapZoom(map)"
                 class="orb-home__thumb-media"
               />
-              <!-- Flow Board thumbnail -->
+              <!-- Flow Map thumbnail -->
               <svg
                 v-else-if="map.view.type === 'flow'"
                 viewBox="0 0 256 128"
@@ -261,7 +261,7 @@
                   H
                 </text>
               </svg>
-              <!-- Radar Board thumbnail — status card grid -->
+              <!-- Radar Map thumbnail — status card grid -->
               <svg
                 v-else-if="map.view.type === 'radar'"
                 viewBox="0 0 256 128"
@@ -517,7 +517,161 @@
                 <rect x="193" y="106" width="32" height="7" rx="2" fill="rgba(255,208,0,0.12)" />
                 <circle cx="197.5" cy="109.5" r="1.5" fill="#ffd000" />
               </svg>
-              <!-- Static board thumbnail — scattered host/service objects, no tree structure -->
+              <!-- Folder Tree thumbnail — nested SETUP folders with live severity -->
+              <svg
+                v-else-if="map.view.type === 'foldertree'"
+                viewBox="0 0 256 128"
+                class="orb-home__thumb-media orb-home__thumb-media--fill"
+              >
+                <rect width="256" height="128" fill="#18181b" />
+                <!-- tree guide rails -->
+                <path
+                  d="M16 24 V102 M16 39 H26 M16 102 H26 M32 45 V81 M32 60 H42 M32 81 H42"
+                  stroke="#3f3f46"
+                  stroke-width="1"
+                  fill="none"
+                />
+                <!-- row 1 (root, open) — green -->
+                <path d="M10.5 15.5 h6 l-3 5 z" fill="#71717a" />
+                <rect x="22" y="12" width="6" height="3" rx="1" fill="rgba(34,197,94,0.5)" />
+                <rect
+                  x="22"
+                  y="14"
+                  width="14"
+                  height="9"
+                  rx="1.5"
+                  fill="rgba(34,197,94,0.18)"
+                  stroke="rgba(34,197,94,0.6)"
+                  stroke-width="0.75"
+                />
+                <rect x="40" y="16" width="78" height="5" rx="2" fill="rgba(255,255,255,0.22)" />
+                <circle cx="240" cy="18" r="3.5" fill="#22c55e" />
+                <!-- row 2 (open) — red -->
+                <path d="M26.5 36.5 h6 l-3 5 z" fill="#71717a" />
+                <rect x="38" y="33" width="6" height="3" rx="1" fill="rgba(239,68,68,0.5)" />
+                <rect
+                  x="38"
+                  y="35"
+                  width="14"
+                  height="9"
+                  rx="1.5"
+                  fill="rgba(239,68,68,0.18)"
+                  stroke="rgba(239,68,68,0.6)"
+                  stroke-width="0.75"
+                />
+                <rect x="56" y="37" width="66" height="5" rx="2" fill="rgba(255,255,255,0.22)" />
+                <circle cx="240" cy="39" r="3.5" fill="#ef4444" />
+                <!-- row 3 (leaf) — red -->
+                <rect x="44" y="54" width="6" height="3" rx="1" fill="rgba(239,68,68,0.5)" />
+                <rect
+                  x="44"
+                  y="56"
+                  width="14"
+                  height="9"
+                  rx="1.5"
+                  fill="rgba(239,68,68,0.18)"
+                  stroke="rgba(239,68,68,0.6)"
+                  stroke-width="0.75"
+                />
+                <rect x="62" y="58" width="54" height="5" rx="2" fill="rgba(255,255,255,0.16)" />
+                <circle cx="240" cy="60" r="3.5" fill="#ef4444" />
+                <!-- row 4 (leaf) — green -->
+                <rect x="44" y="75" width="6" height="3" rx="1" fill="rgba(34,197,94,0.5)" />
+                <rect
+                  x="44"
+                  y="77"
+                  width="14"
+                  height="9"
+                  rx="1.5"
+                  fill="rgba(34,197,94,0.18)"
+                  stroke="rgba(34,197,94,0.6)"
+                  stroke-width="0.75"
+                />
+                <rect x="62" y="79" width="60" height="5" rx="2" fill="rgba(255,255,255,0.16)" />
+                <circle cx="240" cy="81" r="3.5" fill="#22c55e" />
+                <!-- row 5 (closed) — yellow -->
+                <path d="M27 99 l4 3 l-4 3 z" fill="#71717a" />
+                <rect x="38" y="96" width="6" height="3" rx="1" fill="rgba(255,208,0,0.5)" />
+                <rect
+                  x="38"
+                  y="98"
+                  width="14"
+                  height="9"
+                  rx="1.5"
+                  fill="rgba(255,208,0,0.18)"
+                  stroke="rgba(255,208,0,0.6)"
+                  stroke-width="0.75"
+                />
+                <rect x="56" y="100" width="70" height="5" rx="2" fill="rgba(255,255,255,0.22)" />
+                <circle cx="240" cy="102" r="3.5" fill="#ffd000" />
+              </svg>
+              <!-- Presentation thumbnail — design-first slide with title and gadgets -->
+              <svg
+                v-else-if="map.view.type === 'presentation'"
+                viewBox="0 0 256 128"
+                class="orb-home__thumb-media orb-home__thumb-media--fill"
+              >
+                <rect width="256" height="128" fill="#18181b" />
+                <!-- slide canvas -->
+                <rect
+                  x="22"
+                  y="12"
+                  width="212"
+                  height="104"
+                  rx="6"
+                  fill="#1f2430"
+                  stroke="rgba(255,255,255,0.12)"
+                  stroke-width="1"
+                />
+                <!-- title block -->
+                <rect x="34" y="22" width="86" height="7" rx="2" fill="rgba(255,255,255,0.78)" />
+                <rect x="34" y="33" width="54" height="4" rx="2" fill="rgba(255,255,255,0.3)" />
+                <!-- gauge gadget -->
+                <path
+                  d="M44 96 A22 22 0 0 1 88 96"
+                  fill="none"
+                  stroke="#3f3f46"
+                  stroke-width="5"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M44 96 A22 22 0 0 1 79 78.4"
+                  fill="none"
+                  stroke="#22c55e"
+                  stroke-width="5"
+                  stroke-linecap="round"
+                />
+                <rect x="58" y="88" width="16" height="4" rx="2" fill="rgba(255,255,255,0.5)" />
+                <!-- bar gadget card -->
+                <rect
+                  x="110"
+                  y="56"
+                  width="46"
+                  height="48"
+                  rx="4"
+                  fill="rgba(255,255,255,0.04)"
+                  stroke="rgba(255,255,255,0.1)"
+                  stroke-width="0.75"
+                />
+                <rect x="118" y="80" width="7" height="18" rx="1.5" fill="#22c55e" />
+                <rect x="129" y="70" width="7" height="28" rx="1.5" fill="#ffd000" />
+                <rect x="140" y="86" width="7" height="12" rx="1.5" fill="#22c55e" />
+                <!-- value / light card -->
+                <rect
+                  x="164"
+                  y="56"
+                  width="46"
+                  height="48"
+                  rx="4"
+                  fill="rgba(255,255,255,0.04)"
+                  stroke="rgba(255,255,255,0.1)"
+                  stroke-width="0.75"
+                />
+                <circle cx="187" cy="74" r="9" fill="rgba(239,68,68,0.22)" />
+                <circle cx="187" cy="74" r="5" fill="#ef4444" />
+                <rect x="174" y="90" width="26" height="6" rx="2" fill="rgba(255,255,255,0.28)" />
+              </svg>
+              <!-- Static map thumbnail — scattered host/service objects, no tree structure -->
               <svg
                 v-else
                 viewBox="0 0 256 128"
@@ -726,10 +880,12 @@
                             ? 'orb-home__type-badge--static'
                             : map.view.type === 'foldertree'
                               ? 'orb-home__type-badge--foldertree'
-                              : 'orb-home__type-badge--generic'
+                              : map.view.type === 'presentation'
+                                ? 'orb-home__type-badge--presentation'
+                                : 'orb-home__type-badge--generic'
                   "
                 >
-                  {{ boardTypeLabel(map.view.type) }}
+                  {{ mapTypeLabel(map.view.type) }}
                 </span>
               </div>
               <div v-if="auth.isAdmin" class="orb-home__badges orb-home__badges--admin">
@@ -743,7 +899,7 @@
                 <span
                   v-if="map.readonly"
                   class="orb-home__flag-badge"
-                  :title="_t('Demo board — cannot be edited')"
+                  :title="_t('Demo map — cannot be edited')"
                 >
                   {{ _t('read-only') }}
                 </span>
@@ -778,7 +934,7 @@
                     />
                   </svg>
                   <span class="orb-home__card-conn" :title="map.connection_id">{{
-                    map.connection_id
+                    connectionsStore.labelFor(map.connection_id)
                   }}</span>
                   <span class="orb-home__card-dot">·</span>
                 </template>
@@ -798,7 +954,7 @@
             <button
               v-if="(auth.isAdmin || map.can_edit) && !map.readonly"
               class="orb-home__action orb-home__action--settings"
-              :title="_t('Board Settings')"
+              :title="_t('Map Settings')"
               @click.stop="openSettings(map)"
             >
               <svg
@@ -821,10 +977,10 @@
               </svg>
             </button>
             <button
-              v-if="auth.canCreateBoards"
+              v-if="auth.canCreateMaps"
               class="orb-home__action orb-home__action--clone"
-              :title="_t('Clone board')"
-              @click.stop="cloneBoard(map)"
+              :title="_t('Clone map')"
+              @click.stop="cloneMap(map)"
             >
               <svg
                 style="width: 14px; height: 14px"
@@ -841,10 +997,10 @@
               </svg>
             </button>
             <button
-              v-if="auth.canCreateBoards"
+              v-if="auth.canCreateMaps"
               class="orb-home__action orb-home__action--export"
-              :title="_t('Export board as JSON')"
-              @click.stop="exportBoard(map.name)"
+              :title="_t('Export map as JSON')"
+              @click.stop="exportMap(map.name)"
             >
               <svg
                 style="width: 14px; height: 14px"
@@ -861,10 +1017,10 @@
               </svg>
             </button>
             <button
-              v-if="auth.canCreateBoards"
+              v-if="auth.canCreateMaps"
               class="orb-home__action orb-home__action--delete"
-              :title="_t('Delete board &quot;%{name}&quot;?', { name: map.alias || map.name })"
-              @click.stop="deleteBoard(map)"
+              :title="_t('Delete map &quot;%{name}&quot;?', { name: map.alias || map.name })"
+              @click.stop="deleteMap(map)"
             >
               <svg
                 style="width: 14px; height: 14px"
@@ -885,25 +1041,25 @@
       </div>
 
       <!-- Table view -->
-      <BoardsTable
+      <MapsTable
         v-else
-        data-tour="boards-grid"
-        :boards="filteredBoards"
-        :selected-boards="selectedBoards"
+        data-tour="maps-grid"
+        :maps="filteredMaps"
+        :selected-maps="selectedMaps"
         :search-query="searchQuery"
         :all-selected="allFilteredSelected"
-        @toggle-select="toggleBoardSelection"
+        @toggle-select="toggleMapSelection"
         @toggle-select-all="toggleSelectAllFiltered"
         @open-settings="openSettings"
-        @clone="cloneBoard"
-        @export="exportBoard"
-        @delete="deleteBoard"
+        @clone="cloneMap"
+        @export="exportMap"
+        @delete="deleteMap"
       />
     </main>
   </div>
   <OrbConfirmDialog
     :open="!!confirmDelete"
-    :title="_t('Delete board')"
+    :title="_t('Delete map')"
     :message="
       confirmDelete
         ? _t('Are you sure you want to delete &quot;%{name}&quot;? This action cannot be undone.', {
@@ -916,13 +1072,13 @@
     @cancel="confirmDelete = null"
   />
 
-  <template v-if="auth.canCreateBoards">
-    <BoardBulkActionBar
+  <template v-if="auth.canCreateMaps">
+    <MapBulkActionBar
       v-if="capabilities.formSpecs"
       :count="selectedCount"
       :busy="bulkBusy"
       :select-all-checked="allFilteredSelected"
-      :select-all-label="_t('Select all (%{n} visible)', { n: filteredBoards.length })"
+      :select-all-label="_t('Select all (%{n} visible)', { n: filteredMaps.length })"
       :can-edit="true"
       @cancel="clearSelection"
       @edit="openBulkEdit"
@@ -930,12 +1086,12 @@
       @delete="openBulkDelete"
       @toggle-select-all="toggleSelectAllFiltered($event)"
     />
-    <BoardBulkActionBarLegacy
+    <MapBulkActionBarLegacy
       v-else
       :count="selectedCount"
       :busy="bulkBusy"
       :select-all-checked="allFilteredSelected"
-      :select-all-label="_t('Select all (%{n} visible)', { n: filteredBoards.length })"
+      :select-all-label="_t('Select all (%{n} visible)', { n: filteredMaps.length })"
       @cancel="clearSelection"
       @export="doBulkExport"
       @delete="openBulkDelete"
@@ -943,7 +1099,7 @@
     />
   </template>
 
-  <BoardBulkEditSlideIn
+  <MapBulkEditSlideIn
     v-if="capabilities.formSpecs && showBulkEdit"
     :open="showBulkEdit"
     :names="editableSelectedNames"
@@ -953,7 +1109,7 @@
     @apply="doBulkEdit"
   />
 
-  <BoardBulkDeleteDialog
+  <MapBulkDeleteDialog
     v-if="capabilities.formSpecs"
     :open="confirmBulkDelete"
     :names="selectedAliases"
@@ -961,7 +1117,7 @@
     @confirm="doBulkDelete"
     @cancel="confirmBulkDelete = false"
   />
-  <BoardBulkDeleteDialogLegacy
+  <MapBulkDeleteDialogLegacy
     v-else
     :open="confirmBulkDelete"
     :names="selectedAliases"
@@ -970,9 +1126,9 @@
     @cancel="confirmBulkDelete = false"
   />
 
-  <OrbModal :open="!!confirmClone" :title="_t('Clone board')" closable @close="confirmClone = null">
+  <OrbModal :open="!!confirmClone" :title="_t('Clone map')" closable @close="confirmClone = null">
     <div class="home-clone-modal__field">
-      <label class="home-clone-modal__label">{{ _t('Board ID') }}</label>
+      <label class="home-clone-modal__label">{{ _t('Map ID') }}</label>
       <input
         ref="cloneInputEl"
         :value="cloneNewName"
@@ -1000,15 +1156,15 @@
     </template>
   </OrbModal>
 
-  <BoardSettingsModal
-    v-if="settingsBoard"
-    :board="settingsBoard"
-    @close="settingsBoard = null"
-    @updated="boardsStore.fetchBoards()"
+  <MapSettingsModal
+    v-if="settingsMap"
+    :map="settingsMap"
+    @close="settingsMap = null"
+    @updated="mapsStore.fetchMaps()"
   />
 
-  <!-- Import FAB (board creators only) -->
-  <label v-if="auth.canCreateBoards" class="orb-home__import-fab" :title="_t('Import')">
+  <!-- Import FAB (map creators only) -->
+  <label v-if="auth.canCreateMaps" class="orb-home__import-fab" :title="_t('Import')">
     <svg
       class="orb-home__import-icon"
       fill="none"
@@ -1027,7 +1183,7 @@
       type="file"
       accept=".json,.cfg,application/json"
       class="orb-home__import-input"
-      @change="importBoard"
+      @change="importMap"
     />
   </label>
   <OrbConfirmDialog
@@ -1035,7 +1191,7 @@
     :title="_t('Import')"
     :message="
       importConflict
-        ? _t('Board &quot;%{name}&quot; already exists. Overwrite?', { name: importConflict.name })
+        ? _t('Map &quot;%{name}&quot; already exists. Overwrite?', { name: importConflict.name })
         : ''
     "
     :confirm-label="_t('Overwrite')"
@@ -1044,63 +1200,64 @@
     @cancel="importConflict = null"
   />
 
-  <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
+  <CreateMapModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
   <OnboardingTour
-    v-if="showOnboarding && auth.user"
+    v-if="showOnboarding && auth.user && capabilities.tour"
     :steps="tourSteps"
     :storage-key="`orbvis_onboarded_${auth.user.user_id}`"
-    :show-create-board="auth.canCreateBoards"
+    :show-create-map="auth.canCreateMaps"
     @close="showOnboarding = false"
-    @create-board="onTourCreateBoard"
+    @create-map="onTourCreateMap"
   />
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import OnboardingTour from '@/components/OnboardingTour.vue'
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue'
 import OrbModal from '@/components/OrbModal.vue'
 import WorldMapThumbnail from '@/components/WorldMapThumbnail.vue'
-import BoardBulkActionBar from '@/components/board/BoardBulkActionBar.vue'
-import BoardBulkActionBarLegacy from '@/components/board/BoardBulkActionBarLegacy.vue'
-import BoardBulkDeleteDialog from '@/components/board/BoardBulkDeleteDialog.vue'
-import BoardBulkDeleteDialogLegacy from '@/components/board/BoardBulkDeleteDialogLegacy.vue'
-import BoardBulkEditSlideIn from '@/components/board/BoardBulkEditSlideIn.vue'
-import BoardSettingsModal from '@/components/board/BoardSettingsModal.vue'
-import BoardsTable from '@/components/board/BoardsTable.vue'
-import CreateBoardModal from '@/components/board/CreateBoardModal.vue'
+import MapBulkActionBar from '@/components/map/MapBulkActionBar.vue'
+import MapBulkActionBarLegacy from '@/components/map/MapBulkActionBarLegacy.vue'
+import MapBulkDeleteDialog from '@/components/map/MapBulkDeleteDialog.vue'
+import MapBulkDeleteDialogLegacy from '@/components/map/MapBulkDeleteDialogLegacy.vue'
+import MapBulkEditSlideIn from '@/components/map/MapBulkEditSlideIn.vue'
+import MapSettingsModal from '@/components/map/MapSettingsModal.vue'
+import MapsTable from '@/components/map/MapsTable.vue'
+import CreateMapModal from '@/components/map/CreateMapModal.vue'
 import CmkButton from '@/components/cmk/CmkButton'
 import CmkToggleButtonGroup from '@/components/cmk/CmkToggleButtonGroup'
 
-import { boardsApi } from '@/api/client'
+import { mapsApi } from '@/api/client'
+import { useMapBulkActions } from '@/composables/useMapBulkActions'
+import { useMapImportExport } from '@/composables/useMapImportExport'
+import { useMapListViewMode } from '@/composables/useMapListViewMode'
 import { useChangelog } from '@/composables/useChangelog'
 import { useDragReorder } from '@/composables/useDragReorder'
-import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
-import { useBoardsStore } from '@/stores/boards'
+import { useMapsStore } from '@/stores/maps'
 import { useCapabilitiesStore } from '@/stores/capabilities'
+import { useConnectionsStore } from '@/stores/connections'
 import { useSettingsStore } from '@/stores/settings'
-import type {
-  BoardBulkDeleteFailure,
-  BoardConfig,
-  BoardListView,
-  BoardRead,
-  WorldmapView
-} from '@/types/api'
+import type { MapRead, WorldmapView } from '@/types/api'
 import type { TourStep } from '@/types/tour'
-import { sanitizeBoardName } from '@/utils/naming'
 import usei18n from '@cmk/lib/i18n'
 
 const { _t, _tn } = usei18n()
 const baseUrl = import.meta.env.BASE_URL
-// Boards whose background image 404s (e.g. an imported map_image that was never
-// uploaded) fall back to the board-type thumbnail.
+// Maps whose background image 404s (e.g. an imported map_image that was never
+// uploaded) fall back to the map-type thumbnail.
 const bgImageFailed = reactive<Record<string, boolean>>({})
 const auth = useAuthStore()
-const boardsStore = useBoardsStore()
+const mapsStore = useMapsStore()
 const router = useRouter()
+
+// Card meta shows the connection's display name, not the raw id — same
+// treatment as the maps table; falls back to the id until loaded.
+const connectionsStore = useConnectionsStore()
+if (auth.isAdmin) void connectionsStore.ensureConnections()
 const { changelogVisible } = useChangelog()
 const showCreate = ref(false)
 const showOnboarding = ref(false)
@@ -1111,7 +1268,7 @@ const tourSteps = computed<TourStep[]>(() => {
       selector: null,
       title: _t('Welcome to OrbVis'),
       body: _t(
-        'OrbVis visualizes the status of your monitored infrastructure — hosts, services, groups and more — on customizable boards.'
+        'OrbVis visualizes the status of your monitored infrastructure — hosts, services, groups and more — on customizable maps.'
       )
     },
     {
@@ -1119,26 +1276,26 @@ const tourSteps = computed<TourStep[]>(() => {
       title: _t('Navigation'),
       body: auth.isAdmin
         ? _t(
-            '"Overview" in the sidebar brings you back to the board list. The admin section below gives access to connections, images, users and settings.'
+            '"Overview" in the sidebar brings you back to the map list. The admin section below gives access to connections, images, users and settings.'
           )
-        : _t('"Overview" in the sidebar brings you back to the board list.')
+        : _t('"Overview" in the sidebar brings you back to the map list.')
     },
     {
-      selector: '[data-tour="boards-grid"]',
-      title: _t('Your boards'),
+      selector: '[data-tour="maps-grid"]',
+      title: _t('Your maps'),
       body: _t(
-        'Each card is a board — a visual map of your monitoring landscape. OrbVis supports static boards, Geo Boards, Radar views and Flow Boards.'
+        'Each card is a map — a visual map of your monitoring landscape. OrbVis supports static maps, Geo Maps, Radar views and Flow Maps.'
       )
     },
     {
-      selector: auth.isAdmin ? '[data-tour="new-board"]' : null,
+      selector: auth.isAdmin ? '[data-tour="new-map"]' : null,
       title: _t('Ready to go!'),
       body: auth.isAdmin
         ? _t(
-            'Create your first board here. Inside a board, click the pencil button (bottom-right) to enter edit mode and start placing monitoring objects.'
+            'Create your first map here. Inside a map, click the pencil button (bottom-right) to enter edit mode and start placing monitoring objects.'
           )
         : _t(
-            'Your administrator can create boards and grant you access. Once a board is available it will appear here.'
+            'Your administrator can create maps and grant you access. Once a map is available it will appear here.'
           )
     }
   ]
@@ -1149,381 +1306,140 @@ const tourSteps = computed<TourStep[]>(() => {
 const confirmDelete = ref<{ name: string; alias: string } | null>(null)
 const capabilities = useCapabilitiesStore()
 const settingsStore = useSettingsStore()
-const toast = useToast()
 
-// Per-user view choice (all roles), read synchronously at setup so the first
-// render honours it; the global board_list_view is only the default otherwise.
-function viewModeStorageKey(): string {
-  return `orbvis_board_list_view_${auth.user?.user_id ?? 'anon'}`
-}
-function readStoredViewMode(): BoardListView | null {
-  const v = localStorage.getItem(viewModeStorageKey())
-  return v === 'table' || v === 'cards' ? v : null
-}
-const localViewMode = ref<BoardListView | null>(readStoredViewMode())
+// Cards-vs-table choice (per-user localStorage override + global default).
+const { viewMode, viewModeOptions, setViewMode } = useMapListViewMode()
 
-const viewMode = computed<BoardListView>(
-  () =>
-    localViewMode.value ?? (settingsStore.settings.board_list_view === 'table' ? 'table' : 'cards')
-)
-const viewModeOptions = computed(() => [
-  { label: _t('Cards'), value: 'cards' },
-  { label: _t('Table'), value: 'table' }
-])
-
-function setViewMode(value: string) {
-  const next: BoardListView = value === 'table' ? 'table' : 'cards'
-  if (viewMode.value === next) return
-  localViewMode.value = next
-  try {
-    localStorage.setItem(viewModeStorageKey(), next)
-  } catch {
-    // localStorage unavailable (e.g. private mode); the in-memory ref still applies.
-  }
-}
-
-const selectedBoards = ref<Set<string>>(new Set())
-const confirmBulkDelete = ref(false)
-const bulkBusy = ref(false)
-const bulkFailures = ref<BoardBulkDeleteFailure[]>([])
-
-watch(viewMode, (mode) => {
-  if (mode === 'cards' && selectedBoards.value.size > 0) {
-    selectedBoards.value = new Set()
-    bulkFailures.value = []
-  }
+// Multi-select + bulk delete/edit/export for the map list (table view).
+const {
+  selectedMaps,
+  confirmBulkDelete,
+  bulkBusy,
+  showBulkEdit,
+  clearSelection,
+  toggleMapSelection,
+  selectedCount,
+  allFilteredSelected,
+  toggleSelectAllFiltered,
+  selectedAliases,
+  openBulkDelete,
+  doBulkDelete,
+  editableSelectedNames,
+  editableSelectedAliases,
+  openBulkEdit,
+  doBulkEdit,
+  doBulkExport
+} = useMapBulkActions({
+  filteredMaps: () => filteredMaps.value,
+  viewMode: () => viewMode.value,
+  openSettings: (map) => openSettings(map)
 })
 
 function onCreated(name: string) {
   showCreate.value = false
-  router.push(`/boards/${name}`)
+  router.push(`/maps/${name}`)
 }
 
-function deleteBoard(map: { name: string; alias: string }) {
+function deleteMap(map: { name: string; alias: string }) {
   confirmDelete.value = map
 }
 
 async function doDelete() {
   if (!confirmDelete.value) return
-  await boardsStore.deleteBoard(confirmDelete.value.name)
+  await mapsStore.deleteMap(confirmDelete.value.name)
   confirmDelete.value = null
 }
 
-function clearSelection() {
-  selectedBoards.value = new Set()
-  bulkFailures.value = []
-}
-
-function toggleBoardSelection(name: string) {
-  const next = new Set(selectedBoards.value)
-  if (next.has(name)) next.delete(name)
-  else next.add(name)
-  selectedBoards.value = next
-}
-
-const selectedCount = computed(() => selectedBoards.value.size)
-
-const allFilteredSelected = computed(() => {
-  const list = filteredBoards.value
-  if (list.length === 0) return false
-  return list.every((b) => selectedBoards.value.has(b.name))
-})
-
-function toggleSelectAllFiltered(checked: boolean) {
-  const next = new Set(selectedBoards.value)
-  if (checked) {
-    for (const b of filteredBoards.value) next.add(b.name)
-  } else {
-    for (const b of filteredBoards.value) next.delete(b.name)
-  }
-  selectedBoards.value = next
-}
-
-const selectedNames = computed(() => Array.from(selectedBoards.value))
-
-const selectedAliases = computed(() => {
-  const byName = new Map(boardsStore.boards.map((b) => [b.name, b.alias || b.name]))
-  return selectedNames.value.map((n) => byName.get(n) ?? n)
-})
-
-function openBulkDelete() {
-  if (selectedCount.value === 0) return
-  bulkFailures.value = []
-  confirmBulkDelete.value = true
-}
-
-async function doBulkDelete() {
-  if (bulkBusy.value) return
-  bulkBusy.value = true
-  try {
-    const result = await boardsStore.bulkDeleteBoards(selectedNames.value)
-    const okCount = result.deleted.length
-    const failed = result.failed
-    const okSet = new Set(result.deleted)
-    const remaining = new Set<string>()
-    for (const n of selectedBoards.value) {
-      if (!okSet.has(n)) remaining.add(n)
-    }
-    selectedBoards.value = remaining
-    bulkFailures.value = failed
-    confirmBulkDelete.value = false
-    if (failed.length === 0) {
-      toast.success(_t('%{n} boards deleted', { n: okCount }))
-    } else {
-      toast.error(_t('%{ok} deleted, %{fail} failed', { ok: okCount, fail: failed.length }))
-    }
-  } catch (e: unknown) {
-    toast.error(e instanceof Error ? e.message : 'Bulk delete failed')
-    confirmBulkDelete.value = false
-  } finally {
-    bulkBusy.value = false
-  }
-}
-
-const showBulkEdit = ref(false)
-
-const editableSelectedNames = computed(() => {
-  const writable = new Set(boardsStore.boards.filter((b) => !b.readonly).map((b) => b.name))
-  return selectedNames.value.filter((n) => writable.has(n))
-})
-
-const editableSelectedAliases = computed(() => {
-  const byName = new Map(boardsStore.boards.map((b) => [b.name, b.alias || b.name]))
-  return editableSelectedNames.value.map((n) => byName.get(n) ?? n)
-})
-
-function openBulkEdit() {
-  if (editableSelectedNames.value.length === 0) {
-    toast.error(_t('None of the selected boards is editable (all are read-only).'))
-    return
-  }
-  if (editableSelectedNames.value.length === 1) {
-    const board = boardsStore.boards.find((b) => b.name === editableSelectedNames.value[0])
-    if (board) {
-      openSettings(board)
-      return
-    }
-  }
-  showBulkEdit.value = true
-}
-
-async function doBulkEdit(updates: Record<string, unknown>) {
-  if (bulkBusy.value) return
-  if (Object.keys(updates).length === 0) {
-    showBulkEdit.value = false
-    return
-  }
-  const targets = editableSelectedNames.value
-  if (targets.length === 0) {
-    showBulkEdit.value = false
-    return
-  }
-  bulkBusy.value = true
-  try {
-    const result = await boardsStore.bulkEditBoards(targets, updates)
-    showBulkEdit.value = false
-    if (result.failed.length === 0) {
-      toast.success(_t('Updated %{n} boards', { n: result.updated.length }))
-    } else {
-      toast.error(
-        _t('Updated %{ok}, %{fail} failed', {
-          ok: result.updated.length,
-          fail: result.failed.length
-        })
-      )
-    }
-  } catch (e: unknown) {
-    toast.error(e instanceof Error ? e.message : 'Bulk edit failed')
-  } finally {
-    bulkBusy.value = false
-  }
-}
-
-async function doBulkExport() {
-  if (bulkBusy.value || selectedNames.value.length === 0) return
-  bulkBusy.value = true
-  try {
-    await boardsStore.bulkExportBoards(selectedNames.value)
-    toast.success(_t('Exported %{n} boards', { n: selectedNames.value.length }))
-  } catch (e: unknown) {
-    toast.error(e instanceof Error ? e.message : 'Bulk export failed')
-  } finally {
-    bulkBusy.value = false
-  }
-}
-
-const importConflict = ref<{ name: string; action: () => Promise<unknown> } | null>(null)
-
-async function importBoard(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  try {
-    if (file.name.toLowerCase().endsWith('.cfg')) {
-      try {
-        await boardsApi.importCfg(file, auth.accessToken!, false)
-      } catch (e: unknown) {
-        if (e instanceof Error && e.message.includes('already exists')) {
-          const name = file.name.replace(/\.cfg$/i, '')
-          importConflict.value = {
-            name,
-            action: () => boardsApi.importCfg(file, auth.accessToken!, true)
-          }
-          return
-        } else {
-          throw e
-        }
-      }
-    } else {
-      const text = await file.text()
-      const data: BoardConfig = JSON.parse(text)
-      try {
-        await boardsApi.importBoard(data, auth.accessToken!, false)
-      } catch (e: unknown) {
-        if (e instanceof Error && e.message.includes('already exists')) {
-          importConflict.value = {
-            name: data.name,
-            action: () => boardsApi.importBoard(data, auth.accessToken!, true)
-          }
-          return
-        } else {
-          throw e
-        }
-      }
-    }
-    await boardsStore.fetchBoards()
-  } catch (e: unknown) {
-    alert(e instanceof Error ? e.message : _t('Import failed'))
-  } finally {
-    ;(event.target as HTMLInputElement).value = ''
-  }
-}
-
-async function confirmImportOverwrite() {
-  if (!importConflict.value) return
-  const action = importConflict.value.action
-  importConflict.value = null
-  try {
-    await action()
-    await boardsStore.fetchBoards()
-  } catch (e: unknown) {
-    alert(e instanceof Error ? e.message : _t('Import failed'))
-  }
-}
-
-async function exportBoard(name: string) {
-  await boardsApi.exportBoard(name, auth.accessToken!)
-}
-
-const confirmClone = ref<string | null>(null)
-const cloneNewName = ref('')
-const cloneAlias = ref('')
-const cloneError = ref('')
+// Single-map import / export / clone (with overwrite-conflict handling).
 const cloneInputEl = ref<HTMLInputElement | null>(null)
+const {
+  importConflict,
+  importMap,
+  confirmImportOverwrite,
+  exportMap,
+  confirmClone,
+  cloneNewName,
+  cloneAlias,
+  cloneError,
+  cloneMap,
+  onCloneNameInput,
+  doClone
+} = useMapImportExport({ cloneInputEl })
 
-function cloneBoard(map: BoardRead) {
-  confirmClone.value = map.name
-  cloneNewName.value = `${map.name}_copy`
-  cloneAlias.value = map.alias ? `${map.alias} (Copy)` : ''
-  cloneError.value = ''
-  nextTick(() => {
-    cloneInputEl.value?.select()
-  })
-}
+const settingsMap = ref<MapRead | null>(null)
 
-function onCloneNameInput(e: Event) {
-  cloneNewName.value = sanitizeBoardName((e.target as HTMLInputElement).value)
-}
-
-async function doClone() {
-  if (!confirmClone.value || !cloneNewName.value) return
-  try {
-    await boardsApi.clone(
-      confirmClone.value,
-      {
-        new_name: cloneNewName.value,
-        ...(cloneAlias.value ? { alias: cloneAlias.value } : {})
-      },
-      auth.accessToken!
-    )
-    await boardsStore.fetchBoards()
-    confirmClone.value = null
-  } catch (e: unknown) {
-    cloneError.value = e instanceof Error ? e.message : _t('Clone failed')
-  }
-}
-
-const settingsBoard = ref<BoardRead | null>(null)
-
-function openSettings(map: BoardRead) {
-  settingsBoard.value = map
+function openSettings(map: MapRead) {
+  settingsMap.value = map
 }
 
 const searchQuery = ref('')
 
-const visibleBoards = computed(() =>
-  auth.isAdmin ? boardsStore.boards : boardsStore.boards.filter((m) => m.show_in_lists !== false)
+const visibleMaps = computed(() =>
+  auth.isAdmin ? mapsStore.maps : mapsStore.maps.filter((m) => m.show_in_lists !== false)
 )
 
-const filteredBoards = computed(() => {
+const filteredMaps = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return visibleBoards.value
-  return visibleBoards.value.filter(
+  if (!q) return visibleMaps.value
+  return visibleMaps.value.filter(
     (m) => m.name.toLowerCase().includes(q) || m.alias.toLowerCase().includes(q)
   )
 })
 
 const isDragEnabled = computed(() => auth.isAdmin && !searchQuery.value.trim())
 
-const draggableBoards = computed(() =>
-  isDragEnabled.value ? boardsStore.boards : filteredBoards.value
+const draggableMaps = computed(() =>
+  isDragEnabled.value ? mapsStore.maps : filteredMaps.value
 )
 
 // Reorder operates on the FULL store list — never on the filtered subset.
 // The isEnabled guard ensures drags only start when both lists are identical.
 const { dragIndex, onDragStart, onDragOver, onDrop, onDragEnd } = useDragReorder(
-  () => boardsStore.boards,
+  () => mapsStore.maps,
   (list) => {
-    boardsStore.boards.splice(0, boardsStore.boards.length, ...list)
+    mapsStore.maps.splice(0, mapsStore.maps.length, ...list)
   },
-  persistBoardOrder,
+  persistMapOrder,
   () => isDragEnabled.value
 )
 
-function persistBoardOrder() {
-  const order = boardsStore.boards.map((b, i) => ({ name: b.name, sort_order: i }))
-  boardsApi.reorder(order, auth.accessToken!).catch(() => boardsStore.fetchBoards())
+function persistMapOrder() {
+  const order = mapsStore.maps.map((b, i) => ({ name: b.name, sort_order: i }))
+  mapsApi.reorder(order, auth.accessToken!).catch(() => mapsStore.fetchMaps())
 }
 
 const TYPE_LABELS: Record<string, string> = {
   static: 'Static',
-  worldmap: 'Geo Board',
-  flow: 'Flow Board',
+  worldmap: 'Geo Map',
+  flow: 'Flow Map',
   radar: 'Radar',
-  foldertree: 'Folder Tree'
+  foldertree: 'Folder Tree',
+  presentation: 'Presentation'
 }
-function boardTypeLabel(type: string) {
+function mapTypeLabel(type: string) {
   return TYPE_LABELS[type] ?? type
 }
 
-function worldmapLat(map: BoardRead) {
+function worldmapLat(map: MapRead) {
   return map.view.type === 'worldmap' ? (map.view as WorldmapView).lat : 51
 }
-function worldmapLng(map: BoardRead) {
+function worldmapLng(map: MapRead) {
   return map.view.type === 'worldmap' ? (map.view as WorldmapView).lng : 10
 }
-function worldmapZoom(map: BoardRead) {
+function worldmapZoom(map: MapRead) {
   return map.view.type === 'worldmap' ? (map.view as WorldmapView).zoom : 5
 }
 
 onMounted(async () => {
-  await Promise.all([boardsStore.fetchBoards(), settingsStore.load()])
+  await Promise.all([mapsStore.fetchMaps(), settingsStore.load()])
   if (!auth.user) return
+  if (!capabilities.tour) return
   const storageKey = `orbvis_onboarded_${auth.user.user_id}`
   if (localStorage.getItem(storageKey)) return
-  // Existing operators who already have boards have outgrown the
+  // Existing operators who already have maps have outgrown the
   // onboarding tour; mark them as onboarded so an upgrade doesn't
   // ambush them with it.
-  if (boardsStore.boards.length > 0) {
+  if (mapsStore.maps.length > 0) {
     localStorage.setItem(storageKey, '1')
     return
   }
@@ -1539,7 +1455,7 @@ onMounted(async () => {
   }
 })
 
-function onTourCreateBoard(): void {
+function onTourCreateMap(): void {
   showOnboarding.value = false
   showCreate.value = true
 }
@@ -1947,6 +1863,18 @@ function onTourCreateBoard(): void {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-yellow-50) 30%, transparent);
 }
 
+.orb-home__type-badge--presentation {
+  color: var(--color-pink-80);
+  background: color-mix(in srgb, var(--color-pink-50) 15%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-pink-60) 40%, transparent);
+}
+
+.dark .orb-home__type-badge--presentation {
+  color: var(--color-pink-30);
+  background: color-mix(in srgb, var(--color-pink-50) 20%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-pink-50) 30%, transparent);
+}
+
 .orb-home__type-badge--generic {
   color: var(--text);
   background: color-mix(in srgb, var(--bg-surface) 85%, transparent);
@@ -2160,14 +2088,16 @@ function onTourCreateBoard(): void {
   align-items: center;
 }
 
-.home-view-toggle :deep(.toggle_buttons_container) {
+.home-view-toggle :deep(.cmk-toggle-button-group__container) {
   margin-bottom: 0;
-  padding: 3px;
+  padding: 2px;
+  border-radius: 4px;
 }
 
-.home-view-toggle :deep(.toggle_option) {
+.home-view-toggle :deep(.cmk-toggle-button-group__toggle-option) {
   min-width: 60px;
   font-size: 12px;
   padding: 3px 10px;
+  border-radius: 3px;
 }
 </style>

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { markRaw, ref, shallowRef, triggerRef } from 'vue'
 
-import { boardsApi, connectionsApi } from '@/api/client'
+import { authApi, mapsApi, connectionsApi } from '@/api/client'
 import type {
   FolderTreeDelta,
   FolderTreeNode,
@@ -73,7 +73,7 @@ function _indexFolderTree(node: FolderTreeNode, out: Map<string, FolderTreeNode>
   for (const c of node.children) _indexFolderTree(c, out)
 }
 
-// Foldertree boards ship no flat states list, so host-state notifications are
+// Foldertree maps ship no flat states list, so host-state notifications are
 // derived by diffing successive tree snapshots. Returns the new snapshot to
 // store; a null `prev` only primes (else every bad host would alert on load).
 function _diffNotifyFolderTree(
@@ -98,16 +98,19 @@ export const useStatesStore = defineStore('states', () => {
   const metricTitles = ref<Record<string, Record<string, string>>>({})
   const metricGraphs = ref<Record<string, MetricGraphGroup[]>>({})
   const connected = ref(false)
+  // Distributed: federation sites that stopped answering — foldertree leaves
+  // from these sites are frozen on their last known state (node.stale).
+  const deadSites = ref<string[]>([])
   const lastUpdate = ref<number | null>(null)
   const initialLoad = ref(false)
   const topology = ref<TopologyNode[]>([])
   const topologyReady = ref(false)
   // Bumped on every applied topology timing patch. Consumers that read a
-  // node's timing off a captured reference (the Flow Board's detail drawer)
+  // node's timing off a captured reference (the Flow Map's detail drawer)
   // watch this to re-derive — the in-place field mutation alone doesn't always
   // re-trigger their computed.
   const topologyTimingVersion = ref(0)
-  // Resolved + aggregated tree for foldertree boards (null for other types).
+  // Resolved + aggregated tree for foldertree maps (null for other types).
   // shallowRef + markRaw: not deep-reactive (100k+ nodes). The REST load + SSE
   // ``full`` replace it wholesale; SSE deltas patch nodes in place via the path
   // index and triggerRef() to notify consumers.
@@ -152,6 +155,7 @@ export const useStatesStore = defineStore('states', () => {
       node.acknowledged = p.acknowledged
       node.in_downtime = p.in_downtime
       node.is_flapping = p.is_flapping
+      node.stale = p.stale ?? false
       node.last_state_change = p.last_state_change ?? null
       node.services_summary = p.services_summary ?? null
       if (p.children_order) {
@@ -164,9 +168,9 @@ export const useStatesStore = defineStore('states', () => {
     triggerRef(folderTree)
     folderTreeVersion.value++
   }
-  // Kept under the historical name for compatibility with views; false after
-  // we fall back to HTTP polling because SSE didn't work.
-  const wsAvailable = ref(true)
+  // False after we fall back to HTTP polling because SSE didn't work
+  // (proxy without streaming support, auth rejected, …).
+  const sseAvailable = ref(true)
   const _LS_NOTIF = 'orbvis_notifications'
   const notificationsEnabled = ref(
     typeof Notification !== 'undefined' &&
@@ -231,7 +235,7 @@ export const useStatesStore = defineStore('states', () => {
     } finally {
       initialLoad.value = false
     }
-    if (!pollingMode) _connect()
+    if (!pollingMode) await _connect()
     else _startPolling()
   }
 
@@ -247,7 +251,7 @@ export const useStatesStore = defineStore('states', () => {
     if (!currentMap || !currentToken) return
     const mapAtStart = currentMap
     try {
-      const data = await boardsApi.getStates(
+      const data = await mapsApi.getStates(
         mapAtStart,
         currentToken,
         radarOverride.value,
@@ -267,6 +271,7 @@ export const useStatesStore = defineStore('states', () => {
       Object.assign(states.value, newStates)
       lastUpdate.value = ts
       connected.value = data.connection_ok
+      deadSites.value = data.dead_sites ?? []
       _setFolderTree(data.folder_tree ?? null)
       if (notificationsEnabled.value)
         prevFolderHostStates = _diffNotifyFolderTree(folderTree.value, prevFolderHostStates)
@@ -282,23 +287,36 @@ export const useStatesStore = defineStore('states', () => {
     if (!reprobeTimer) reprobeTimer = setInterval(_attemptSseReprobe, SSE_REPROBE_INTERVAL_MS)
   }
 
-  // SSE: GET endpoint, token in query string (EventSource cannot set
-  // Authorization). Access-token TTL is short (60 min default), so the
-  // exposure window is bounded.
-  function _sseUrl(): string {
-    return `${_base}/api/v1/sse/boards/${encodeURIComponent(
-      currentMap!
-    )}?token=${encodeURIComponent(currentToken!)}`
+  // SSE: GET endpoint, credential in query string (EventSource cannot set
+  // Authorization). Proxies log query strings, so prefer a minutes-lived
+  // stream ticket over the 60-min access token; fall back to the token when
+  // the ticket endpoint is unavailable (older backend during an update).
+  async function _sseUrl(map: string, token: string): Promise<string> {
+    let credential = token
+    try {
+      credential = (await authApi.streamTicket(token)).ticket
+    } catch {
+      // documented fallback above
+    }
+    return `${_base}/api/v1/sse/maps/${encodeURIComponent(map)}?token=${encodeURIComponent(
+      credential
+    )}`
   }
 
   // While polling, periodically test whether SSE is reachable again. On
   // success we discard the probe and re-establish the real stream via the
   // normal _connect() path (which wires the message/error handlers).
-  function _attemptSseReprobe() {
+  async function _attemptSseReprobe() {
     if (probing || !pollingMode || !currentMap || !currentToken) return
     probing = true
     const probeMap = currentMap
-    const probe = new EventSource(_sseUrl())
+    const probeUrl = await _sseUrl(probeMap, currentToken)
+    // A map switch / disconnect may have happened during the ticket fetch.
+    if (!pollingMode || currentMap !== probeMap) {
+      probing = false
+      return
+    }
+    const probe = new EventSource(probeUrl)
     reprobe = probe
     let opened = false
     probe.onopen = () => {
@@ -306,9 +324,9 @@ export const useStatesStore = defineStore('states', () => {
       probing = false
       probe.close()
       if (reprobe === probe) reprobe = null
-      // A board switch / disconnect happened while the probe was in
+      // A map switch / disconnect happened while the probe was in
       // flight — drop the stale result instead of promoting a stream for
-      // the wrong (or no) board.
+      // the wrong (or no) map.
       if (!pollingMode || currentMap !== probeMap) return
       if (pollTimer) {
         clearInterval(pollTimer)
@@ -319,8 +337,8 @@ export const useStatesStore = defineStore('states', () => {
         reprobeTimer = null
       }
       pollingMode = false
-      wsAvailable.value = true
-      _connect()
+      sseAvailable.value = true
+      void _connect()
     }
     probe.onerror = () => {
       // Still unreachable — discard; the timer retries on the next tick.
@@ -338,7 +356,7 @@ export const useStatesStore = defineStore('states', () => {
       _applyTopologyTiming(delta.timing)
       return
     }
-    // Only rebuild the array (which makes the FlowBoard re-derive its d3
+    // Only rebuild the array (which makes the FlowMap re-derive its d3
     // nodes) when the structure actually changed. A timing-only tick skips
     // this and patches in place below — no node rebuild, no force-sim
     // restart, just the open drawer/hover re-reading the new next-check.
@@ -379,9 +397,13 @@ export const useStatesStore = defineStore('states', () => {
     }
   }
 
-  function _connect() {
+  async function _connect() {
     if (!currentMap || !currentToken) return
-    sse = new EventSource(_sseUrl())
+    const map = currentMap
+    const url = await _sseUrl(map, currentToken)
+    // Map switched / disconnected while the ticket fetch was in flight.
+    if (currentMap !== map || sse) return
+    sse = new EventSource(url)
     let opened = false
 
     sse.onopen = () => {
@@ -419,6 +441,7 @@ export const useStatesStore = defineStore('states', () => {
           }
           lastUpdate.value = msg.states.generated_at
           connected.value = msg.states.connection_ok
+          deadSites.value = msg.states.dead_sites ?? []
           // A disk-cfg delta would overwrite the preview override snapshot.
           if (!folderOverride.value) _applyFolderTreeDelta(msg.states.folder_tree_delta)
           if (notificationsEnabled.value)
@@ -431,7 +454,7 @@ export const useStatesStore = defineStore('states', () => {
       } catch (e) {
         // A malformed frame must not kill the stream, but stay
         // diagnosable: a serialization/protocol regression would
-        // otherwise silently freeze the board on stale state.
+        // otherwise silently freeze the map on stale state.
         console.warn('[OrbVis] Failed to parse SSE message:', e)
       }
     }
@@ -442,7 +465,7 @@ export const useStatesStore = defineStore('states', () => {
       // streaming support, auth rejected etc.).
       if (!opened) {
         pollingMode = true
-        wsAvailable.value = false
+        sseAvailable.value = false
         sse?.close()
         sse = null
         _startPolling()
@@ -468,8 +491,8 @@ export const useStatesStore = defineStore('states', () => {
       reprobe = null
     }
     probing = false
-    // Reset so the next board re-attempts SSE fresh instead of inheriting a
-    // sticky polling fallback from a previously unreachable board.
+    // Reset so the next map re-attempts SSE fresh instead of inheriting a
+    // sticky polling fallback from a previously unreachable map.
     pollingMode = false
     if (sse) {
       sse.onerror = null
@@ -547,6 +570,7 @@ export const useStatesStore = defineStore('states', () => {
     metricTitles,
     metricGraphs,
     connected,
+    deadSites,
     lastUpdate,
     initialLoad,
     topology,
@@ -554,7 +578,7 @@ export const useStatesStore = defineStore('states', () => {
     topologyTimingVersion,
     folderTree,
     folderTreeVersion,
-    wsAvailable,
+    sseAvailable,
     notificationsEnabled,
     connectToMap,
     disconnect,

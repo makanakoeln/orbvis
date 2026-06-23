@@ -5,7 +5,7 @@
         {{ _t('Global Settings') }}
       </CmkHeading>
       <CmkParagraph class="admin-subtitle">
-        {{ _t('Default values applied when creating new boards and objects') }}
+        {{ _t('Default values applied when creating new maps and objects') }}
       </CmkParagraph>
     </div>
 
@@ -14,21 +14,20 @@
     </div>
 
     <div v-else>
-      <!-- Group: Defaults applied when creating a new board -->
-      <h3 class="orb-group-heading">{{ _t('When creating a new board') }}</h3>
+      <!-- Group: Defaults applied when creating a new map -->
+      <h3 class="orb-group-heading">{{ _t('When creating a new map') }}</h3>
       <div class="orb-gset__cards">
-        <!-- New board defaults -->
         <section class="orb-gset__card">
           <button
             class="orb-gset__card-toggle"
-            @click="sectionOpen.newBoardDefaults = !sectionOpen.newBoardDefaults"
+            @click="sectionOpen.newMapDefaults = !sectionOpen.newMapDefaults"
           >
             <h3 class="orb-gset__card-title">
-              {{ _t('New board defaults') }}
+              {{ _t('New map defaults') }}
             </h3>
             <svg
               class="orb-gset__chevron"
-              :class="{ 'orb-gset__chevron--open': sectionOpen.newBoardDefaults }"
+              :class="{ 'orb-gset__chevron--open': sectionOpen.newMapDefaults }"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -41,7 +40,7 @@
               />
             </svg>
           </button>
-          <CmkCollapsible :open="sectionOpen.newBoardDefaults">
+          <CmkCollapsible :open="sectionOpen.newMapDefaults">
             <div class="orb-gset__card-body orb-gset__field-row">
               <label class="orb-gset__label">
                 <span class="orb-gset__field-label">{{ _t('Connection') }}</span>
@@ -55,7 +54,7 @@
               </label>
 
               <label class="orb-gset__label">
-                <span class="orb-gset__field-label">{{ _t('Board type') }}</span>
+                <span class="orb-gset__field-label">{{ _t('Map type') }}</span>
                 <CmkDropdown
                   class="orb-gset__select"
                   :selected-option="form.default_map_type || null"
@@ -69,10 +68,9 @@
         </section>
       </div>
 
-      <!-- Group: Defaults applied to objects rendered on a board -->
-      <h3 class="orb-group-heading">{{ _t('When rendering objects on a board') }}</h3>
+      <!-- Group: Defaults applied to objects rendered on a map -->
+      <h3 class="orb-group-heading">{{ _t('When rendering objects on a map') }}</h3>
       <div class="orb-gset__cards">
-        <!-- Icon defaults -->
         <section class="orb-gset__card">
           <button
             class="orb-gset__card-toggle"
@@ -129,7 +127,6 @@
           </CmkCollapsible>
         </section>
 
-        <!-- Line defaults -->
         <section class="orb-gset__card">
           <button
             class="orb-gset__card-toggle"
@@ -185,9 +182,7 @@
           </CmkCollapsible>
         </section>
 
-        <!-- Label defaults — Show-label is a master toggle in the card header.
-                 Header uses a div+role=button instead of a native <button> so we can
-                 nest the CmkSwitch <label> (invalid HTML inside <button>). -->
+        <!-- div+role=button: the interactive CmkSwitch may not nest in a native <button> -->
         <section class="orb-gset__card">
           <div
             class="orb-gset__card-toggle orb-gset__card-toggle--clickable"
@@ -201,10 +196,10 @@
               {{ _t('Label defaults') }}
             </h3>
             <div class="orb-gset__card-actions" @click.stop>
-              <label class="orb-gset__switch-label">
-                <CmkSwitch v-model:data="form.label_show" />
-                <span>{{ _t('Show label') }}</span>
-              </label>
+              <span class="orb-gset__switch-label">
+                <CmkSwitch v-model="form.label_show" />
+                <span @click="form.label_show = !form.label_show">{{ _t('Show label') }}</span>
+              </span>
               <svg
                 class="orb-gset__chevron orb-gset__chevron--pointer"
                 :class="{ 'orb-gset__chevron--open': sectionOpen.labelDefaults }"
@@ -266,7 +261,6 @@
           </CmkCollapsible>
         </section>
 
-        <!-- Templates -->
         <section class="orb-gset__card">
           <button
             class="orb-gset__card-toggle"
@@ -295,7 +289,7 @@
               <p class="orb-gset__hint">
                 {{
                   _t(
-                    'Global fallback — applies to any board or object without its own template set'
+                    'Global fallback — applies to any map or object without its own template set'
                   )
                 }}
               </p>
@@ -373,7 +367,7 @@ import CmkInput from '@/components/cmk/user-input/CmkInput'
 import { useConnectionsStore } from '@/stores/connections'
 import { useSettingsStore } from '@/stores/settings'
 import type { GlobalSettings, LineStyle } from '@/types/api'
-import { boardTypeOptions, lineStyleOptions } from '@/utils/dropdownOptions'
+import { mapTypeOptions, lineStyleOptions } from '@/utils/dropdownOptions'
 import usei18n from '@cmk/lib/i18n'
 
 const { _t } = usei18n()
@@ -402,7 +396,7 @@ const sectionOpen = reactive({
   iconDefaults: true,
   lineDefaults: false,
   labelDefaults: false,
-  newBoardDefaults: false,
+  newMapDefaults: false,
   templates: false
 })
 
@@ -414,11 +408,12 @@ const connectionOptions = computed(() => ({
 }))
 const mapTypeOptions = computed(() => ({
   type: 'fixed' as const,
-  // Offer folder-tree as a default board type only when the feature flag is on,
+  // Offer folder-tree as a default map type only when the feature flag is on,
   // or when it is already the configured default (so it isn't silently dropped).
-  suggestions: boardTypeOptions(
+  suggestions: mapTypeOptions(
     _t,
-    store.system.enable_folder_boards || form.default_map_type === 'foldertree'
+    store.system.enable_folder_maps || form.default_map_type === 'foldertree',
+    store.system.enable_presentation_maps || form.default_map_type === 'presentation'
   )
 }))
 const lineStyleOpts = computed(() => ({
@@ -427,7 +422,6 @@ const lineStyleOpts = computed(() => ({
 }))
 const dirty = computed(() => JSON.stringify(form) !== JSON.stringify(store.settings))
 
-// Sync form when store finishes loading
 watch(
   () => store.settings,
   (val) => Object.assign(form, val),

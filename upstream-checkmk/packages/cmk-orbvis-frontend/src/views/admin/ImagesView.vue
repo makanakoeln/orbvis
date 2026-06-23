@@ -6,7 +6,7 @@
           {{ _t('Images') }}
         </CmkHeading>
         <CmkParagraph class="admin-subtitle">
-          {{ _t('Upload and manage images for board objects') }}
+          {{ _t('Upload and manage images for map objects') }}
         </CmkParagraph>
       </div>
       <CmkButton variant="primary" @click="fileInputEl?.click()">
@@ -50,10 +50,10 @@
       @cancel="cancelDelete"
     />
 
-    <!-- Image is referenced by N boards → CMK SlideIn with link cards.
+    <!-- Image is referenced by N maps → CMK SlideIn with link cards.
              Mirrors CMK's WATO pattern (see watolib/timeperiods.py +
              CmkSlideInDialog/CmkLinkCard) so a long usage list scrolls
-             gracefully and operators can jump to each affected board. -->
+             gracefully and operators can jump to each affected map. -->
     <CmkSlideInDialog
       :open="dialogReady && !!deleteTargetName && pendingUsage.length > 0"
       :header="{
@@ -69,7 +69,7 @@
         <CmkParagraph class="image-usage-pane__intro">
           {{
             _t(
-              'The image "%{name}" is referenced by %{count} board(s). Deleting it will leave those boards without an image. Continue?',
+              'The image "%{name}" is referenced by %{count} map(s). Deleting it will leave those maps without an image. Continue?',
               {
                 name: deleteTargetName ?? '',
                 count: pendingUsage.length
@@ -80,11 +80,11 @@
         <CmkLinkCardContainer>
           <CmkLinkCard
             v-for="entry in pendingUsage"
-            :key="entry.board"
+            :key="entry.map"
             icon-name="dashboard-main"
-            :title="entry.alias || entry.board"
+            :title="entry.alias || entry.map"
             :subtitle="usageSubtitle(entry)"
-            :url="boardUrl(entry)"
+            :url="mapUrl(entry)"
             :open-in-new-tab="true"
           />
         </CmkLinkCardContainer>
@@ -296,11 +296,11 @@ function usageSubtitle(entry: ImageUsageEntry): string {
   return parts.join(', ')
 }
 
-function boardUrl(entry: ImageUsageEntry): string {
+function mapUrl(entry: ImageUsageEntry): string {
   // Hash router: build a full URL so target=_blank opens the right route in
-  // a new tab (a bare "#/boards/..." would resolve against the current
+  // a new tab (a bare "#/maps/..." would resolve against the current
   // location and stay in-tab on some browsers).
-  return `${window.location.pathname}#/boards/${entry.board}`
+  return `${window.location.pathname}#/maps/${entry.map}`
 }
 
 function cancelDelete() {

@@ -56,21 +56,31 @@ export function placeableObjectTypes(
   return types
 }
 
-// The folder-tree board type is opt-in via the System Settings feature flag.
+// The folder-tree map type is opt-in via the System Settings feature flag.
 // ``includeFolderTree`` is the resolved flag; when off the type is hidden from
-// the picker (existing folder boards still render). It stays listed when the
-// board being edited is already a folder board, so its type isn't silently lost.
-export function boardTypeOptions(_t: TranslateFn, includeFolderTree = false) {
+// the picker (existing folder maps still render). It stays listed when the
+// map being edited is already a folder map, so its type isn't silently lost.
+export function mapTypeOptions(
+  _t: TranslateFn,
+  includeFolderTree = false,
+  includePresentation = false
+) {
   const options = [
-    { name: 'static', title: _t('Static board') },
-    { name: 'worldmap', title: _t('Geo Board') },
-    { name: 'flow', title: _t('Flow Board') },
+    { name: 'static', title: _t('Static map') },
+    { name: 'worldmap', title: _t('Geo Map') },
+    { name: 'flow', title: _t('Flow Map') },
     { name: 'radar', title: _t('Radar (dynamic filter)') }
   ]
   if (includeFolderTree) {
     options.push({
       name: 'foldertree',
       title: `${_t('Folder tree')} (experimental)`
+    })
+  }
+  if (includePresentation) {
+    options.push({
+      name: 'presentation',
+      title: `${_t('Presentation')} (experimental)`
     })
   }
   return options

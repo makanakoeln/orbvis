@@ -1,5 +1,4 @@
 import {
-  type NavigationGuardNext,
   type RouteLocationNormalized,
   type RouteLocationRaw,
   createRouter,
@@ -24,15 +23,15 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/boards/:name',
-      name: 'board',
-      component: () => import('@/views/BoardView.vue'),
+      path: '/maps/:name',
+      name: 'map',
+      component: () => import('@/views/MapView.vue'),
       meta: { requiresAuth: true }
     },
     {
-      path: '/boards/:name/view',
-      name: 'board-kiosk',
-      component: () => import('@/views/BoardView.vue'),
+      path: '/maps/:name/view',
+      name: 'map-kiosk',
+      component: () => import('@/views/MapView.vue'),
       meta: { requiresAuth: true, kiosk: true }
     },
     {
@@ -127,8 +126,5 @@ export async function authGuard(
 }
 
 router.beforeEach(authGuard)
-
-// Suppress "unused" warnings for types only consumed by the guard signature.
-export type { NavigationGuardNext }
 
 export default router

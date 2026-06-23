@@ -1,4 +1,6 @@
-import type { BoardObject } from '@/types/api'
+import type { MapObject } from '@/types/api'
+
+import { STATEFUL_OBJECT_TYPES, isProblemState } from './problemState'
 
 /**
  * Quicksearch tokens — mirror Checkmk's monitoring quicksearch prefixes so
@@ -71,7 +73,7 @@ export function matchesFilterTerms(
   )
 }
 
-function boardObjectFieldValue(obj: BoardObject, field: FilterField): string[] {
+function mapObjectFieldValue(obj: MapObject, field: FilterField): string[] {
   switch (field) {
     case 'host':
       return [obj.host_name ?? '']
@@ -96,12 +98,24 @@ function boardObjectFieldValue(obj: BoardObject, field: FilterField): string[] {
   }
 }
 
-export function objectMatchesFilter(obj: BoardObject, query: string): boolean {
+export function objectMatchesFilter(obj: MapObject, query: string): boolean {
   const terms = parseFilterTerms(query)
-  return matchesFilterTerms(terms, (field) => boardObjectFieldValue(obj, field))
+  return matchesFilterTerms(terms, (field) => mapObjectFieldValue(obj, field))
 }
 
 // Non-matches are desaturated too, not just faded, so matches read by colour on
 // a busy map; renderers also raise matches above dimmed neighbours.
 export const DIMMED_OPACITY = 0.15
 export const DIMMED_FILTER = 'grayscale(1)'
+
+// "Problems only" map toggle: stateful objects must currently be in a
+// problem state to stay visible; decorative types (image, textbox, …) and an
+// inactive toggle always pass. Shared by the static and worldmap canvases.
+export function passesProblemFilter(
+  obj: MapObject,
+  problemsOnly: boolean | undefined,
+  state: string | undefined
+): boolean {
+  if (!problemsOnly || !STATEFUL_OBJECT_TYPES.has(obj.type)) return true
+  return isProblemState(state)
+}

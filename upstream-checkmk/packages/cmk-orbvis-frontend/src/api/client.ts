@@ -4,12 +4,12 @@
 import type {
   AggregationInfo,
   AggregationNode,
-  BoardBulkDeleteResult,
-  BoardBulkEditResult,
-  BoardConfig,
-  BoardObject,
-  BoardPermissions,
-  BoardRead,
+  MapBulkDeleteResult,
+  MapBulkEditResult,
+  MapConfig,
+  MapObject,
+  MapPermissions,
+  MapRead,
   ConnectionConfig,
   ConnectionContext,
   DowntimeEntry,
@@ -21,19 +21,28 @@ import type {
   ImageEntry,
   ImageUsageEntry,
   MapStates,
+  MetricChoice,
   MetricGraphGroup,
   MetricHistoryResponse,
+  MetricUnitMap,
   ObjectDetails,
   PerfometerResult,
   PermissionRead,
   RoleRead,
+  StreamTicketResponse,
   SystemSettings,
   TokenResponse,
   UserRead
 } from '@/types/api'
+import { stripCheckmkBase } from '@/utils/mapNavigation'
 
 // import.meta.env.BASE_URL is '/' in dev and '/heute/orbvis/' when built with --base
 const BASE_URL = `${import.meta.env.BASE_URL}api/v1`
+
+// sessionStorage key for the access token. Lives here (not in stores/auth)
+// because both the auth store and the direct CMK-origin command path read
+// it, and the store already imports this module.
+export const ACCESS_TOKEN_KEY = 'orbvis_access_token'
 
 export class ApiError extends Error {
   constructor(
@@ -126,6 +135,8 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
 export interface Capabilities {
   form_specs: boolean
+  changelog: boolean
+  tour: boolean
 }
 
 export const capabilitiesApi = {
@@ -152,18 +163,23 @@ export const authApi = {
 
   me: (token: string): Promise<UserRead> => request('/auth/me', {}, token),
 
+  // Short-lived credential for URL-borne auth (SSE / tile <img> fetches) —
+  // keeps the long-lived access token out of proxy access logs.
+  streamTicket: (token: string): Promise<StreamTicketResponse> =>
+    request('/auth/stream-ticket', { method: 'POST' }, token),
+
   logout: (token: string): Promise<void> => request('/auth/logout', { method: 'POST' }, token)
 }
 
-// ---- Boards ----
+// ---- Maps ----
 
-export const boardsApi = {
-  list: (token: string): Promise<BoardRead[]> => request('/boards', {}, token),
+export const mapsApi = {
+  list: (token: string): Promise<MapRead[]> => request('/maps', {}, token),
 
-  get: (name: string, token: string): Promise<BoardConfig> => request(`/boards/${name}`, {}, token),
+  get: (name: string, token: string): Promise<MapConfig> => request(`/maps/${name}`, {}, token),
 
-  autoObjects: (name: string, token: string): Promise<BoardObject[]> =>
-    request(`/boards/${name}/auto-objects`, {}, token),
+  autoObjects: (name: string, token: string): Promise<MapObject[]> =>
+    request(`/maps/${name}/auto-objects`, {}, token),
 
   create: (
     data: {
@@ -175,17 +191,17 @@ export const boardsApi = {
       render_mode?: string
     },
     token: string
-  ): Promise<BoardConfig> =>
-    request('/boards', { method: 'POST', body: JSON.stringify(data) }, token),
+  ): Promise<MapConfig> =>
+    request('/maps', { method: 'POST', body: JSON.stringify(data) }, token),
 
   update: (
     name: string,
     data: Record<string, unknown>,
     token: string,
     ifMatch?: number | null
-  ): Promise<BoardConfig> =>
+  ): Promise<MapConfig> =>
     request(
-      `/boards/${name}`,
+      `/maps/${name}`,
       {
         method: 'PUT',
         body: JSON.stringify(data),
@@ -195,27 +211,27 @@ export const boardsApi = {
     ),
 
   reorder: (order: { name: string; sort_order: number }[], token: string): Promise<void> =>
-    request('/boards/reorder', { method: 'POST', body: JSON.stringify(order) }, token),
+    request('/maps/reorder', { method: 'POST', body: JSON.stringify(order) }, token),
 
   delete: (name: string, token: string): Promise<void> =>
-    request(`/boards/${name}`, { method: 'DELETE' }, token),
+    request(`/maps/${name}`, { method: 'DELETE' }, token),
 
-  bulkDelete: (names: string[], token: string): Promise<BoardBulkDeleteResult> =>
-    request('/boards/bulk-delete', { method: 'POST', body: JSON.stringify({ names }) }, token),
+  bulkDelete: (names: string[], token: string): Promise<MapBulkDeleteResult> =>
+    request('/maps/bulk-delete', { method: 'POST', body: JSON.stringify({ names }) }, token),
 
   bulkEdit: (
     names: string[],
     updates: Record<string, unknown>,
     token: string
-  ): Promise<BoardBulkEditResult> =>
+  ): Promise<MapBulkEditResult> =>
     request(
-      '/boards/bulk-edit',
+      '/maps/bulk-edit',
       { method: 'POST', body: JSON.stringify({ names, updates }) },
       token
     ),
 
   bulkExport: async (names: string[], token: string): Promise<void> => {
-    const response = await fetch(`${BASE_URL}/boards/bulk-export`, {
+    const response = await fetch(`${BASE_URL}/maps/bulk-export`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -231,7 +247,7 @@ export const boardsApi = {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'orbvis-boards.zip'
+    a.download = 'orbvis-maps.zip'
     a.click()
     URL.revokeObjectURL(url)
   },
@@ -242,7 +258,7 @@ export const boardsApi = {
     radarOverride?: { filter: string; filterValue: string } | null,
     folderOverride?: FolderTreeOverride | null
   ): Promise<MapStates> => {
-    let path = `/boards/${name}/states`
+    let path = `/maps/${name}/states`
     const qs = new URLSearchParams()
     if (radarOverride) {
       qs.set('radar_filter', radarOverride.filter)
@@ -261,13 +277,13 @@ export const boardsApi = {
   },
 
   // Lazily fetch one foldertree host's services (only when the operator
-  // expands that host) — keeps the board scalable on huge sites.
+  // expands that host) — keeps the map scalable on huge sites.
   folderHostServices: (name: string, host: string, token: string): Promise<FolderHostService[]> => {
     const qs = new URLSearchParams({ host })
-    return request(`/boards/${name}/folder-host-services?${qs.toString()}`, {}, token)
+    return request(`/maps/${name}/folder-host-services?${qs.toString()}`, {}, token)
   },
 
-  // Server-side service search for a foldertree board: finds services (and
+  // Server-side service search for a foldertree map: finds services (and
   // bare host-or-service terms) across the whole site via Livestatus, so a
   // `s:` query reaches hosts whose services were never lazily loaded. Pure
   // host/folder searches stay client-side and don't call this.
@@ -280,59 +296,59 @@ export const boardsApi = {
     terms.s.forEach((t) => qs.append('s', t))
     terms.h.forEach((t) => qs.append('h', t))
     terms.q.forEach((t) => qs.append('q', t))
-    return request(`/boards/${name}/folder-search?${qs.toString()}`, {}, token)
+    return request(`/maps/${name}/folder-search?${qs.toString()}`, {}, token)
   },
 
-  addObject: (boardName: string, obj: BoardObject, token: string): Promise<BoardConfig> =>
-    request(`/boards/${boardName}/objects`, { method: 'POST', body: JSON.stringify(obj) }, token),
+  addObject: (mapName: string, obj: MapObject, token: string): Promise<MapConfig> =>
+    request(`/maps/${mapName}/objects`, { method: 'POST', body: JSON.stringify(obj) }, token),
 
   updateObject: (
-    boardName: string,
+    mapName: string,
     objId: string,
     updates: Record<string, unknown>,
     token: string
-  ): Promise<BoardObject> =>
+  ): Promise<MapObject> =>
     request(
-      `/boards/${boardName}/objects/${objId}`,
+      `/maps/${mapName}/objects/${objId}`,
       { method: 'PUT', body: JSON.stringify(updates) },
       token
     ),
 
-  deleteObject: (boardName: string, objId: string, token: string): Promise<void> =>
-    request(`/boards/${boardName}/objects/${objId}`, { method: 'DELETE' }, token),
+  deleteObject: (mapName: string, objId: string, token: string): Promise<void> =>
+    request(`/maps/${mapName}/objects/${objId}`, { method: 'DELETE' }, token),
 
-  getPermissions: (name: string, token: string): Promise<BoardPermissions> =>
-    request(`/boards/${name}/permissions`, {}, token),
+  getPermissions: (name: string, token: string): Promise<MapPermissions> =>
+    request(`/maps/${name}/permissions`, {}, token),
 
   uploadBackground: (
-    boardName: string,
+    mapName: string,
     file: File,
     token: string
   ): Promise<{ filename: string; version: number | null }> =>
-    uploadFile(`/boards/${boardName}/background`, file, token),
+    uploadFile(`/maps/${mapName}/background`, file, token),
 
-  deleteBackground: (boardName: string, token: string): Promise<{ version: number | null }> =>
-    request(`/boards/${boardName}/background`, { method: 'DELETE' }, token),
+  deleteBackground: (mapName: string, token: string): Promise<{ version: number | null }> =>
+    request(`/maps/${mapName}/background`, { method: 'DELETE' }, token),
 
   clone: (
     name: string,
     data: { new_name: string; alias?: string },
     token: string
-  ): Promise<BoardConfig> =>
-    request(`/boards/${name}/clone`, { method: 'POST', body: JSON.stringify(data) }, token),
+  ): Promise<MapConfig> =>
+    request(`/maps/${name}/clone`, { method: 'POST', body: JSON.stringify(data) }, token),
 
-  importBoard: (data: BoardConfig, token: string, overwrite = false): Promise<BoardConfig> =>
+  importMap: (data: MapConfig, token: string, overwrite = false): Promise<MapConfig> =>
     request(
-      `/boards/import?overwrite=${overwrite}`,
+      `/maps/import?overwrite=${overwrite}`,
       { method: 'POST', body: JSON.stringify(data) },
       token
     ),
 
-  importCfg: (file: File, token: string, overwrite = false): Promise<BoardConfig> =>
-    uploadFile(`/boards/import/cfg?overwrite=${overwrite}`, file, token),
+  importCfg: (file: File, token: string, overwrite = false): Promise<MapConfig> =>
+    uploadFile(`/maps/import/cfg?overwrite=${overwrite}`, file, token),
 
-  exportBoard: async (name: string, token: string): Promise<void> => {
-    const cfg = await request<BoardConfig>(`/boards/${name}`, {}, token)
+  exportMap: async (name: string, token: string): Promise<void> => {
+    const cfg = await request<MapConfig>(`/maps/${name}`, {}, token)
     const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -405,22 +421,22 @@ export const rolesApi = {
 
 // ---- Connections ----
 
-export const boardsApiFormSpec = {
+export const mapsApiFormSpec = {
   getMetadataSchema: (token: string): Promise<Record<string, unknown>> =>
-    request('/boards/-/metadata-schema', {}, token),
+    request('/maps/-/metadata-schema', {}, token),
 
   getBulkMetadataSchema: (token: string): Promise<Record<string, unknown>> =>
-    request('/boards/-/bulk-metadata-schema', {}, token),
+    request('/maps/-/bulk-metadata-schema', {}, token),
 
   getFlowViewSchema: (token: string): Promise<Record<string, unknown>> =>
-    request('/boards/-/flow-view-schema', {}, token),
+    request('/maps/-/flow-view-schema', {}, token),
 
   getMetadata: (name: string, token: string): Promise<Record<string, unknown>> =>
-    request(`/boards/${encodeURIComponent(name)}/metadata`, {}, token),
+    request(`/maps/${encodeURIComponent(name)}/metadata`, {}, token),
 
   updateMetadata: (name: string, form: Record<string, unknown>, token: string): Promise<unknown> =>
     request(
-      `/boards/${encodeURIComponent(name)}/metadata`,
+      `/maps/${encodeURIComponent(name)}/metadata`,
       { method: 'PUT', body: JSON.stringify(form) },
       token
     )
@@ -572,7 +588,7 @@ export const connectionsApi = {
     host: string,
     token: string,
     service?: string
-  ): Promise<string[]> => {
+  ): Promise<MetricChoice[]> => {
     const params = new URLSearchParams({ host })
     if (service) params.set('service', service)
     return request(`/connections/${connectionId}/perf-metrics?${params}`, {}, token)
@@ -705,11 +721,18 @@ export const systemSettingsApi = {
     request('/settings/system/form', { method: 'PUT', body: JSON.stringify(data) }, token)
 }
 
+// Shared error path for the direct-fetch helpers below (CMK REST + command
+// proxy) — same ApiError shape as request() so callers can inspect status.
+async function throwApiError(response: Response): Promise<never> {
+  const detail = await response.json().catch(() => null)
+  throw new ApiError(response.status, formatApiErrorBody(detail, response.status), detail)
+}
+
 // ---- Checkmk REST API (direct browser → CMK, same-origin session) ----
 
 async function cmkRequest(baseUrl: string, path: string, body?: unknown): Promise<void> {
   // baseUrl e.g. "http://host/site" → API at "http://host/site/check_mk/api/1.0"
-  const base = baseUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
+  const base = stripCheckmkBase(baseUrl)
   const url = `${base}/check_mk/api/1.0${path}`
   const response = await fetch(url, {
     method: 'POST',
@@ -721,11 +744,7 @@ async function cmkRequest(baseUrl: string, path: string, body?: unknown): Promis
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {})
   })
-  if (!response.ok) {
-    const detail = await response.json().catch(() => null)
-    const msg = detail?.detail ?? detail?.title ?? `HTTP ${response.status}`
-    throw new Error(typeof msg === 'string' ? msg : `HTTP ${response.status}`)
-  }
+  if (!response.ok) await throwApiError(response)
 }
 
 interface CmkDowntimeItem {
@@ -746,7 +765,7 @@ async function cmkGetDowntimes(
   baseUrl: string,
   params: Record<string, string>
 ): Promise<DowntimeEntry[]> {
-  const base = baseUrl.replace(/\/check_mk\/?$/, '').replace(/\/$/, '')
+  const base = stripCheckmkBase(baseUrl)
   const query = new URLSearchParams(params).toString()
   const url = `${base}/check_mk/api/1.0/domain-types/downtime/collections/all?${query}`
   const response = await fetch(url, {
@@ -754,11 +773,7 @@ async function cmkGetDowntimes(
     credentials: 'include',
     headers: { Accept: 'application/json' }
   })
-  if (!response.ok) {
-    const detail = await response.json().catch(() => null)
-    const msg = detail?.detail ?? detail?.title ?? `HTTP ${response.status}`
-    throw new Error(typeof msg === 'string' ? msg : `HTTP ${response.status}`)
-  }
+  if (!response.ok) await throwApiError(response)
   const data: { value: CmkDowntimeItem[] } = await response.json()
   return data.value.map((item) => ({
     id: item.id,
@@ -816,10 +831,10 @@ async function orbvisCommand(
   // replacement uses OrbVis's own JWT. Read the same key the auth store
   // writes — keeping cmkApi callable from places without a vue-store
   // injection (composables, modal components).
-  const token = sessionStorage.getItem('orbvis_access_token') || ''
+  const token = sessionStorage.getItem(ACCESS_TOKEN_KEY) || ''
   // OrbVis hardcodes "live_1" as the default connection_id on every
   // CMK-bundled install (set by orbvis-setup), so it's a safe default
-  // for action commands. Future work: thread the active board's
+  // for action commands. Future work: thread the active map's
   // connection_id through if multi-backend setups need it.
   const connectionId = 'live_1'
   const url = `${orbvisApiBase(cmkBaseUrl)}/connections/${connectionId}/${target}`
@@ -831,11 +846,7 @@ async function orbvisCommand(
     headers,
     body: JSON.stringify(body)
   })
-  if (!response.ok) {
-    const detail = await response.json().catch(() => null)
-    const msg = detail?.detail ?? detail?.title ?? `HTTP ${response.status}`
-    throw new Error(typeof msg === 'string' ? msg : `HTTP ${response.status}`)
-  }
+  if (!response.ok) await throwApiError(response)
 }
 
 function cmkHostAction(
@@ -866,6 +877,16 @@ export const metricsApi = {
   ): Promise<PerfometerResult | null> {
     const params = new URLSearchParams({ connection_id: connectionId, host, service })
     return request<PerfometerResult | null>(`/metrics/perfometer?${params}`, {}, token)
+  },
+
+  getUnits(
+    connectionId: string,
+    host: string,
+    service: string,
+    token: string
+  ): Promise<MetricUnitMap> {
+    const params = new URLSearchParams({ connection_id: connectionId, host, service })
+    return request<MetricUnitMap>(`/metrics/units?${params}`, {}, token)
   }
 }
 

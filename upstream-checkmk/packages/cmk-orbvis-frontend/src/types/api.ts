@@ -37,6 +37,8 @@ export interface AggregationNode {
   acknowledged?: boolean
   host_name?: string | null
   service_description?: string | null
+  /** Plugin output of the node's compute result (leaf check output). */
+  output?: string
   children: AggregationNode[]
 }
 
@@ -58,7 +60,7 @@ export interface DisplayConfig {
   mode: 'icon' | 'text' | 'gadget'
   image?: string | null
   image_size?: number | null
-  gadget_type?: 'gauge' | 'bar' | 'trafficlight' | null
+  gadget_type?: 'gauge' | 'bar' | 'trafficlight' | 'value' | null
   gadget_metric?: string | null
 }
 
@@ -118,14 +120,150 @@ export interface FolderTreeView {
   show_services?: boolean
   show_empty_folders?: boolean
   problems_only?: boolean
+  /** What counts as a "problem" for problems_only ('any' default). */
+  problems_severity?: 'any' | 'critical'
   only_hard_states?: boolean
   sites?: string[]
 }
-export type BoardView = StaticView | WorldmapView | RadarView | FlowView | FolderTreeView
+export type PresentationTheme = 'midnight' | 'paper' | 'ops' | 'aurora'
+
+// Monitoring object types a presentation element can bind to. Absent/null
+// keeps the legacy host/service derivation.
+export type PresentationObjectType =
+  | 'host'
+  | 'service'
+  | 'hostgroup'
+  | 'servicegroup'
+  | 'aggregation'
+
+export interface ElementLabel {
+  show: boolean
+  text?: string | null
+  size: number
+  // null = inherit the slide theme.
+  color?: string | null
+  background?: string | null
+  weight?: 'normal' | 'bold' | null
+  align?: 'left' | 'right' | 'center' | null
+}
+
+// Absolute slide pixels — deliberately not the static map's percentages.
+interface PresentationElementBase {
+  id: string
+  x: number
+  y: number
+  w: number
+  h: number
+  rotation: number
+  z: number
+  opacity: number
+  locked: boolean
+  hidden: boolean
+  name?: string | null
+}
+
+export interface ShapeElement extends PresentationElementBase {
+  kind: 'shape'
+  shape: 'rect' | 'ellipse' | 'line' | 'arrow'
+  fill?: string | null
+  stroke?: string | null
+  stroke_width: number
+  corner_radius: number
+  dash: 'solid' | 'dashed' | 'dotted'
+  // Optional monitoring binding: when bound, the shape colours by state and can
+  // show a state label.
+  connection_id?: string | null
+  object_type?: PresentationObjectType | null
+  host_name?: string | null
+  service_description?: string | null
+  group_name?: string | null
+  aggregation_id?: string | null
+  only_hard_states?: boolean
+  label?: ElementLabel | null
+  // Endpoint docking (line/arrow): start/end follows a referenced element's centre.
+  start_ref?: string | null
+  end_ref?: string | null
+  // Weathermap flow: animate + drive colour/width/speed from a utilisation
+  // metric; a back metric splits the connector into a two-way link.
+  flow?: boolean
+  flow_metric?: string | null
+  flow_metric_back?: string | null
+  // Intended data slot (template placeholder): counted by the connect-data
+  // walkthrough until bound; plain decorative shapes never are.
+  data_slot?: boolean
+}
+
+export interface TextElement extends PresentationElementBase {
+  kind: 'text'
+  text: string
+  font_family?: string | null
+  font_size: number
+  font_weight: 'normal' | 'bold'
+  font_style: 'normal' | 'italic'
+  text_align: 'left' | 'center' | 'right' | 'justify'
+  line_height: number
+  // null = inherit the slide theme.
+  color?: string | null
+  background?: string | null
+  letter_spacing: number
+}
+
+export interface ImageElement extends PresentationElementBase {
+  kind: 'image'
+  src?: string | null
+  fit: 'cover' | 'contain' | 'fill'
+  alt?: string | null
+}
+
+export interface DataElement extends PresentationElementBase {
+  kind: 'data'
+  connection_id?: string | null
+  object_type?: PresentationObjectType | null
+  host_name?: string | null
+  service_description?: string | null
+  group_name?: string | null
+  aggregation_id?: string | null
+  only_hard_states: boolean
+  display: DisplayConfig
+  label?: ElementLabel | null
+  fill?: string | null
+  stroke?: string | null
+}
+
+export interface GroupElement extends PresentationElementBase {
+  kind: 'group'
+  children: string[]
+}
+
+export type PresentationElement =
+  | ShapeElement
+  | TextElement
+  | ImageElement
+  | DataElement
+  | GroupElement
+
+export interface PresentationView {
+  type: 'presentation'
+  width: number
+  height: number
+  theme: PresentationTheme
+  background?: string | null
+  background_image?: string | null
+  elements: PresentationElement[]
+  problems_only?: boolean
+}
+
+export type MapView =
+  | StaticView
+  | WorldmapView
+  | RadarView
+  | FlowView
+  | FolderTreeView
+  | PresentationView
 
 // Unsaved server-side foldertree view fields the Settings preview sends so the
 // server rebuilds the tree without persisting. Client-side fields (problems_only,
-// default_view, expand depth) are mirrored in the board and stay out of this.
+// default_view, expand depth) are mirrored in the map and stay out of this.
 export interface FolderTreeOverride {
   rootFolder: string
   showEmptyFolders: boolean
@@ -146,6 +284,8 @@ export interface FolderTreeNode {
   output: string
   acknowledged: boolean
   in_downtime: boolean
+  /** Distributed: the node's site went dead — last known state, render greyed. */
+  stale?: boolean
   site_id: string | null
   services_summary?: ServicesSummary | null
   children: FolderTreeNode[]
@@ -174,6 +314,7 @@ export interface FolderTreeNodePatch {
   acknowledged: boolean
   in_downtime: boolean
   is_flapping: boolean
+  stale?: boolean
   last_state_change?: number | null
   services_summary?: ServicesSummary | null
   children_order?: string[] | null
@@ -198,7 +339,7 @@ export interface FolderHostService {
   last_state_change: number | null
 }
 
-// One host + its services that matched a server-side folder-board service
+// One host + its services that matched a server-side folder-map service
 // search (grouped by host so the frontend injects them into the loaded tree).
 export interface FolderServiceMatch {
   host: string
@@ -206,14 +347,14 @@ export interface FolderServiceMatch {
   services: FolderHostService[]
 }
 
-// Result of a server-side (Livestatus) folder-board service search.
+// Result of a server-side (Livestatus) folder-map service search.
 export interface FolderServiceSearchResult {
   matches: FolderServiceMatch[]
   truncated: boolean
   limit: number
 }
 
-// Bulk-ack target shape shared by DetailDrawer (emits) → BoardView
+// Bulk-ack target shape shared by DetailDrawer (emits) → MapView
 // (handler) → BulkAckModal (props). One declaration so a future field
 // (e.g. site_id for federated targets) lands in one place.
 export interface BulkAckTarget {
@@ -225,7 +366,7 @@ export type HostState = 'UP' | 'DOWN' | 'UNREACHABLE' | 'PENDING'
 export type ServiceState = 'OK' | 'WARNING' | 'CRITICAL' | 'UNKNOWN' | 'PENDING'
 export type MonitoringState = HostState | ServiceState | 'NO_PERMISSION' | 'NOT_FOUND'
 
-export interface BoardObject {
+export interface MapObject {
   id: string
   type: ObjectType
   connection_id?: string | null
@@ -233,13 +374,13 @@ export interface BoardObject {
   y: number
   lat?: number | null
   lng?: number | null
-  // null/undefined ⇒ inherit the board's default_z (NagVis-style global default).
+  // null/undefined ⇒ inherit the map's default_z (NagVis-style global default).
   z?: number | null
   host_name?: string | null
   service_description?: string | null
   // Runtime-only hint (not persisted): the host's monitoring site, so commands
-  // route to the right site on boards whose objects aren't in the state map
-  // (e.g. the Flow Board, which is topology-driven). Optional everywhere else.
+  // route to the right site on maps whose objects aren't in the state map
+  // (e.g. the Flow Map, which is topology-driven). Optional everywhere else.
   site_id?: string | null
   group_name?: string | null
   map_name?: string | null
@@ -251,6 +392,9 @@ export interface BoardObject {
   // Optional line bend; null ⇒ geometric midpoint of the two endpoints.
   mid_x?: number | null
   mid_y?: number | null
+  // Sticky connectors: a bound endpoint follows the referenced object's position.
+  start_ref?: string | null
+  end_ref?: string | null
   line_style?: LineStyle | null
   line_width?: number | null
   line_perfdata_label?: LinePerfdataLabel | null
@@ -263,6 +407,9 @@ export interface BoardObject {
   aggregation_id?: string | null
   object_types?: 'host' | 'service' | null
   object_filter?: string | null
+  bundle_kind?: 'static' | 'location' | null
+  bundle_hosts?: string[] | null
+  bundle_precision?: number | null
   expand_depth?: number
   only_hard_states?: boolean
   recognize_services?: boolean
@@ -297,7 +444,7 @@ export type ClickAction = 'link' | 'none'
 
 export type RenderMode = 'default' | 'nagvis_classic'
 
-export interface BoardConfig {
+export interface MapConfig {
   name: string
   alias: string
   readonly?: boolean
@@ -311,15 +458,18 @@ export interface BoardConfig {
   background_image?: string | null
   background_color?: string | null
   render_mode?: RenderMode
-  // Board-wide fallback z for objects without an explicit z. Default 1.
+  // Map-wide fallback z for objects without an explicit z. Default 1.
   default_z?: number
   show_in_lists?: boolean
   version?: number
-  view: BoardView
-  objects: BoardObject[]
+  // Persisted percent-positioning divisor; see MapConfig.canvas_width (backend).
+  canvas_width?: number | null
+  canvas_height?: number | null
+  view: MapView
+  objects: MapObject[]
 }
 
-export interface BoardRead {
+export interface MapRead {
   name: string
   alias: string
   background_image?: string | null
@@ -327,7 +477,7 @@ export interface BoardRead {
   icon_size: number | null
   connection_id: string
   view_type: string
-  view: BoardView
+  view: MapView
   object_count: number
   rotation_interval: number
   version?: number
@@ -342,24 +492,24 @@ export interface BoardRead {
   can_edit?: boolean
 }
 
-export interface BoardBulkDeleteFailure {
+export interface MapBulkDeleteFailure {
   name: string
   reason: string
 }
 
-export interface BoardBulkDeleteResult {
+export interface MapBulkDeleteResult {
   deleted: string[]
-  failed: BoardBulkDeleteFailure[]
+  failed: MapBulkDeleteFailure[]
 }
 
-export interface BoardBulkEditFailure {
+export interface MapBulkEditFailure {
   name: string
   reason: string
 }
 
-export interface BoardBulkEditResult {
+export interface MapBulkEditResult {
   updated: string[]
-  failed: BoardBulkEditFailure[]
+  failed: MapBulkEditFailure[]
 }
 
 export interface ServicesSummary {
@@ -392,6 +542,7 @@ export interface ObjectState {
   last_state_change?: number | null
   tree?: AggregationNode | null
   services_summary?: ServicesSummary | null
+  hosts_summary?: ServicesSummary | null
 }
 
 export interface PerfometerSegment {
@@ -404,6 +555,17 @@ export interface PerfometerResult {
   rows: PerfometerSegment[][]
   pcts: number[]
 }
+
+// cmk-shared-typing UnitFormat plus the perfdata→registry scale factor —
+// what GET /metrics/units returns per raw perfdata label.
+export interface MetricUnitSpec {
+  notation: 'decimal' | 'si' | 'iec' | 'standard_scientific' | 'engineering_scientific' | 'time'
+  symbol: string
+  precision: { type: 'auto' | 'strict'; digits: number }
+  scale: number
+}
+
+export type MetricUnitMap = Record<string, MetricUnitSpec>
 
 export interface DowntimeEntry {
   id: string
@@ -458,6 +620,9 @@ export interface MapStates {
   states: ObjectState[]
   generated_at: number
   connection_ok: boolean
+  /** Distributed: federation sites that stopped answering (their tree leaves
+   *  freeze on the last known state, marked stale). */
+  dead_sites?: string[]
   folder_tree?: FolderTreeNode | null
 }
 
@@ -465,6 +630,11 @@ export interface TokenResponse {
   access_token: string
   refresh_token: string
   token_type: string
+}
+
+export interface StreamTicketResponse {
+  ticket: string
+  expires_in: number
 }
 
 export interface PermissionRef {
@@ -486,7 +656,7 @@ export interface UserRead {
   cmk_language: string | null
   cmk_inline_help: boolean
   can_configure: boolean
-  can_create_boards: boolean
+  can_create_maps: boolean
   command_permissions: string[]
   roles: RoleRef[]
   permissions: PermissionRef[]
@@ -558,18 +728,19 @@ export interface GlobalSettings {
   default_render_mode?: RenderMode
   hover_template?: string | null
   context_template?: string | null
-  board_list_view?: BoardListView
+  map_list_view?: MapListView
 }
 
-export type BoardListView = 'cards' | 'table'
+export type MapListView = 'cards' | 'table'
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL'
 
 export interface SystemSettings {
   log_level?: LogLevel | null
   checkmk_url?: string | null
-  enable_folder_boards?: boolean
+  enable_folder_maps?: boolean
   enable_graph_objects?: boolean
+  enable_presentation_maps?: boolean
 }
 
 // Slim timing patch for fields excluded from the state change-hash; see backend ObjectTiming.
@@ -587,6 +758,7 @@ export interface StateUpdatePayload {
   states: ObjectState[]
   generated_at: number
   connection_ok: boolean
+  dead_sites?: string[]
   folder_tree_delta?: FolderTreeDelta | null
 }
 
@@ -594,7 +766,7 @@ export interface WebSocketStateUpdate {
   type: 'state_update'
   map: string
   // When `full` is true (or absent, for old servers), `states.states` holds
-  // every object on the board and replaces the local map. When false, it
+  // every object on the map and replaces the local map. When false, it
   // contains only added/changed entries and `removed_ids` lists object_ids
   // that disappeared since the previous tick — frontend merges in place.
   states: StateUpdatePayload
@@ -606,7 +778,7 @@ export interface WebSocketStateUpdate {
 
 // Slim check-timing patch for a flow topology host (+ its services), parallel
 // to ObjectTiming on the state channel. Carries the last/next-check fields the
-// topology change-hash omits, so the Flow Board's next-check stays live.
+// topology change-hash omits, so the Flow Map's next-check stays live.
 export interface ServiceTiming {
   name: string
   last_check?: number | null
@@ -643,13 +815,13 @@ export interface ImageEntry {
 }
 
 export interface ImageUsageEntry {
-  board: string
+  map: string
   alias: string | null
   object_ids: string[]
   is_background: boolean
 }
 
-export interface BoardPermissions {
+export interface MapPermissions {
   view: string[]
   edit: string[]
 }
@@ -664,12 +836,20 @@ export interface MetricGraphGroup {
   id: string
   title: string
   metrics: string[]
+  // Metrics CMK draws mirrored below the x-axis (a Bidirectional graph's lower half).
+  mirrored?: string[]
+}
+
+export interface MetricChoice {
+  name: string
+  title: string
 }
 
 export interface MetricHistoryResponse {
   series: Record<string, MetricPoint[]>
   titles: Record<string, string>
   graphs: MetricGraphGroup[]
+  error?: string | null
 }
 
 export interface CommentInfo {

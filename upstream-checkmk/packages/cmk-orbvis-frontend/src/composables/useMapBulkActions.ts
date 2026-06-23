@@ -1,0 +1,201 @@
+import { computed, ref, watch } from 'vue'
+
+import { useToast } from '@/composables/useToast'
+import { useMapsStore } from '@/stores/maps'
+import type { MapBulkDeleteFailure, MapListView, MapRead } from '@/types/api'
+import usei18n from '@cmk/lib/i18n'
+
+interface MapBulkActionsOptions {
+  filteredMaps: () => MapRead[]
+  viewMode: () => MapListView
+  /** Opens the single-map settings modal (used when a bulk edit targets one). */
+  openSettings: (map: MapRead) => void
+}
+
+/**
+ * Multi-select + bulk delete/edit/export for the map list. Selection is reset
+ * when switching to cards view (the checkboxes only render in the table). Bulk
+ * delete keeps the still-selected set on partial failure so the operator can
+ * retry; bulk edit collapses to the single-map settings modal when exactly one
+ * editable map is selected. Read-only maps are filtered out of edits.
+ */
+export function useMapBulkActions(options: MapBulkActionsOptions) {
+  const { filteredMaps, viewMode, openSettings } = options
+  const mapsStore = useMapsStore()
+  const toast = useToast()
+  const { _t } = usei18n()
+
+  const selectedMaps = ref<Set<string>>(new Set())
+  const confirmBulkDelete = ref(false)
+  const bulkBusy = ref(false)
+  const bulkFailures = ref<MapBulkDeleteFailure[]>([])
+  const showBulkEdit = ref(false)
+
+  watch(viewMode, (mode) => {
+    if (mode === 'cards' && selectedMaps.value.size > 0) {
+      selectedMaps.value = new Set()
+      bulkFailures.value = []
+    }
+  })
+
+  function clearSelection() {
+    selectedMaps.value = new Set()
+    bulkFailures.value = []
+  }
+
+  function toggleMapSelection(name: string) {
+    const next = new Set(selectedMaps.value)
+    if (next.has(name)) next.delete(name)
+    else next.add(name)
+    selectedMaps.value = next
+  }
+
+  const selectedCount = computed(() => selectedMaps.value.size)
+
+  const allFilteredSelected = computed(() => {
+    const list = filteredMaps()
+    if (list.length === 0) return false
+    return list.every((b) => selectedMaps.value.has(b.name))
+  })
+
+  function toggleSelectAllFiltered(checked: boolean) {
+    const next = new Set(selectedMaps.value)
+    if (checked) {
+      for (const b of filteredMaps()) next.add(b.name)
+    } else {
+      for (const b of filteredMaps()) next.delete(b.name)
+    }
+    selectedMaps.value = next
+  }
+
+  const selectedNames = computed(() => Array.from(selectedMaps.value))
+
+  const selectedAliases = computed(() => {
+    const byName = new Map(mapsStore.maps.map((b) => [b.name, b.alias || b.name]))
+    return selectedNames.value.map((n) => byName.get(n) ?? n)
+  })
+
+  function openBulkDelete() {
+    if (selectedCount.value === 0) return
+    bulkFailures.value = []
+    confirmBulkDelete.value = true
+  }
+
+  async function doBulkDelete() {
+    if (bulkBusy.value) return
+    bulkBusy.value = true
+    try {
+      const result = await mapsStore.bulkDeleteMaps(selectedNames.value)
+      const okCount = result.deleted.length
+      const failed = result.failed
+      const okSet = new Set(result.deleted)
+      const remaining = new Set<string>()
+      for (const n of selectedMaps.value) {
+        if (!okSet.has(n)) remaining.add(n)
+      }
+      selectedMaps.value = remaining
+      bulkFailures.value = failed
+      confirmBulkDelete.value = false
+      if (failed.length === 0) {
+        toast.success(_t('%{n} maps deleted', { n: okCount }))
+      } else {
+        toast.error(_t('%{ok} deleted, %{fail} failed', { ok: okCount, fail: failed.length }))
+      }
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Bulk delete failed')
+      confirmBulkDelete.value = false
+    } finally {
+      bulkBusy.value = false
+    }
+  }
+
+  const editableSelectedNames = computed(() => {
+    const writable = new Set(mapsStore.maps.filter((b) => !b.readonly).map((b) => b.name))
+    return selectedNames.value.filter((n) => writable.has(n))
+  })
+
+  const editableSelectedAliases = computed(() => {
+    const byName = new Map(mapsStore.maps.map((b) => [b.name, b.alias || b.name]))
+    return editableSelectedNames.value.map((n) => byName.get(n) ?? n)
+  })
+
+  function openBulkEdit() {
+    if (editableSelectedNames.value.length === 0) {
+      toast.error(_t('None of the selected maps is editable (all are read-only).'))
+      return
+    }
+    if (editableSelectedNames.value.length === 1) {
+      const map = mapsStore.maps.find((b) => b.name === editableSelectedNames.value[0])
+      if (map) {
+        openSettings(map)
+        return
+      }
+    }
+    showBulkEdit.value = true
+  }
+
+  async function doBulkEdit(updates: Record<string, unknown>) {
+    if (bulkBusy.value) return
+    if (Object.keys(updates).length === 0) {
+      showBulkEdit.value = false
+      return
+    }
+    const targets = editableSelectedNames.value
+    if (targets.length === 0) {
+      showBulkEdit.value = false
+      return
+    }
+    bulkBusy.value = true
+    try {
+      const result = await mapsStore.bulkEditMaps(targets, updates)
+      showBulkEdit.value = false
+      if (result.failed.length === 0) {
+        toast.success(_t('Updated %{n} maps', { n: result.updated.length }))
+      } else {
+        toast.error(
+          _t('Updated %{ok}, %{fail} failed', {
+            ok: result.updated.length,
+            fail: result.failed.length
+          })
+        )
+      }
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Bulk edit failed')
+    } finally {
+      bulkBusy.value = false
+    }
+  }
+
+  async function doBulkExport() {
+    if (bulkBusy.value || selectedNames.value.length === 0) return
+    bulkBusy.value = true
+    try {
+      await mapsStore.bulkExportMaps(selectedNames.value)
+      toast.success(_t('Exported %{n} maps', { n: selectedNames.value.length }))
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Bulk export failed')
+    } finally {
+      bulkBusy.value = false
+    }
+  }
+
+  return {
+    selectedMaps,
+    confirmBulkDelete,
+    bulkBusy,
+    showBulkEdit,
+    clearSelection,
+    toggleMapSelection,
+    selectedCount,
+    allFilteredSelected,
+    toggleSelectAllFiltered,
+    selectedAliases,
+    openBulkDelete,
+    doBulkDelete,
+    editableSelectedNames,
+    editableSelectedAliases,
+    openBulkEdit,
+    doBulkEdit,
+    doBulkExport
+  }
+}

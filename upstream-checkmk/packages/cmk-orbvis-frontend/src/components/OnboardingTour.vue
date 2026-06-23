@@ -22,14 +22,14 @@
 
     <!-- 3. Demo scene on canvas step -->
     <OnboardingDemoScene
-      v-if="currentStep.selector?.includes('board-canvas') && targetRect"
+      v-if="currentStep.selector?.includes('map-canvas') && targetRect"
       :canvas-rect="targetRect"
       style="z-index: 9999"
     />
 
-    <!-- 3b. Settings scene on board-settings step -->
+    <!-- 3b. Settings scene on map-settings step -->
     <OnboardingSettingsScene
-      v-if="currentStep.selector?.includes('board-settings') && targetRect"
+      v-if="currentStep.selector?.includes('map-settings') && targetRect"
       style="z-index: 9999"
     />
 
@@ -72,13 +72,13 @@
             <button v-if="step > 1" class="orb-tour__btn-back" @click="prev">
               {{ _t('Back') }}
             </button>
-            <!-- Last step with create-board action -->
-            <template v-if="step === TOTAL && showCreateBoard">
-              <button class="orb-tour__btn-primary" @click="createBoard">
-                {{ _t('Create first board') }}
+            <!-- Last step with create-map action -->
+            <template v-if="step === TOTAL && showCreateMap">
+              <button class="orb-tour__btn-primary" @click="createMap">
+                {{ _t('Create first map') }}
               </button>
             </template>
-            <!-- Last step without create-board -->
+            <!-- Last step without create-map -->
             <button v-else-if="step === TOTAL" class="orb-tour__btn-primary" @click="finish">
               {{ _t('Done') }}
             </button>
@@ -149,12 +149,12 @@ const { _t } = usei18n()
 const props = defineProps<{
   steps: TourStep[]
   storageKey: string
-  showCreateBoard?: boolean
+  showCreateMap?: boolean
 }>()
 
 const emit = defineEmits<{
   close: []
-  createBoard: []
+  createMap: []
   stepClick: [step: number]
   stepBack: [step: number]
 }>()
@@ -334,9 +334,9 @@ function finish() {
   markDone()
   showAndClose(() => emit('close'))
 }
-function createBoard() {
+function createMap() {
   markDone()
-  showAndClose(() => emit('createBoard'))
+  showAndClose(() => emit('createMap'))
 }
 </script>
 

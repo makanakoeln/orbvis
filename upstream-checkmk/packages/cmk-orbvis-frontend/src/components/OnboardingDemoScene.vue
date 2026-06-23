@@ -1,6 +1,6 @@
 <template>
   <div class="scene" :style="overlayStyle">
-    <!-- Backdrop so demo objects are readable over any existing board content -->
+    <!-- Backdrop so demo objects are readable over any existing map content -->
     <div class="backdrop" />
 
     <!-- Connection lines -->

@@ -42,7 +42,7 @@
           </button>
         </nav>
 
-        <div class="settings-page__detail" :data-active="activeGroup">
+        <div ref="detailEl" class="settings-page__detail" :data-active="activeGroup">
           <FormEdit v-model:data="data" :spec="schema" :backend-validation="validation" />
         </div>
       </div>
@@ -93,6 +93,7 @@ import CmkHeading from '@/components/cmk/typography/CmkHeading'
 import CmkParagraph from '@/components/cmk/typography/CmkParagraph'
 
 import { ApiError, settingsApi } from '@/api/client'
+import { useDictionaryGroupAttrs } from '@/composables/useDictionaryGroupAttrs'
 import { useFormSpecSchema } from '@/composables/useFormSpecSchema'
 import { useSaveBarState } from '@/composables/useSaveBarState'
 import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
@@ -146,6 +147,8 @@ const data = ref<unknown>({})
 const initialData = ref<unknown>({})
 const validation = ref<Validation>([])
 const activeGroup = ref<string>('')
+const detailEl = ref<HTMLElement | null>(null)
+useDictionaryGroupAttrs(detailEl, () => (schema.value as DictionarySchema | null)?.elements)
 
 let savedOkTimer: ReturnType<typeof setTimeout> | null = null
 let saveErrorTimer: ReturnType<typeof setTimeout> | null = null
@@ -158,7 +161,7 @@ const heading = computed(
 const subtitle = computed(
   () =>
     (schema.value as DictionarySchema | null)?.help ||
-    _t('Default values applied when creating new boards and objects')
+    _t('Default values applied when creating new maps and objects')
 )
 
 function sidebarKey(rawKey: string): string {
@@ -640,14 +643,14 @@ onUnmounted(() => {
    would vanish. Vue's :deep() weakens specificity, so we hoist this
    rule with !important; the alternative (v-show inside the vendored
    FormDictionary) would require a bigger vendor patch. */
-.settings-page__detail :deep(tr[data-group='board_defaults']),
+.settings-page__detail :deep(tr[data-group='map_defaults']),
 .settings-page__detail :deep(tr[data-group='object_appearance']),
 .settings-page__detail :deep(tr[data-group='object_labels']),
 .settings-page__detail :deep(tr[data-group='object_templates']) {
   display: none !important;
 }
 
-.settings-page__detail[data-active='board_defaults'] :deep(tr[data-group='board_defaults']),
+.settings-page__detail[data-active='map_defaults'] :deep(tr[data-group='map_defaults']),
 .settings-page__detail[data-active='object_defaults'] :deep(tr[data-group='object_appearance']),
 .settings-page__detail[data-active='object_defaults'] :deep(tr[data-group='object_labels']),
 .settings-page__detail[data-active='object_defaults'] :deep(tr[data-group='object_templates']) {
@@ -655,11 +658,11 @@ onUnmounted(() => {
 }
 
 /* When a sidebar entry maps 1:1 to a single group, hide the inline
-   title — the sidebar already shows "Board defaults". For "Object
+   title — the sidebar already shows "Map defaults". For "Object
    defaults" the inline titles ("Appearance", "Labels", "Templates")
    stay because they're distinct sub-headings within one sidebar entry. */
-.settings-page__detail[data-active='board_defaults']
-  :deep(tr[data-group='board_defaults'] .form-dictionary__group-title) {
+.settings-page__detail[data-active='map_defaults']
+  :deep(tr[data-group='map_defaults'] .form-dictionary__group-title) {
   display: none;
 }
 
@@ -704,6 +707,12 @@ onUnmounted(() => {
   ) {
   border-top: 1px solid rgb(255 255 255 / 12%);
   padding-top: var(--dimension-6);
+}
+
+.settings-page__detail[data-active='object_defaults']
+  :deep(tr[data-group='object_appearance'] > td.form-dictionary__dictleft) {
+  border-top: 0 !important;
+  padding-top: 0 !important;
 }
 
 .settings-page__detail[data-active='object_defaults']

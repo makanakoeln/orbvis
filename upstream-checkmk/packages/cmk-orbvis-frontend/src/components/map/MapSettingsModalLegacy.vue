@@ -1,0 +1,1688 @@
+<template>
+  <CmkSlideInDialog
+    :open="!isPickingView"
+    :header="{ title: mapTitle, closeButton: true }"
+    :size="showPreview ? 'medium' : 'small'"
+    @close="onSlideInClose"
+  >
+    <div class="map-settings__shell">
+      <div class="map-settings__layout">
+        <div class="map-settings__body">
+          <!-- Tabs (only when there's more than one) -->
+          <div v-if="tabs.length > 1" class="map-settings__tabs">
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              type="button"
+              class="map-settings__tab"
+              :class="{ 'map-settings__tab--active': activeTab === tab.id }"
+              @click="activeTab = tab.id"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+
+          <div class="map-settings__scroll">
+            <!-- General -->
+            <div v-if="activeTab === 'general'" class="map-settings__form">
+              <div class="map-settings__field">
+                <CmkLabel>{{ _t('Display name') }}</CmkLabel>
+                <!-- aria-label keeps the field addressable like the FormSpec
+                     variant ("Display name") — same operator contract, and the
+                     shared e2e spec locates it in both modes. -->
+                <CmkInput v-model="form.alias" field-size="FILL" :aria-label="_t('Display name')" />
+              </div>
+
+              <div class="map-settings__field">
+                <CmkLabel>{{ _t('Connection') }}</CmkLabel>
+                <CmkDropdown
+                  :selected-option="form.connection_id || null"
+                  :options="connectionOptions"
+                  :width="'fill'"
+                  :label="_t('Connection')"
+                  @update:selected-option="form.connection_id = $event ?? ''"
+                />
+              </div>
+
+              <!-- Map type (read-only — switching type would invalidate type-specific
+                         settings and the map geometry; cloning is the supported path).
+                         Rendered as plain text (not Badge) so it doesn't suggest interaction. -->
+              <div class="map-settings__field">
+                <CmkLabel
+                  :help="
+                    _t(
+                      'Map type cannot be changed after creation. Clone the map to switch type.'
+                    )
+                  "
+                  >{{ _t('Map type') }}</CmkLabel
+                >
+                <p class="map-settings__readonly-value">{{ mapTypeLabel }}</p>
+              </div>
+
+              <!-- Rotation (positive toggle replaces the 0=disabled magic value) -->
+              <div class="map-settings__field">
+                <div class="map-settings__row-between">
+                  <CmkLabel :help="_t('Cycle through visible maps on a fixed interval')">{{
+                    _t('Auto-rotate maps')
+                  }}</CmkLabel>
+                  <CmkSwitch
+                    :model-value="rotationEnabled"
+                    @update:model-value="onToggleRotation"
+                  />
+                </div>
+                <div v-if="rotationEnabled" class="map-settings__detail">
+                  <NumberInput
+                    v-model="form.rotation_interval"
+                    min="1"
+                    max="3600"
+                    class="map-settings__num"
+                  />
+                  <span class="map-settings__unit">{{ _t('s') }}</span>
+                </div>
+              </div>
+
+              <!-- Object defaults (per-map overrides of global icon defaults).
+                                 The foldertree has no coordinate-positioned icons, so icon
+                                 size / layer don't apply. -->
+              <div
+                v-if="form.map_type !== 'foldertree' && form.map_type !== 'presentation'"
+                class="map-settings__subsection"
+              >
+                <p class="orb-section-title">{{ _t('Object defaults') }}</p>
+                <div class="map-settings__field">
+                  <CmkLabel>{{ _t('Icon size') }}</CmkLabel>
+                  <div class="map-settings__input-row">
+                    <NumberInput
+                      v-model="form.icon_size"
+                      min="12"
+                      max="96"
+                      :placeholder="String(settingsStore.settings.icon_size)"
+                      class="map-settings__num"
+                    />
+                    <span class="map-settings__unit">px</span>
+                  </div>
+                </div>
+                <div class="map-settings__field">
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'Layer for objects that have no explicit z value. Higher numbers render on top.'
+                      )
+                    "
+                    >{{ _t('Default layer (z)') }}</CmkLabel
+                  >
+                  <NumberInput
+                    v-model="form.default_z"
+                    min="0"
+                    max="999"
+                    class="map-settings__num"
+                  />
+                </div>
+              </div>
+
+              <!-- Worldmap settings -->
+              <template v-if="form.map_type === 'worldmap'">
+                <div class="map-settings__coord-row">
+                  <div class="map-settings__coord-grid">
+                    <div class="map-settings__field">
+                      <CmkLabel>{{ _t('Latitude') }}</CmkLabel>
+                      <NumberInput
+                        v-model="form.worldmap_lat"
+                        step="any"
+                        :precision="10"
+                        class="map-settings__num map-settings__num--full"
+                      />
+                    </div>
+                    <div class="map-settings__field">
+                      <CmkLabel>{{ _t('Longitude') }}</CmkLabel>
+                      <NumberInput
+                        v-model="form.worldmap_lng"
+                        step="any"
+                        :precision="10"
+                        class="map-settings__num map-settings__num--full"
+                      />
+                    </div>
+                    <div class="map-settings__field">
+                      <CmkLabel
+                        :help="
+                          _t(
+                            'Pan/zoom the map first, then reopen settings to capture the current view.'
+                          )
+                        "
+                        >{{ _t('Zoom') }}</CmkLabel
+                      >
+                      <NumberInput
+                        v-model="form.worldmap_zoom"
+                        min="1"
+                        max="18"
+                        class="map-settings__num map-settings__num--full"
+                      />
+                    </div>
+                  </div>
+                  <CmkButton
+                    variant="secondary"
+                    class="map-settings__pick-btn"
+                    :title="_t('Closes settings and switches the map to picker mode.')"
+                    @click="startWorldmapViewPick"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="8" />
+                      <line x1="12" y1="2" x2="12" y2="6" />
+                      <line x1="12" y1="18" x2="12" y2="22" />
+                      <line x1="2" y1="12" x2="6" y2="12" />
+                      <line x1="18" y1="12" x2="22" y2="12" />
+                      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                    </svg>
+                    <span>{{ _t('Pick from map') }}</span>
+                  </CmkButton>
+                </div>
+                <div class="map-settings__field">
+                  <CmkLabel>{{ _t('Tile server URL') }}</CmkLabel>
+                  <CmkInput
+                    v-model="form.worldmap_tile_url"
+                    :placeholder="_t('https://%{s}.tile.openstreetmap.org/%{z}/%{x}/%{y}.png')"
+                    field-size="FILL"
+                  />
+                </div>
+                <div class="map-settings__field">
+                  <CmkLabel>{{ _t('Map saturation (%)') }}</CmkLabel>
+                  <NumberInput
+                    v-model="form.worldmap_tile_saturate"
+                    :min="0"
+                    :max="100"
+                    :step="5"
+                    :placeholder="_t('100 (default)')"
+                    class="map-settings__num map-settings__num--full"
+                  />
+                </div>
+
+                <!-- Automap: dynamically populate the map from
+                                 host geo-coords (orbvis_lat/orbvis_lng labels
+                                 or LAT/LONG custom variables). Mirrors NagVis
+                                 automap with lat/lng. -->
+                <div class="map-settings__subsection map-settings__field">
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'Hosts are auto-discovered from monitoring data via orbvis_lat/orbvis_lng labels or LAT/LONG custom variables. They show up alongside any objects you place manually.'
+                      )
+                    "
+                    >{{ _t('Automap source') }}</CmkLabel
+                  >
+                  <CmkDropdown
+                    :selected-option="form.worldmap_auto_source || ''"
+                    :options="worldmapAutoSourceOptions"
+                    :width="'fill'"
+                    :label="_t('Automap source')"
+                    @update:selected-option="
+                      form.worldmap_auto_source = ($event ?? '') as typeof form.worldmap_auto_source
+                    "
+                  />
+                  <CmkInput
+                    v-if="
+                      form.worldmap_auto_source === 'hostgroup' ||
+                      form.worldmap_auto_source === 'servicegroup'
+                    "
+                    v-model="form.worldmap_auto_filter_value"
+                    :placeholder="_t('group name (e.g. &quot;muc&quot;)')"
+                    field-size="FILL"
+                  />
+                </div>
+              </template>
+
+              <!-- Flow settings -->
+              <template v-if="form.map_type === 'flow'">
+                <div class="map-settings__field">
+                  <CmkLabel>{{ _t('Root host') }}</CmkLabel>
+                  <CmkInput
+                    v-model="form.flow_root"
+                    :placeholder="_t('Leave empty to render full topology')"
+                    field-size="FILL"
+                  />
+                </div>
+                <div class="map-settings__grid-2">
+                  <div class="map-settings__field">
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'Restrict the topology to a cutout around a single root host. -1 = unlimited hops, 0 = none.'
+                        )
+                      "
+                      >{{ _t('Child layers') }}</CmkLabel
+                    >
+                    <NumberInput
+                      v-model="form.flow_child_layers"
+                      :min="-1"
+                      :max="20"
+                      :placeholder="_t('unlimited')"
+                      class="map-settings__num map-settings__num--full"
+                    />
+                  </div>
+                  <div class="map-settings__field">
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'Restrict the topology to a cutout around a single root host. -1 = unlimited hops, 0 = none.'
+                        )
+                      "
+                      >{{ _t('Parent layers') }}</CmkLabel
+                    >
+                    <NumberInput
+                      v-model="form.flow_parent_layers"
+                      :min="-1"
+                      :max="20"
+                      :placeholder="_t('unlimited')"
+                      class="map-settings__num map-settings__num--full"
+                    />
+                  </div>
+                </div>
+
+                <div class="map-settings__grid-2">
+                  <div class="map-settings__field">
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'Only the top-K hosts ranked by problem count render full service detail; the rest show donut-only. Leave empty to use the global default.'
+                        )
+                      "
+                      >{{ _t('Hosts with service detail') }}</CmkLabel
+                    >
+                    <NumberInput
+                      v-model="form.flow_top_affected_hosts"
+                      :min="0"
+                      :max="1000"
+                      :placeholder="String(FLOW_TOP_AFFECTED_HOSTS_DEFAULT)"
+                      class="map-settings__num map-settings__num--full"
+                    />
+                  </div>
+                  <div class="map-settings__field">
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'Only the top-K hosts ranked by problem count render full service detail; the rest show donut-only. Leave empty to use the global default.'
+                        )
+                      "
+                      >{{ _t('Services per host') }}</CmkLabel
+                    >
+                    <NumberInput
+                      v-model="form.flow_max_services_per_host"
+                      :min="0"
+                      :max="500"
+                      :placeholder="String(FLOW_MAX_SERVICES_PER_HOST_DEFAULT)"
+                      class="map-settings__num map-settings__num--full"
+                    />
+                  </div>
+                </div>
+              </template>
+
+              <!-- Radar settings -->
+              <template v-if="form.map_type === 'radar'">
+                <div class="map-settings__grid-2">
+                  <div class="map-settings__field">
+                    <CmkLabel>{{ _t('Filter type') }}</CmkLabel>
+                    <CmkDropdown
+                      :selected-option="form.radar_filter || null"
+                      :options="radarFilterOptions"
+                      :width="'fill'"
+                      :label="_t('Filter type')"
+                      @update:selected-option="form.radar_filter = $event ?? ''"
+                    />
+                  </div>
+                  <div
+                    v-if="form.radar_filter === 'hostgroup' || form.radar_filter === 'servicegroup'"
+                    class="map-settings__field"
+                  >
+                    <CmkLabel>{{ _t('Group name') }}</CmkLabel>
+                    <AutocompleteInput
+                      v-model="form.radar_filter_value"
+                      :suggestions="radarGroupNames"
+                      :loading="loadingRadarGroups"
+                      :placeholder="_t('Group name')"
+                      :empty-text="
+                        form.radar_filter === 'hostgroup'
+                          ? _t('No host groups configured in this site')
+                          : _t('No service groups configured in this site')
+                      "
+                    />
+                  </div>
+                </div>
+              </template>
+
+              <template v-if="form.map_type === 'foldertree'">
+                <div class="map-settings__grid-2">
+                  <div class="map-settings__field">
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'Show only this folder and below. Empty = whole tree. Accepts a folder path or its stable id.'
+                        )
+                      "
+                      >{{ _t('Root folder') }}</CmkLabel
+                    >
+                    <CmkDropdown
+                      :selected-option="form.ft_root_folder"
+                      :options="ftRootFolderOptions"
+                      :width="'fill'"
+                      :label="_t('Root folder')"
+                      @update:selected-option="form.ft_root_folder = $event ?? ''"
+                    />
+                  </div>
+                  <div class="map-settings__field">
+                    <CmkLabel
+                      :help="_t('How many folder levels are expanded when the map opens.')"
+                      >{{ _t('Auto-expand depth') }}</CmkLabel
+                    >
+                    <NumberInput
+                      v-model="form.ft_default_expand_depth"
+                      min="0"
+                      max="20"
+                      class="map-settings__num"
+                    />
+                  </div>
+                </div>
+                <div class="map-settings__field">
+                  <CmkLabel :help="_t('Which presentation the map opens in by default.')">{{
+                    _t('Default view')
+                  }}</CmkLabel>
+                  <CmkDropdown
+                    :selected-option="form.ft_default_view"
+                    :options="ftDefaultViewOptions"
+                    :width="'fill'"
+                    :label="_t('Default view')"
+                    @update:selected-option="
+                      form.ft_default_view = ($event as 'list' | 'map') ?? 'list'
+                    "
+                  />
+                </div>
+                <div class="map-settings__field">
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'Distributed monitoring: limit the tree to these sites. None selected = all sites.'
+                      )
+                    "
+                    >{{ _t('Sites') }}</CmkLabel
+                  >
+                  <FtSitesSelect v-model="ftSites" :options="siteOptions" />
+                </div>
+                <div class="map-settings__toggle-list">
+                  <div class="map-settings__toggle">
+                    <CmkSwitch v-model="form.ft_show_empty_folders" />
+                    <span
+                      class="map-settings__toggle-label"
+                      @click="form.ft_show_empty_folders = !form.ft_show_empty_folders"
+                      >{{ _t('Show empty folders') }}</span
+                    >
+                  </div>
+                  <div class="map-settings__toggle">
+                    <CmkSwitch v-model="form.ft_show_services" />
+                    <span
+                      class="map-settings__toggle-label"
+                      @click="form.ft_show_services = !form.ft_show_services"
+                      >{{ _t('Expand hosts to their services') }}</span
+                    >
+                  </div>
+                  <div class="map-settings__toggle">
+                    <CmkSwitch v-model="form.ft_problems_only" />
+                    <span
+                      class="map-settings__toggle-label"
+                      @click="form.ft_problems_only = !form.ft_problems_only"
+                      >{{ _t('Show only folders/hosts with problems') }}</span
+                    >
+                  </div>
+                  <div v-if="form.ft_problems_only" class="map-settings__field">
+                    <CmkLabel
+                      :help="
+                        _t(
+                          'On typical sites almost every host carries some WARNING service — narrowing to critical keeps the problem filter meaningful.'
+                        )
+                      "
+                      >{{ _t('Problem severity') }}</CmkLabel
+                    >
+                    <CmkDropdown
+                      :selected-option="form.ft_problems_severity"
+                      :options="ftProblemsSeverityOptions"
+                      :width="'fill'"
+                      :label="_t('Problem severity')"
+                      @update:selected-option="
+                        form.ft_problems_severity = ($event as 'any' | 'critical') ?? 'any'
+                      "
+                    />
+                  </div>
+                  <div class="map-settings__toggle">
+                    <CmkSwitch v-model="form.ft_only_hard_states" />
+                    <span
+                      class="map-settings__toggle-label"
+                      @click="form.ft_only_hard_states = !form.ft_only_hard_states"
+                      >{{ _t('Use hard states only') }}</span
+                    >
+                  </div>
+                </div>
+              </template>
+
+              <!-- Templates: radar cards and the foldertree tree have no
+                                 per-object hover / context popups, so the templates never apply. -->
+              <div
+                v-if="
+                  form.map_type !== 'radar' &&
+                  form.map_type !== 'foldertree' &&
+                  form.map_type !== 'presentation'
+                "
+                class="map-settings__subsection map-settings__stack"
+              >
+                <p class="orb-section-title">{{ _t('Templates') }}</p>
+                <div class="map-settings__field">
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'Available: {{name}}, {{state}}, {{output}}, {{host}}, {{service}}, {{address}}, {{state_type}}, {{attempts}}, {{last_check}}, {{state_duration}}, {{acknowledged}}, {{in_downtime}}, {{stale}}'
+                      )
+                    "
+                    >{{ _t('Hover template') }}</CmkLabel
+                  >
+                  <CmkInput
+                    v-model="form.hover_template"
+                    :placeholder="_t('e.g. {{name}} is {{state}}')"
+                    field-size="FILL"
+                  />
+                </div>
+                <div class="map-settings__field">
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'Available: {{name}}, {{state}}, {{output}}, {{host}}, {{service}}, {{address}}, {{state_type}}, {{attempts}}, {{last_check}}, {{state_duration}}, {{acknowledged}}, {{in_downtime}}, {{stale}}'
+                      )
+                    "
+                    >{{ _t('Context template') }}</CmkLabel
+                  >
+                  <CmkInput
+                    v-model="form.context_template"
+                    :placeholder="_t('e.g. {{name}} is {{state}}')"
+                    field-size="FILL"
+                  />
+                </div>
+              </div>
+
+              <div
+                v-if="form.map_type !== 'presentation'"
+                class="map-settings__subsection map-settings__field"
+              >
+                <div>
+                  <CmkLabel>{{ _t('Click action') }}</CmkLabel>
+                </div>
+                <CmkDropdown
+                  :selected-option="form.click_action"
+                  :options="clickActionOptions"
+                  :width="'fill'"
+                  label=""
+                  @update:selected-option="
+                    form.click_action = ($event ?? 'link') as 'link' | 'none'
+                  "
+                />
+              </div>
+
+              <!-- Rendering style (static maps) -->
+              <div
+                v-if="form.map_type === 'static'"
+                class="map-settings__subsection map-settings__field"
+              >
+                <div>
+                  <CmkLabel
+                    :help="
+                      _t(
+                        'NagVis-classic anchors objects top-left with flat textboxes on a light canvas (auto-selected for imported NagVis maps). OrbVis is the modern centered glass style.'
+                      )
+                    "
+                    >{{ _t('Rendering style') }}</CmkLabel
+                  >
+                </div>
+                <CmkDropdown
+                  :selected-option="form.render_mode"
+                  :options="renderModeOptions"
+                  :width="'fill'"
+                  label=""
+                  @update:selected-option="
+                    form.render_mode = ($event ?? 'default') as 'default' | 'nagvis_classic'
+                  "
+                />
+              </div>
+
+              <div class="map-settings__subsection map-settings__row-between">
+                <CmkLabel :help="_t('When disabled, this map is hidden from regular users')">{{
+                  _t('Show in map list')
+                }}</CmkLabel>
+                <CmkSwitch v-model="form.show_in_lists" />
+              </div>
+
+              <!-- Background (static only) -->
+              <div
+                v-if="form.map_type === 'static'"
+                class="map-settings__subsection map-settings__stack"
+              >
+                <p class="orb-section-title">{{ _t('Background') }}</p>
+                <div class="map-settings__field">
+                  <CmkLabel>{{ _t('Background image') }}</CmkLabel>
+                  <BackgroundImageUpload
+                    v-model:pending-file="pendingBgFile"
+                    v-model:pending-remove="pendingBgRemove"
+                    :model-value="form.background_image"
+                    :pending-preview-url="pendingBgPreviewUrl"
+                  />
+                </div>
+                <div class="map-settings__field">
+                  <CmkLabel>{{ _t('Background color') }}</CmkLabel>
+                  <ColorInput
+                    v-model="form.background_color"
+                    :enable-label="_t('Use color')"
+                    default-color="#1f2937"
+                  />
+                </div>
+              </div>
+
+              <p v-if="saveError" class="map-settings__error">
+                {{ saveError }}
+              </p>
+            </div>
+
+            <!-- Permissions -->
+            <div v-else-if="activeTab === 'permissions'">
+              <div v-if="permLoading" class="map-settings__perm-loading">
+                <CmkLoading />
+              </div>
+              <div v-else>
+                <table class="map-settings__perm-table">
+                  <thead>
+                    <tr class="map-settings__perm-head-row">
+                      <th class="map-settings__perm-th">
+                        {{ _t('Role') }}
+                      </th>
+                      <th class="map-settings__perm-th map-settings__perm-th--center">
+                        {{ _t('View') }}
+                      </th>
+                      <th class="map-settings__perm-th map-settings__perm-th--center">
+                        {{ _t('Edit') }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="map-settings__perm-body">
+                    <tr
+                      v-for="role in permRoles"
+                      :key="role.role_id"
+                      class="map-settings__perm-row"
+                    >
+                      <td class="map-settings__perm-td map-settings__perm-td--name">
+                        {{ role.name }}
+                      </td>
+                      <td class="map-settings__perm-td map-settings__perm-td--center">
+                        <div class="map-settings__perm-cell">
+                          <CmkCheckbox
+                            :model-value="hasDraftPerm(role, 'view')"
+                            :disabled="hasWildcard(role, 'view')"
+                            @update:model-value="toggleDraftPerm(role, 'view')"
+                          />
+                          <span
+                            v-if="hasWildcard(role, 'view')"
+                            class="map-settings__perm-wildcard"
+                            :title="_t('Granted via wildcard rule')"
+                            >*</span
+                          >
+                        </div>
+                      </td>
+                      <td class="map-settings__perm-td map-settings__perm-td--center">
+                        <div class="map-settings__perm-cell">
+                          <CmkCheckbox
+                            :model-value="hasDraftPerm(role, 'edit')"
+                            :disabled="hasWildcard(role, 'edit')"
+                            @update:model-value="toggleDraftPerm(role, 'edit')"
+                          />
+                          <span
+                            v-if="hasWildcard(role, 'edit')"
+                            class="map-settings__perm-wildcard"
+                            :title="_t('Granted via wildcard rule')"
+                            >*</span
+                          >
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p v-if="!permRoles.length" class="map-settings__perm-empty">
+                  {{ _t('No roles defined yet') }}
+                </p>
+                <p class="map-settings__perm-note">
+                  *
+                  {{
+                    _t(
+                      'Permissions marked with * apply via a wildcard rule and cannot be changed here.'
+                    )
+                  }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside v-if="showPreview" class="map-settings__preview">
+          <span class="map-settings__preview-label">{{ _t('Live preview') }}</span>
+          <div class="map-settings__preview-stage">
+            <iframe
+              ref="previewIframe"
+              :src="previewUrl"
+              class="map-settings__preview-frame"
+              :title="_t('Live preview')"
+              @load="onPreviewLoaded"
+            />
+          </div>
+        </aside>
+      </div>
+
+      <div class="map-settings__footer">
+        <button type="button" class="map-settings__preview-toggle" @click="togglePreview">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <template v-if="showPreview">
+              <path
+                d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+              />
+              <path
+                d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.46 18.46 0 0 1-2.16 3.19"
+              />
+              <line x1="1" y1="1" x2="23" y2="23" />
+            </template>
+            <template v-else>
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </template>
+          </svg>
+          <span>{{ showPreview ? _t('Hide preview') : _t('Show preview') }}</span>
+        </button>
+        <span class="map-settings__footer-spacer" />
+        <CmkButton variant="secondary" @click="$emit('close')">
+          {{ _t('Cancel') }}
+        </CmkButton>
+        <CmkButton variant="primary" :disabled="saving" @click="save">
+          {{ saving ? _t('Saving…') : _t('Save') }}
+        </CmkButton>
+      </div>
+    </div>
+  </CmkSlideInDialog>
+</template>
+
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+
+import ColorInput from '@/components/ColorInput.vue'
+import NumberInput from '@/components/NumberInput.vue'
+import CmkButton from '@/components/cmk/CmkButton'
+import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown'
+import CmkLabel from '@/components/cmk/CmkLabel'
+import CmkLoading from '@/components/cmk/CmkLoading'
+import CmkSlideInDialog from '@/components/cmk/CmkSlideInDialog'
+import CmkSwitch from '@/components/cmk/CmkSwitch'
+import CmkCheckbox from '@/components/cmk/user-input/CmkCheckbox'
+import CmkInput from '@/components/cmk/user-input/CmkInput'
+
+import { ApiError, mapsApi, connectionsApi, rolesApi } from '@/api/client'
+import { useRadarGroups } from '@/composables/useRadarGroups'
+import { useAuthStore } from '@/stores/auth'
+import { useMapsStore } from '@/stores/maps'
+import { useSettingsStore } from '@/stores/settings'
+import type {
+  MapRead,
+  ConnectionConfig,
+  FlowView,
+  FolderTreeView,
+  PermissionRead,
+  RadarView,
+  RoleRead,
+  WorldmapView
+} from '@/types/api'
+import { mapTypeOptions } from '@/utils/dropdownOptions'
+import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge'
+import usei18n from '@cmk/lib/i18n'
+
+import AutocompleteInput from './AutocompleteInput.vue'
+import BackgroundImageUpload from './BackgroundImageUpload.vue'
+import FtSitesSelect from './FtSitesSelect.vue'
+
+// Mirror of backend `Settings.flow_map_*` defaults — shown as placeholder so
+// the user knows which value applies when the field is left empty.
+const FLOW_TOP_AFFECTED_HOSTS_DEFAULT = 25
+const FLOW_MAX_SERVICES_PER_HOST_DEFAULT = 50
+
+const props = defineProps<{
+  map: MapRead
+  worldmapView?: { lat: number; lng: number; zoom: number } | null
+}>()
+const emit = defineEmits<{
+  close: []
+  updated: []
+  pickWorldmapView: [done: (view: { lat: number; lng: number; zoom: number } | null) => void]
+  worldmapViewChange: [view: { lat: number; lng: number; zoom: number }]
+}>()
+
+const PREVIEW_PREF_KEY = 'orbvis.mapSettings.previewVisible'
+const showPreview = ref(
+  typeof window !== 'undefined' && window.localStorage?.getItem(PREVIEW_PREF_KEY) === '1'
+)
+function togglePreview() {
+  showPreview.value = !showPreview.value
+  try {
+    window.localStorage?.setItem(PREVIEW_PREF_KEY, showPreview.value ? '1' : '0')
+  } catch {
+    // Private-Mode oder Storage voll — Toggle wirkt nur in dieser Sitzung.
+  }
+}
+
+const isPickingView = ref(false)
+function startWorldmapViewPick() {
+  if (isPickingView.value) return
+  isPickingView.value = true
+  emit('pickWorldmapView', (view) => {
+    isPickingView.value = false
+    if (view) {
+      form.value.worldmap_lat = view.lat
+      form.value.worldmap_lng = view.lng
+      form.value.worldmap_zoom = view.zoom
+    }
+  })
+}
+function onSlideInClose() {
+  if (isPickingView.value) return
+  emit('close')
+}
+
+const { _t } = usei18n()
+const auth = useAuthStore()
+const mapsStore = useMapsStore()
+const settingsStore = useSettingsStore()
+
+const tabs = computed<{ id: 'general' | 'permissions'; label: string }[]>(() => {
+  const isCmk = auth.ssoActive || auth.isCheckmkDeployment
+  return [
+    { id: 'general', label: _t('Settings') },
+    ...(!isCmk ? [{ id: 'permissions' as const, label: _t('Map Permissions') }] : [])
+  ]
+})
+const activeTab = ref<'general' | 'permissions'>('general')
+
+const localVersion = ref<number | null>(props.map.version ?? null)
+// Background image is staged and only uploaded/removed on save, so closing
+// without saving leaves the server untouched (upload → save).
+const pendingBgFile = ref<File | null>(null)
+const pendingBgRemove = ref(false)
+
+// Mirror the staged background file as a data: URL so the live preview can show
+// it before save — the server filename only exists after upload. Must be a
+// data: URL (not blob:): Checkmk's CSP allows ``img-src ... data:`` but blocks
+// blob:, so a blob: URL would render nothing on OMD sites.
+const pendingBgPreviewUrl = ref<string | null>(null)
+let bgReadSeq = 0
+watch(pendingBgFile, (file) => {
+  const seq = ++bgReadSeq
+  if (!file) {
+    pendingBgPreviewUrl.value = null
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = () => {
+    if (seq === bgReadSeq) pendingBgPreviewUrl.value = reader.result as string
+  }
+  reader.readAsDataURL(file)
+})
+
+// ── General ────────────────────────────────────────────────────────────────
+
+function initWorldmapCoords() {
+  if (props.worldmapView) {
+    return {
+      lat: props.worldmapView.lat,
+      lng: props.worldmapView.lng,
+      zoom: props.worldmapView.zoom
+    }
+  }
+  if (props.map.view.type === 'worldmap') {
+    const wv = props.map.view as WorldmapView
+    return { lat: wv.lat, lng: wv.lng, zoom: wv.zoom }
+  }
+  return { lat: 51.0, lng: 10.0, zoom: 5 }
+}
+
+const wm = initWorldmapCoords()
+const rv = props.map.view.type === 'radar' ? (props.map.view as RadarView) : null
+const wmv = props.map.view.type === 'worldmap' ? (props.map.view as WorldmapView) : null
+const fv = props.map.view.type === 'flow' ? (props.map.view as FlowView) : null
+const ftv = props.map.view.type === 'foldertree' ? (props.map.view as FolderTreeView) : null
+
+const form = ref({
+  alias: props.map.alias,
+  connection_id: props.map.connection_id,
+  icon_size: props.map.icon_size,
+  rotation_interval: props.map.rotation_interval,
+  click_action: (props.map.click_action ?? 'link') as 'link' | 'none',
+  render_mode: (props.map.render_mode ?? 'default') as 'default' | 'nagvis_classic',
+  default_z: props.map.default_z ?? 1,
+  show_in_lists: props.map.show_in_lists !== false,
+  map_type: props.map.view.type,
+  worldmap_auto_source: (wmv?.auto_source ?? '') as '' | 'all_hosts' | 'hostgroup' | 'servicegroup',
+  worldmap_auto_filter_value: wmv?.auto_filter_value ?? '',
+  worldmap_lat: wm.lat,
+  worldmap_lng: wm.lng,
+  worldmap_zoom: wm.zoom,
+  worldmap_tile_url: wmv?.tile_url ?? '',
+  worldmap_tile_saturate: wmv?.tile_saturate ?? (null as number | null),
+  radar_filter: rv?.filter ?? 'hostgroup',
+  radar_filter_value: rv?.filter_value ?? '',
+  flow_root: fv?.root ?? '',
+  flow_child_layers: fv?.child_layers ?? (null as number | null),
+  flow_parent_layers: fv?.parent_layers ?? (null as number | null),
+  flow_top_affected_hosts: fv?.top_affected_hosts ?? (null as number | null),
+  flow_max_services_per_host: fv?.max_services_per_host ?? (null as number | null),
+  ft_root_folder: ftv?.root_folder ?? '',
+  ft_default_view: (ftv?.default_view ?? 'list') as 'list' | 'map',
+  ft_default_expand_depth: ftv?.default_expand_depth ?? 1,
+  ft_show_services: ftv?.show_services ?? false,
+  ft_show_empty_folders: ftv?.show_empty_folders ?? true,
+  ft_problems_only: ftv?.problems_only ?? false,
+  ft_problems_severity: (ftv?.problems_severity ?? 'any') as 'any' | 'critical',
+  ft_only_hard_states: ftv?.only_hard_states ?? false,
+  ft_sites: (ftv?.sites ?? []).join(', '),
+  hover_template: props.map.hover_template ?? '',
+  context_template: props.map.context_template ?? '',
+  background_image: props.map.background_image ?? '',
+  background_color: props.map.background_color ?? ''
+})
+
+const connections = ref<ConnectionConfig[]>([])
+const saving = ref(false)
+
+watch(
+  () => [form.value.worldmap_lat, form.value.worldmap_lng, form.value.worldmap_zoom] as const,
+  ([lat, lng, zoom]) => {
+    if (form.value.map_type === 'worldmap') {
+      emit('worldmapViewChange', { lat, lng, zoom })
+    }
+  }
+)
+
+const connectionOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: connections.value.map((b) => ({ name: b.id, title: b.label || b.id }))
+}))
+const mapTypeLabel = computed(
+  () =>
+    // Resolve the label for whatever type the map already is, so a folder
+    // map still shows its proper name even when the feature flag is off.
+    mapTypeOptions(_t, true, true).find((o) => o.name === form.value.map_type)?.title ??
+    form.value.map_type
+)
+
+const mapTitle = computed(() => _t('Map Settings') + ' — ' + props.map.name)
+
+const rotationEnabled = computed(() => (form.value.rotation_interval ?? 0) > 0)
+
+function onToggleRotation(checked: boolean) {
+  form.value.rotation_interval = checked ? Math.max(form.value.rotation_interval || 30, 1) : 0
+}
+const worldmapAutoSourceOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: '', title: _t('None — manual placement only') },
+    { name: 'all_hosts', title: _t('All hosts with geo coordinates') },
+    { name: 'hostgroup', title: _t('Hosts in host group…') },
+    { name: 'servicegroup', title: _t('Hosts hosting a service in service group…') }
+  ]
+}))
+const radarFilterOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'hostgroup', title: _t('Host group') },
+    { name: 'servicegroup', title: _t('Service group') },
+    { name: 'all_hosts', title: _t('All hosts') },
+    { name: 'all_services', title: _t('All services') }
+  ]
+}))
+const folderOptions = ref<{ path: string; title: string }[]>([])
+const ftDefaultViewOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'list', title: _t('List (tree)') },
+    { name: 'map', title: _t('Map (treemap)') }
+  ]
+}))
+
+const ftProblemsSeverityOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'any', title: _t('Any problem (incl. WARNING)') },
+    { name: 'critical', title: _t('Only critical & down') }
+  ]
+}))
+const ftRootFolderOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: '', title: _t('(all folders)') },
+    ...folderOptions.value.map((f) => ({ name: f.path, title: f.title }))
+  ]
+}))
+async function loadFolderOptions() {
+  if (form.value.map_type !== 'foldertree' || !form.value.connection_id) return
+  try {
+    folderOptions.value = await connectionsApi.folders(form.value.connection_id, auth.accessToken!)
+  } catch {
+    folderOptions.value = []
+  }
+}
+
+const siteOptions = ref<{ id: string; alias: string }[]>([])
+async function loadSiteOptions() {
+  if (form.value.map_type !== 'foldertree' || !form.value.connection_id) return
+  try {
+    siteOptions.value = await connectionsApi.sites(form.value.connection_id, auth.accessToken!)
+  } catch {
+    siteOptions.value = []
+  }
+}
+
+// form.ft_sites is the comma-joined wire shape; FtSitesSelect works on an id array.
+const ftSites = computed<string[]>({
+  get: () =>
+    form.value.ft_sites
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+  set: (v) => {
+    form.value.ft_sites = v.join(', ')
+  }
+})
+const clickActionOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'link', title: _t('Open link') },
+    { name: 'none', title: _t('No action') }
+  ]
+}))
+const renderModeOptions = computed(() => ({
+  type: 'fixed' as const,
+  suggestions: [
+    { name: 'default', title: _t('OrbVis (default)') },
+    { name: 'nagvis_classic', title: _t('NagVis-classic') }
+  ]
+}))
+const saveError = ref('')
+
+const { names: radarGroupNames, loading: loadingRadarGroups } = useRadarGroups(
+  form,
+  () => auth.accessToken
+)
+
+async function save() {
+  saving.value = true
+  saveError.value = ''
+  try {
+    if (permDraft.size > 0) {
+      await savePermissions()
+    }
+    // Stage-then-save: the chosen background only hits the server now, so
+    // closing without saving never persists it. Both endpoints bump the
+    // map version, so adopt it before the If-Match-gated update below.
+    if (pendingBgRemove.value) {
+      const { version } = await mapsApi.deleteBackground(props.map.name, auth.accessToken!)
+      form.value.background_image = ''
+      if (version != null) localVersion.value = version
+    } else if (pendingBgFile.value) {
+      const { filename, version } = await mapsApi.uploadBackground(
+        props.map.name,
+        pendingBgFile.value,
+        auth.accessToken!
+      )
+      form.value.background_image = filename
+      if (version != null) localVersion.value = version
+    }
+    let view: Record<string, unknown>
+    if (form.value.map_type === 'worldmap') {
+      view = {
+        type: 'worldmap',
+        lat: form.value.worldmap_lat,
+        lng: form.value.worldmap_lng,
+        zoom: form.value.worldmap_zoom,
+        auto_source: form.value.worldmap_auto_source || null,
+        auto_filter_value: form.value.worldmap_auto_filter_value,
+        tile_url: form.value.worldmap_tile_url || null,
+        tile_saturate: form.value.worldmap_tile_saturate
+      }
+    } else if (form.value.map_type === 'radar') {
+      view = {
+        type: 'radar',
+        filter: form.value.radar_filter,
+        filter_value: form.value.radar_filter_value
+      }
+    } else if (form.value.map_type === 'flow') {
+      view = {
+        type: 'flow',
+        root: form.value.flow_root.trim() || null,
+        child_layers: form.value.flow_child_layers,
+        parent_layers: form.value.flow_parent_layers,
+        top_affected_hosts: form.value.flow_top_affected_hosts,
+        max_services_per_host: form.value.flow_max_services_per_host
+      }
+    } else if (form.value.map_type === 'foldertree') {
+      view = {
+        type: 'foldertree',
+        root_folder: form.value.ft_root_folder.trim(),
+        default_view: form.value.ft_default_view,
+        default_expand_depth: form.value.ft_default_expand_depth,
+        show_services: form.value.ft_show_services,
+        show_empty_folders: form.value.ft_show_empty_folders,
+        problems_only: form.value.ft_problems_only,
+        problems_severity: form.value.ft_problems_severity,
+        only_hard_states: form.value.ft_only_hard_states,
+        sites: form.value.ft_sites
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      }
+    } else {
+      view = { type: form.value.map_type }
+    }
+    const updated = await mapsApi.update(
+      props.map.name,
+      {
+        alias: form.value.alias,
+        connection_id: form.value.connection_id,
+        icon_size: form.value.icon_size,
+        rotation_interval: form.value.rotation_interval,
+        click_action: form.value.click_action,
+        render_mode: form.value.render_mode,
+        default_z: form.value.default_z,
+        show_in_lists: form.value.show_in_lists,
+        background_image: form.value.background_image || null,
+        background_color: form.value.background_color || null,
+        // Presentation slide design (elements, theme, size, background) is
+        // owned and autosaved by the canvas — omit ``view`` so saving map
+        // metadata never clobbers the slide.
+        ...(form.value.map_type === 'presentation' ? {} : { view }),
+        hover_template: form.value.hover_template || null,
+        context_template: form.value.context_template || null
+      },
+      auth.accessToken!,
+      localVersion.value
+    )
+    // Adopt the response like the FormSpec modal does: the store keeps the
+    // fresh alias/version, so the breadcrumb updates and a follow-up save
+    // can't trip over a stale If-Match (409). Name-guarded — when hosted
+    // from the maps list, another map may be on screen.
+    localVersion.value = updated.version ?? localVersion.value
+    if (mapsStore.currentMap?.name === updated.name) {
+      mapsStore.currentMap = updated
+    }
+    emit('updated')
+    emit('close')
+  } catch (e: unknown) {
+    // 409 means another operator saved this map after we opened it.
+    // Surface a clear message instead of the generic "An error occurred"
+    // so the operator can reload and reconcile.
+    if (e instanceof ApiError && e.status === 409) {
+      saveError.value = _t(
+        'Map changed elsewhere — close and reopen to apply your edit on top of the latest version.'
+      )
+    } else {
+      saveError.value = e instanceof Error ? e.message : 'An error occurred'
+    }
+  } finally {
+    saving.value = false
+  }
+}
+
+// ── Live preview ───────────────────────────────────────────────────────────
+const previewIframe = ref<HTMLIFrameElement | null>(null)
+const previewUrl = computed(
+  () => `${window.location.pathname}#/maps/${encodeURIComponent(props.map.name)}?preview=1`
+)
+
+function buildPreviewView(): Record<string, unknown> {
+  if (form.value.map_type === 'worldmap') {
+    return {
+      type: 'worldmap',
+      lat: form.value.worldmap_lat,
+      lng: form.value.worldmap_lng,
+      zoom: form.value.worldmap_zoom,
+      auto_source: form.value.worldmap_auto_source || null,
+      auto_filter_value: form.value.worldmap_auto_filter_value,
+      tile_url: form.value.worldmap_tile_url || null,
+      tile_saturate: form.value.worldmap_tile_saturate
+    }
+  }
+  if (form.value.map_type === 'radar') {
+    return {
+      type: 'radar',
+      filter: form.value.radar_filter,
+      filter_value: form.value.radar_filter_value
+    }
+  }
+  if (form.value.map_type === 'flow') {
+    return {
+      type: 'flow',
+      root: form.value.flow_root.trim() || null,
+      child_layers: form.value.flow_child_layers,
+      parent_layers: form.value.flow_parent_layers,
+      top_affected_hosts: form.value.flow_top_affected_hosts,
+      max_services_per_host: form.value.flow_max_services_per_host
+    }
+  }
+  if (form.value.map_type === 'foldertree') {
+    return {
+      type: 'foldertree',
+      root_folder: form.value.ft_root_folder.trim(),
+      default_view: form.value.ft_default_view,
+      default_expand_depth: form.value.ft_default_expand_depth,
+      show_services: form.value.ft_show_services,
+      show_empty_folders: form.value.ft_show_empty_folders,
+      problems_only: form.value.ft_problems_only,
+      problems_severity: form.value.ft_problems_severity,
+      only_hard_states: form.value.ft_only_hard_states,
+      sites: form.value.ft_sites
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    }
+  }
+  return { type: form.value.map_type }
+}
+
+function postPreviewPatch() {
+  const win = previewIframe.value?.contentWindow
+  if (!win) return
+  const patch = {
+    alias: form.value.alias,
+    icon_size: form.value.icon_size,
+    hover_template: form.value.hover_template || '',
+    context_template: form.value.context_template || '',
+    background_color: form.value.background_color || null,
+    // Presentation slides are designed on the canvas; a metadata-only view
+    // would blank the slide in the preview iframe.
+    ...(form.value.map_type === 'presentation' ? {} : { view: buildPreviewView() })
+  }
+  win.postMessage({ source: PREVIEW_EDIT, patch }, window.location.origin)
+}
+
+// The background image (a potentially multi-MB data: URL) is posted on its own
+// channel, only when it changes — keeping it out of the debounced general patch
+// avoids re-cloning megabytes through postMessage on every unrelated edit.
+function postBgPatch() {
+  const win = previewIframe.value?.contentWindow
+  if (!win) return
+  const background_image = pendingBgRemove.value
+    ? null
+    : (pendingBgPreviewUrl.value ?? form.value.background_image) || null
+  win.postMessage({ source: PREVIEW_EDIT, patch: { background_image } }, window.location.origin)
+}
+
+let previewDebounceTimer: ReturnType<typeof setTimeout> | null = null
+function schedulePreviewPost() {
+  if (previewDebounceTimer) clearTimeout(previewDebounceTimer)
+  previewDebounceTimer = setTimeout(postPreviewPatch, 120)
+}
+
+function onPreviewLoaded() {
+  postPreviewPatch()
+  postBgPatch()
+}
+
+function onPreviewReady(ev: MessageEvent) {
+  if (ev.origin !== window.location.origin) return
+  const data = ev.data as { source?: string } | null
+  if (!data || data.source !== PREVIEW_READY) return
+  if (ev.source !== previewIframe.value?.contentWindow) return
+  postPreviewPatch()
+  postBgPatch()
+}
+
+watch(form, schedulePreviewPost, { deep: true })
+watch([pendingBgPreviewUrl, pendingBgRemove], postBgPatch)
+
+// ── Permissions ────────────────────────────────────────────────────────────
+const permRoles = ref<RoleRead[]>([])
+const permLoading = ref(false)
+// Draft: key = `${role_id}-${act}`, value = desired checked state (undefined = use server state)
+const permDraft = reactive(new Map<string, boolean>())
+
+async function loadPermissions() {
+  permLoading.value = true
+  try {
+    permRoles.value = await rolesApi.list(auth.accessToken!)
+    permDraft.clear()
+  } finally {
+    permLoading.value = false
+  }
+}
+
+function hasWildcard(role: RoleRead, act: string): boolean {
+  return role.permissions.some((p) => p.mod === 'map' && p.act === act && p.obj === '*')
+}
+
+function hasDirectPerm(role: RoleRead, act: string): boolean {
+  return role.permissions.some(
+    (p) => p.mod === 'map' && p.act === act && p.obj === props.map.name
+  )
+}
+
+function hasDraftPerm(role: RoleRead, act: string): boolean {
+  const key = `${role.role_id}-${act}`
+  if (permDraft.has(key)) return permDraft.get(key)!
+  return hasDirectPerm(role, act) || hasWildcard(role, act)
+}
+
+function toggleDraftPerm(role: RoleRead, act: string) {
+  if (hasWildcard(role, act)) return
+  const key = `${role.role_id}-${act}`
+  const current = hasDraftPerm(role, act)
+  permDraft.set(key, !current)
+}
+
+async function savePermissions() {
+  for (const role of permRoles.value) {
+    for (const act of ['view', 'edit'] as const) {
+      if (hasWildcard(role, act)) continue
+      const key = `${role.role_id}-${act}`
+      if (!permDraft.has(key)) continue
+      const desired = permDraft.get(key)!
+      const hasServer = hasDirectPerm(role, act)
+      if (desired && !hasServer) {
+        let existingPerm: PermissionRead | null = null
+        for (const r of permRoles.value) {
+          const p = r.permissions.find(
+            (p) => p.mod === 'map' && p.act === act && p.obj === props.map.name
+          )
+          if (p) {
+            existingPerm = p
+            break
+          }
+        }
+        if (!existingPerm) {
+          existingPerm = await rolesApi.createPermission(
+            'map',
+            act,
+            props.map.name,
+            auth.accessToken!
+          )
+        }
+        await rolesApi.assignPermission(role.role_id, existingPerm.perm_id, auth.accessToken!)
+      } else if (!desired && hasServer) {
+        const perm = role.permissions.find(
+          (p) => p.mod === 'map' && p.act === act && p.obj === props.map.name
+        )!
+        await rolesApi.removePermission(role.role_id, perm.perm_id, auth.accessToken!)
+      }
+    }
+  }
+  permDraft.clear()
+}
+
+onMounted(async () => {
+  const [bs] = await Promise.all([connectionsApi.list(auth.accessToken!), loadPermissions()])
+  connections.value = bs
+  void loadFolderOptions()
+  void loadSiteOptions()
+  window.addEventListener('message', onPreviewReady)
+})
+
+watch(
+  () => form.value.connection_id,
+  () => {
+    void loadFolderOptions()
+    void loadSiteOptions()
+  }
+)
+
+onBeforeUnmount(() => {
+  window.removeEventListener('message', onPreviewReady)
+  if (previewDebounceTimer) clearTimeout(previewDebounceTimer)
+})
+</script>
+
+<style scoped>
+.map-settings__shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.map-settings__layout {
+  display: flex;
+  flex-direction: row;
+  gap: var(--dimension-5);
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.map-settings__body {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--dimension-4);
+  flex: 1 1 60%;
+  min-width: 0;
+}
+
+.map-settings__preview {
+  flex: 1 1 40%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dimension-2);
+  border-left: 1px solid var(--border);
+  padding-left: var(--dimension-4);
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  max-height: calc(100vh - 120px);
+}
+
+.map-settings__preview-label {
+  font-size: var(--font-size-small, 0.8125rem);
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.map-settings__preview-stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
+.map-settings__preview-frame {
+  flex: none;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--border);
+  border-radius: var(--dimension-3);
+  background: var(--bg-elevated, var(--bg-hover));
+}
+
+.map-settings__preview-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--dimension-3);
+  padding: var(--dimension-2) var(--dimension-4);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dimension-2);
+  cursor: pointer;
+  font-size: var(--font-size-normal);
+}
+
+.map-settings__preview-toggle:hover {
+  background: var(--bg-hover);
+}
+
+.map-settings__footer-spacer {
+  flex: 1;
+}
+
+/* Read-only display for unchangeable values (e.g. map type). Plain text
+   on the form background so it doesn't suggest a button or pill. */
+.map-settings__readonly-value {
+  font-size: var(--font-size-normal);
+  color: var(--text);
+  margin: 0;
+  padding: var(--dimension-1) 0;
+}
+
+/* Detail field that appears below a toggle, slightly indented so the operator
+   sees the relationship at a glance. The vertical spacing comes from the
+   surrounding field stack. */
+.map-settings__detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: var(--dimension-5);
+}
+
+/* Section separator between logical clusters in the form. */
+.map-settings__subsection {
+  padding-top: var(--dimension-5);
+  margin-top: var(--dimension-3);
+  border-top: 1px solid var(--border);
+}
+
+.map-settings__tabs {
+  display: flex;
+  gap: var(--dimension-2);
+  padding: 0 0 var(--dimension-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.map-settings__tab {
+  padding: var(--dimension-2) var(--dimension-4);
+  border-radius: var(--dimension-3);
+  background: transparent;
+  border: 0;
+  font-size: var(--font-size-large);
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.map-settings__tab:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+.map-settings__tab--active {
+  background: rgb(21 209 160 / 20%);
+  color: var(--color-corporate-green-40);
+}
+
+.map-settings__scroll {
+  flex: 1;
+  min-height: 0;
+  padding-top: var(--dimension-5);
+}
+
+.map-settings__footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--dimension-3);
+  padding: var(--dimension-4) 0;
+  background: linear-gradient(
+    to top,
+    var(--bg-surface) 0%,
+    var(--bg-surface) 75%,
+    transparent 100%
+  );
+  margin-top: var(--dimension-5);
+}
+
+.map-settings__coord-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--dimension-3);
+}
+
+.map-settings__pick-btn {
+  flex-shrink: 0;
+  gap: var(--dimension-2);
+}
+
+.map-settings__pick-btn svg {
+  flex-shrink: 0;
+}
+
+/* Vertical stacks (former space-y utilities). __form must come after
+   __subsection so its 10px gap wins between subsections, matching the old
+   utility specificity. */
+.map-settings__form > * + * {
+  margin-top: 10px;
+}
+
+.map-settings__stack > * + * {
+  margin-top: var(--dimension-4);
+}
+
+.map-settings__field > * + * {
+  margin-top: var(--dimension-3);
+}
+
+.map-settings__row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.map-settings__input-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.map-settings__num {
+  width: 100px;
+}
+
+.map-settings__num--full {
+  width: 100%;
+}
+
+.map-settings__unit {
+  flex-shrink: 0;
+  font-size: var(--font-size-large);
+  color: var(--text-muted);
+}
+
+.map-settings__coord-grid {
+  display: grid;
+  flex: 1 1 0%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--dimension-4);
+}
+
+.map-settings__grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--dimension-4);
+}
+
+.map-settings__toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.map-settings__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--dimension-4);
+}
+
+.map-settings__toggle-label {
+  font-size: var(--font-size-large);
+}
+
+.map-settings__error {
+  font-size: var(--font-size-normal);
+  color: var(--color-light-red-40);
+}
+
+.map-settings__perm-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.map-settings__perm-table {
+  width: 100%;
+  font-size: var(--font-size-large);
+}
+
+.map-settings__perm-head-row {
+  border-bottom: 1px solid var(--border);
+}
+
+.map-settings__perm-th {
+  padding: var(--dimension-3) var(--dimension-4);
+  font-size: var(--font-size-large);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.map-settings__perm-th--center {
+  width: 80px;
+  text-align: center;
+}
+
+.map-settings__perm-body tr + tr {
+  border-top: 1px solid var(--border);
+}
+
+.map-settings__perm-row:hover {
+  background: var(--bg-hover);
+}
+
+.map-settings__perm-td {
+  padding: var(--dimension-3) var(--dimension-4);
+}
+
+.map-settings__perm-td--name {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.map-settings__perm-td--center {
+  text-align: center;
+}
+
+.map-settings__perm-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.map-settings__perm-wildcard {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.map-settings__perm-empty {
+  padding: var(--dimension-8) 0;
+  font-size: var(--font-size-large);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.map-settings__perm-note {
+  margin-top: var(--dimension-5);
+  padding: 0 var(--dimension-3);
+  font-size: var(--font-size-large);
+  color: var(--text-muted);
+}
+</style>

@@ -23,7 +23,7 @@ vi.mock('@/api/client', () => ({
     refresh: vi.fn(),
     logout: vi.fn()
   },
-  boardsApi: { list: vi.fn(), get: vi.fn(), create: vi.fn(), delete: vi.fn() },
+  mapsApi: { list: vi.fn(), get: vi.fn(), create: vi.fn(), delete: vi.fn() },
   settingsApi: { get: vi.fn(), update: vi.fn() }
 }))
 

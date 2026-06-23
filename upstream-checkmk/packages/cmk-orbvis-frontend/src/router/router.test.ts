@@ -51,12 +51,12 @@ describe('router guards', () => {
   it('redirects unauthenticated users on protected routes to /login with redirect param', async () => {
     const result = await authGuard(
       makeRoute({
-        fullPath: '/boards/foo',
-        path: '/boards/foo',
+        fullPath: '/maps/foo',
+        path: '/maps/foo',
         meta: { requiresAuth: true }
       })
     )
-    expect(result).toEqual({ name: 'login', query: { redirect: '/boards/foo' } })
+    expect(result).toEqual({ name: 'login', query: { redirect: '/maps/foo' } })
   })
 
   it('allows authenticated users through', async () => {

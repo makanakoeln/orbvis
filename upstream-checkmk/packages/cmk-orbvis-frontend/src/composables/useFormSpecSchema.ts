@@ -1,7 +1,7 @@
 /**
  * Shared FormSpec-schema loader for OrbVis surfaces.
  *
- * Three views (Settings, Connections, Board-Settings) used to duplicate the
+ * Three views (Settings, Connections, Map-Settings) used to duplicate the
  * same load+cache+initialise-registry boilerplate. This composable owns:
  *   - lazy ``initializeComponentRegistry()`` (only once per page lifetime)
  *   - module-scope cache so a re-mount doesn't re-fetch the same schema

@@ -42,7 +42,7 @@
           </button>
         </nav>
 
-        <div class="settings-page__detail" :data-active="activeGroup">
+        <div ref="detailEl" class="settings-page__detail" :data-active="activeGroup">
           <FormEdit v-model:data="data" :spec="schema" :backend-validation="validation" />
         </div>
       </div>
@@ -93,6 +93,7 @@ import CmkHeading from '@/components/cmk/typography/CmkHeading'
 import CmkParagraph from '@/components/cmk/typography/CmkParagraph'
 
 import { systemSettingsApi } from '@/api/client'
+import { useDictionaryGroupAttrs } from '@/composables/useDictionaryGroupAttrs'
 import { useFormSpecSchema } from '@/composables/useFormSpecSchema'
 import { useSaveBarState } from '@/composables/useSaveBarState'
 import { useUnsavedChangesGuard } from '@/composables/useUnsavedChangesGuard'
@@ -135,6 +136,8 @@ const data = ref<unknown>({})
 const initialData = ref<unknown>({})
 const validation = ref<Validation>([])
 const activeGroup = ref<string>('')
+const detailEl = ref<HTMLElement | null>(null)
+useDictionaryGroupAttrs(detailEl, () => (schema.value as DictionarySchema | null)?.elements)
 
 let savedOkTimer: ReturnType<typeof setTimeout> | null = null
 let saveErrorTimer: ReturnType<typeof setTimeout> | null = null
@@ -145,7 +148,7 @@ const heading = computed(() => (schema.value as DictionarySchema | null)?.title 
 const subtitle = computed(
   () =>
     (schema.value as DictionarySchema | null)?.help ||
-    _t('Runtime and integration options. Applies across all boards.')
+    _t('Runtime and integration options. Applies across all maps.')
 )
 
 const sidebarGroups = computed<{ key: string; title: string; modified: number }[]>(() => {
@@ -409,12 +412,14 @@ onUnmounted(() => {
    branches etc.) use ``-ungrouped-N`` keys and would otherwise be hit by
    a generic ``tr[data-group]`` blanket. */
 .settings-page__detail :deep(tr[data-group='server']),
-.settings-page__detail :deep(tr[data-group='checkmk']) {
+.settings-page__detail :deep(tr[data-group='checkmk']),
+.settings-page__detail :deep(tr[data-group='features']) {
   display: none !important;
 }
 
 .settings-page__detail[data-active='server'] :deep(tr[data-group='server']),
-.settings-page__detail[data-active='checkmk'] :deep(tr[data-group='checkmk']) {
+.settings-page__detail[data-active='checkmk'] :deep(tr[data-group='checkmk']),
+.settings-page__detail[data-active='features'] :deep(tr[data-group='features']) {
   display: table-row !important;
 }
 
@@ -433,5 +438,10 @@ onUnmounted(() => {
    FormDictionary group rows without a border. */
 .settings-page__detail :deep(tr[data-group] + tr[data-group] > td) {
   padding-top: var(--dimension-6);
+}
+
+.settings-page__detail[data-active='checkmk'] :deep(tr[data-group='checkmk'] > td),
+.settings-page__detail[data-active='features'] :deep(tr[data-group='features'] > td) {
+  padding-top: 0;
 }
 </style>

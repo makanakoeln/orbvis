@@ -3,7 +3,7 @@ import { type MaybeRefOrGetter, reactive, ref, toValue } from 'vue'
 import { cmkApi } from '@/api/client'
 import { useToast } from '@/composables/useToast'
 import { useStatesStore } from '@/stores/states'
-import type { BoardObject, DowntimeEntry } from '@/types/api'
+import type { MapObject, DowntimeEntry } from '@/types/api'
 import usei18n from '@cmk/lib/i18n'
 
 interface DispatchOptions {
@@ -19,24 +19,27 @@ interface DispatchOptions {
 }
 
 export interface UseObjectActions {
-  ackModalObject: ReturnType<typeof ref<BoardObject | null>>
-  downtimeModalObject: ReturnType<typeof ref<BoardObject | null>>
-  commentModalObject: ReturnType<typeof ref<BoardObject | null>>
+  ackModalObject: ReturnType<typeof ref<MapObject | null>>
+  downtimeModalObject: ReturnType<typeof ref<MapObject | null>>
+  commentModalObject: ReturnType<typeof ref<MapObject | null>>
   removeDowntimeModal: { visible: boolean; downtimes: DowntimeEntry[]; objectName: string }
+  closeAckModal(): void
+  closeDowntimeModal(): void
+  closeRemoveDowntimeModal(): void
   handlers: {
-    acknowledge(obj: BoardObject | null): void
-    removeAck(obj: BoardObject | null): Promise<void>
-    scheduleDowntime(obj: BoardObject | null): void
-    removeDowntime(obj: BoardObject | null): Promise<void>
-    addComment(obj: BoardObject | null): void
-    forceCheck(obj: BoardObject | null): Promise<void>
-    toggleNotifications(obj: BoardObject | null, enable: boolean): Promise<void>
+    acknowledge(obj: MapObject | null): void
+    removeAck(obj: MapObject | null): Promise<void>
+    scheduleDowntime(obj: MapObject | null): void
+    removeDowntime(obj: MapObject | null): Promise<void>
+    addComment(obj: MapObject | null): void
+    forceCheck(obj: MapObject | null): Promise<void>
+    toggleNotifications(obj: MapObject | null, enable: boolean): Promise<void>
   }
 }
 
 /**
- * Shared cmkApi-action plumbing for board context menus. Holds modal-state and
- * the host/service dispatch boilerplate so BoardCanvas and FlowBoard don't each
+ * Shared cmkApi-action plumbing for map context menus. Holds modal-state and
+ * the host/service dispatch boilerplate so MapCanvas and FlowMap don't each
  * re-implement the same seven handlers.
  */
 export function useObjectActions(
@@ -47,9 +50,9 @@ export function useObjectActions(
   const toast = useToast()
   const statesStore = useStatesStore()
 
-  const ackModalObject = ref<BoardObject | null>(null)
-  const downtimeModalObject = ref<BoardObject | null>(null)
-  const commentModalObject = ref<BoardObject | null>(null)
+  const ackModalObject = ref<MapObject | null>(null)
+  const downtimeModalObject = ref<MapObject | null>(null)
+  const commentModalObject = ref<MapObject | null>(null)
   const removeDowntimeModal = reactive<{
     visible: boolean
     downtimes: DowntimeEntry[]
@@ -64,12 +67,12 @@ export function useObjectActions(
 
   async function dispatchHostOrService(
     url: string,
-    obj: BoardObject,
+    obj: MapObject,
     { hostFn, serviceFn, errorText, successText }: DispatchOptions
   ): Promise<void> {
     try {
       // Prefer the live state-map site_id; fall back to a site_id carried
-      // on the object itself (the Flow Board has no state-map entry but
+      // on the object itself (the Flow Map has no state-map entry but
       // tags its objects with the topology node's site).
       const siteId = statesStore.getState(obj.id)?.site_id ?? obj.site_id ?? null
       if (obj.type === 'service' && obj.host_name && obj.service_description) {
@@ -87,12 +90,12 @@ export function useObjectActions(
     }
   }
 
-  function acknowledge(obj: BoardObject | null): void {
+  function acknowledge(obj: MapObject | null): void {
     start()
     if (obj) ackModalObject.value = obj
   }
 
-  async function removeAck(obj: BoardObject | null): Promise<void> {
+  async function removeAck(obj: MapObject | null): Promise<void> {
     const url = start()
     if (!obj || !url) return
     await dispatchHostOrService(url, obj, {
@@ -102,12 +105,12 @@ export function useObjectActions(
     })
   }
 
-  function scheduleDowntime(obj: BoardObject | null): void {
+  function scheduleDowntime(obj: MapObject | null): void {
     start()
     if (obj) downtimeModalObject.value = obj
   }
 
-  async function removeDowntime(obj: BoardObject | null): Promise<void> {
+  async function removeDowntime(obj: MapObject | null): Promise<void> {
     const url = start()
     if (!obj || !url) return
     let downtimes: DowntimeEntry[]
@@ -143,12 +146,12 @@ export function useObjectActions(
     removeDowntimeModal.visible = true
   }
 
-  function addComment(obj: BoardObject | null): void {
+  function addComment(obj: MapObject | null): void {
     start()
     if (obj) commentModalObject.value = obj
   }
 
-  async function forceCheck(obj: BoardObject | null): Promise<void> {
+  async function forceCheck(obj: MapObject | null): Promise<void> {
     const url = start()
     if (!obj || !url) return
     await dispatchHostOrService(url, obj, {
@@ -159,7 +162,7 @@ export function useObjectActions(
     })
   }
 
-  async function toggleNotifications(obj: BoardObject | null, enable: boolean): Promise<void> {
+  async function toggleNotifications(obj: MapObject | null, enable: boolean): Promise<void> {
     const url = start()
     if (!obj || !url) return
     await dispatchHostOrService(url, obj, {
@@ -170,11 +173,31 @@ export function useObjectActions(
     })
   }
 
+  // Modal close = command finished (or aborted) — refresh so the map
+  // reflects the acknowledged/downtimed state without waiting a full tick.
+  function closeAckModal(): void {
+    ackModalObject.value = null
+    statesStore.refreshAfterCommand()
+  }
+
+  function closeDowntimeModal(): void {
+    downtimeModalObject.value = null
+    statesStore.refreshAfterCommand()
+  }
+
+  function closeRemoveDowntimeModal(): void {
+    removeDowntimeModal.visible = false
+    statesStore.refreshAfterCommand()
+  }
+
   return {
     ackModalObject,
     downtimeModalObject,
     commentModalObject,
     removeDowntimeModal,
+    closeAckModal,
+    closeDowntimeModal,
+    closeRemoveDowntimeModal,
     handlers: {
       acknowledge,
       removeAck,

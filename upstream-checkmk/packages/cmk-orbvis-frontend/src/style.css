@@ -4,14 +4,19 @@
 
 :root {
   --color-warning: #ffd000;
-  --color-state-up: #00ff00;
-  --color-state-down: #ff0000;
-  --color-state-unreachable: #ff8800;
-  --color-state-ok: #00ff00;
-  --color-state-warning: #ffd000;
-  --color-state-critical: #ff0000;
-  --color-state-unknown: #ff8800;
-  --color-state-pending: #aaaaaa;
+
+  /* Monitoring status palette — Checkmk's facelift/modern-dark
+       $color-state-* values (shipped only as compiled SCSS, mirrored here).
+       Used in standalone AND embedded deployments so maps look identical
+       everywhere; the pure-primary NagVis-era palette glared in light mode. */
+  --color-state-up: rgb(21 209 160);
+  --color-state-down: rgb(200 50 50);
+  --color-state-unreachable: rgb(255 132 0);
+  --color-state-ok: rgb(21 209 160);
+  --color-state-warning: rgb(255 215 3);
+  --color-state-critical: rgb(200 50 50);
+  --color-state-unknown: rgb(255 132 0);
+  --color-state-pending: rgb(140 140 140);
 
   /* Modifier badges shown alongside states in the slidein. CMK's vendored
        palette has no semantic ack/downtime tokens so we define them here. */
@@ -27,8 +32,8 @@
   --font-size-xlarge: 15px;
   --border-radius: 4px;
 
-  /* Keeps board icons legible on any backdrop regardless of theme — replaces
-       the theme-coupled .dark .svg-icon invert, which left dark boards shown in
+  /* Keeps map icons legible on any backdrop regardless of theme — replaces
+       the theme-coupled .dark .svg-icon invert, which left dark maps shown in
        the light theme with invisible icons and wrongly inverted coloured logos. */
   --icon-halo: drop-shadow(0 0 1.5px rgb(0 0 0 / 60%)) drop-shadow(0 0 1.5px rgb(255 255 255 / 90%));
 
@@ -79,7 +84,7 @@
 
   /* Gadgets keep a dark "hardware" look in both themes (no .light override).
        The value/label text is always light, so it must stay legible even when
-       it sits directly on a light board backdrop — hence the dark text outline
+       it sits directly on a light map backdrop — hence the dark text outline
        below and a neutral-grey track that shows on light and dark alike. */
   --gadget-bg: rgb(0 0 0 / 55%);
   --gadget-ring: rgb(255 255 255 / 15%);
@@ -90,23 +95,6 @@
   --shadow-text:
     1px 1px 0 rgb(0 0 0 / 90%), -1px 1px 0 rgb(0 0 0 / 90%), 1px -1px 0 rgb(0 0 0 / 90%),
     -1px -1px 0 rgb(0 0 0 / 90%), 0 0 3px rgb(0 0 0 / 70%);
-}
-
-/* In a Checkmk-embedded deployment, adopt Checkmk's own monitoring status palette
-   (its facelift/modern-dark $color-state-* values) instead of OrbVis' standalone
-   pure primaries, so boards match the surrounding Checkmk UI. Checkmk ships these
-   only as compiled SCSS (no CSS vars), so the values are mirrored here; they are
-   identical across the facelift/modern-dark themes. Standalone keeps the @theme
-   primaries above (OrbVis-native, no Checkmk dependency). */
-:root.cmk-deployment {
-  --color-state-up: rgb(21 209 160);
-  --color-state-ok: rgb(21 209 160);
-  --color-state-warning: rgb(255 215 3);
-  --color-state-critical: rgb(200 50 50);
-  --color-state-down: rgb(200 50 50);
-  --color-state-unknown: rgb(255 132 0);
-  --color-state-unreachable: rgb(255 132 0);
-  --color-state-pending: rgb(140 140 140);
 }
 
 /* Override browser autofill yellow highlight */
@@ -170,7 +158,7 @@ html {
    Elevation-Hierarchie (CMK-Konvention dunkles Theme):
      --bg (page)            = --ux-theme-1   (dunkelster Surface-Ton, nicht pitch-black)
      --default-bg-color     = --ux-theme-2   (Slideouts, Popups — elevation gegen page)
-     --bg-surface (cards)   = --ux-theme-3   (Board-Cards, Tabellen)
+     --bg-surface (cards)   = --ux-theme-3   (Map-Cards, Tabellen)
    --default-bg-color MUSS unterscheidbar von --bg sein, damit CmkSlideIn sich abhebt. */
 body {
   /* Bridge OrbVis token names onto CMK's theme-aware vars. CMK's

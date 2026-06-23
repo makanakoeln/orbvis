@@ -18,7 +18,7 @@
         {{ _t('System') }}
       </CmkHeading>
       <CmkParagraph class="admin-subtitle">
-        {{ _t('Runtime and integration options. Applies across all boards.') }}
+        {{ _t('Runtime and integration options. Applies across all maps.') }}
       </CmkParagraph>
     </div>
 
@@ -149,11 +149,11 @@
           </button>
           <CmkCollapsible :open="sectionOpen.features">
             <div class="orb-sset__card-body">
-              <CmkCheckbox v-model="enableFolderBoards" :label="_t('Enable Folder boards')" />
+              <CmkCheckbox v-model="enableFolderMaps" :label="_t('Enable Folder maps')" />
               <p class="orb-sset__feature-hint">
                 {{
                   _t(
-                    'Offer the SETUP folder-tree board type in the board-type picker. Existing folder boards keep rendering even while this is off.'
+                    'Offer the SETUP folder-tree map type in the map-type picker. Existing folder maps keep rendering even while this is off.'
                   )
                 }}
               </p>
@@ -166,6 +166,18 @@
                 {{
                   _t(
                     'Offer the (experimental) graph object type in the add-object picker. Existing graph objects keep rendering even while this is off.'
+                  )
+                }}
+              </p>
+              <CmkCheckbox
+                v-model="enablePresentationMaps"
+                :label="_t('Enable Presentation maps')"
+                style="margin-top: 12px"
+              />
+              <p class="orb-sset__feature-hint">
+                {{
+                  _t(
+                    'Offer the (experimental) presentation map type — a design-first, slide-style surface. Existing presentation maps keep rendering even while this is off.'
                   )
                 }}
               </p>
@@ -250,10 +262,10 @@ const sectionOpen = reactive({
   features: false
 })
 
-const enableFolderBoards = computed({
-  get: () => form.enable_folder_boards ?? false,
+const enableFolderMaps = computed({
+  get: () => form.enable_folder_maps ?? false,
   set: (v: boolean) => {
-    form.enable_folder_boards = v
+    form.enable_folder_maps = v
   }
 })
 
@@ -261,6 +273,13 @@ const enableGraphObjects = computed({
   get: () => form.enable_graph_objects ?? true,
   set: (v: boolean) => {
     form.enable_graph_objects = v
+  }
+})
+
+const enablePresentationMaps = computed({
+  get: () => form.enable_presentation_maps ?? false,
+  set: (v: boolean) => {
+    form.enable_presentation_maps = v
   }
 })
 

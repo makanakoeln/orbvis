@@ -1,6 +1,6 @@
 /**
  * Object-option registry — backend is the single source of truth for the
- * names of line styles (and, later, board types / gadget kinds / etc.).
+ * names of line styles (and, later, map types / gadget kinds / etc.).
  *
  * Loaded once after login and exposed as a plain reactive cache the
  * synchronous dropdown helpers in ``utils/dropdownOptions.ts`` can read

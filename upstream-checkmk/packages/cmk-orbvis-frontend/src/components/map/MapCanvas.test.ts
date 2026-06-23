@@ -1,0 +1,281 @@
+import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it } from 'vitest'
+
+import type { MapConfig, ObjectState } from '@/types/api'
+
+import MapCanvas from './MapCanvas.vue'
+
+const sampleConfig: MapConfig = {
+  name: 'test',
+  alias: 'Test',
+  icon_size: 30,
+  connection_id: 'test',
+  rotation_interval: 0,
+  sort_order: 0,
+  click_action: 'link',
+  view: { type: 'static' },
+  objects: [
+    {
+      id: '1',
+      type: 'host',
+      x: 100,
+      y: 200,
+      host_name: 'localhost',
+      label: {
+        show: true,
+        x: 0,
+        y: 0,
+        size: 10,
+        color: '#ffffff',
+        background: 'transparent'
+      },
+      display: { mode: 'icon' },
+      url_target: '_blank',
+      z: 1
+    }
+  ]
+}
+
+const sampleStates: Record<string, ObjectState> = {
+  '1': {
+    object_id: '1',
+    type: 'host',
+    state: 'UP',
+    output: 'PING OK',
+    perf_data: '',
+    acknowledged: false,
+    in_downtime: false,
+    stale: false
+  }
+}
+
+const baseProps = {
+  config: sampleConfig,
+  states: sampleStates,
+  editMode: false,
+  placing: false,
+  lineDragPositions: {},
+  selectedObjectId: null
+}
+
+describe('MapCanvas', () => {
+  it('renders without errors', () => {
+    const wrapper = mount(MapCanvas, {
+      props: baseProps,
+      global: { stubs: { HoverMenu: true, ContextMenu: true, MapObject: true } }
+    })
+    expect(wrapper.exists()).toBe(true)
+  })
+
+  it('renders the correct number of objects', () => {
+    const wrapper = mount(MapCanvas, {
+      props: baseProps,
+      global: {
+        stubs: { HoverMenu: true, ContextMenu: true, MapLine: true, MapObject: true }
+      }
+    })
+    const objects = wrapper.findAllComponents({ name: 'MapObject' })
+    expect(objects).toHaveLength(1)
+  })
+
+  it('buckets lines into one z-indexed SVG layer per distinct z', () => {
+    const line = (id: string, z: number | null) => ({
+      id,
+      type: 'line' as const,
+      x: 0,
+      y: 0,
+      x2: 50,
+      y2: 50,
+      label: { show: false, x: 0, y: 0, size: 10, color: '#fff', background: 'transparent' },
+      url_target: '_blank',
+      ...(z === null ? {} : { z })
+    })
+    const wrapper = mount(MapCanvas, {
+      props: {
+        ...baseProps,
+        // default_z=10 so the z-less line shares a layer with the z=10 line.
+        config: {
+          ...sampleConfig,
+          default_z: 10,
+          objects: [line('a', 2), line('b', 20), line('c', null), line('d', 10)]
+        }
+      },
+      global: {
+        stubs: { HoverMenu: true, ContextMenu: true, MapLine: true, MapObject: true }
+      }
+    })
+    const zLayers = wrapper
+      .findAll('svg')
+      .map((s) => s.attributes('style') ?? '')
+      .filter((style) => style.includes('z-index'))
+      .map((style) => parseInt(style.match(/z-index:\s*(\d+)/)?.[1] ?? '', 10))
+    // Three distinct buckets (2, 10, 20) sorted ascending; z-less + z=10 merge.
+    expect(zLayers).toEqual([2, 10, 20])
+  })
+})
+
+// Smoke test for the full render path: real MapObject children (not stubbed),
+// so a regression anywhere in the static map's object rendering fails here.
+describe('MapCanvas – smoke with real MapObject', () => {
+  const smokeConfig: MapConfig = {
+    ...sampleConfig,
+    objects: [
+      ...sampleConfig.objects,
+      {
+        id: '2',
+        type: 'textbox',
+        x: 300,
+        y: 100,
+        label: {
+          show: true,
+          text: 'Hello map',
+          x: 0,
+          y: 0,
+          size: 13,
+          color: '#ffffff',
+          background: 'transparent'
+        },
+        url_target: '_blank',
+        z: 1
+      }
+    ]
+  }
+
+  const stubs = { HoverMenu: true, ContextMenu: true }
+  let pinia: ReturnType<typeof createPinia>
+
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+  })
+
+  it('renders host icon and textbox content', () => {
+    const wrapper = mount(MapCanvas, {
+      props: { ...baseProps, config: smokeConfig },
+      global: { plugins: [pinia], stubs }
+    })
+
+    expect(wrapper.findAll('[data-object-id]')).toHaveLength(2)
+    // Host state circle carries the UP colour.
+    expect(wrapper.find('.orb-obj__state-svg circle').attributes('fill')).toBe('rgb(34,197,94)')
+    expect(wrapper.find('.orb-obj__textbox').text()).toBe('Hello map')
+  })
+
+  it('reflects a state change (UP → DOWN) in the rendered icon colour', async () => {
+    const wrapper = mount(MapCanvas, {
+      props: { ...baseProps, config: smokeConfig },
+      global: { plugins: [pinia], stubs }
+    })
+
+    await wrapper.setProps({
+      states: {
+        '1': { ...sampleStates['1']!, state: 'DOWN', output: 'PING CRITICAL' }
+      }
+    })
+
+    expect(wrapper.find('.orb-obj__state-svg circle').attributes('fill')).toBe('rgb(239,68,68)')
+  })
+})
+
+// Persisted canvas size locks the percent-positioning divisor so a map
+// reloads with the same geometry the editor saw (no edge-drop re-anchoring).
+describe('MapCanvas – persisted canvas size', () => {
+  const stubs = { HoverMenu: true, ContextMenu: true, MapObject: true, MapLine: true }
+  const cfgWith = (extra: Partial<MapConfig>): MapConfig => ({
+    ...sampleConfig,
+    objects: [{ ...sampleConfig.objects[0]!, x: 1000, y: 700 }],
+    ...extra
+  })
+  const nativeSize = (cfg: MapConfig) => {
+    const canvas = mount(MapCanvas, {
+      props: { ...baseProps, config: cfg },
+      global: { stubs }
+    }).find('.orb-canvas')
+    return {
+      w: Number(canvas.attributes('data-native-width')),
+      h: Number(canvas.attributes('data-native-height'))
+    }
+  }
+
+  it('derives the divisor from padded extents when unset (legacy maps)', () => {
+    // x=1000 (+150 padding) → 1150; y=700 (+150) → 850.
+    expect(nativeSize(cfgWith({}))).toEqual({ w: 1150, h: 850 })
+  })
+
+  it('uses a persisted size verbatim instead of re-inflating it', () => {
+    expect(nativeSize(cfgWith({ canvas_width: 1200, canvas_height: 900 }))).toEqual({
+      w: 1200,
+      h: 900
+    })
+  })
+
+  it('clamps a too-small persisted size up to raw coords, without re-adding padding', () => {
+    // Persisted < an object's raw coord → grow to the coord (1000/700), not +150.
+    expect(nativeSize(cfgWith({ canvas_width: 900, canvas_height: 600 }))).toEqual({
+      w: 1000,
+      h: 700
+    })
+  })
+})
+
+// Wheel-zoom interaction (view mode). Locks the zoom range [1×, 4×], the
+// pannable-cursor state that tracks it, and that zoom is disabled while editing.
+describe('MapCanvas – wheel zoom', () => {
+  const stubs = { HoverMenu: true, ContextMenu: true, MapObject: true, MapLine: true }
+  let pinia: ReturnType<typeof createPinia>
+
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+  })
+
+  function mountCanvas(overrides: Partial<typeof baseProps> = {}) {
+    const wrapper = mount(MapCanvas, {
+      props: { ...baseProps, ...overrides },
+      global: { plugins: [pinia], stubs }
+    })
+    return { wrapper, canvas: wrapper.find('.orb-canvas') }
+  }
+
+  // No clientX/Y: the handler only reads them when a scroll ancestor exists,
+  // which a detached test mount has not — and test-utils can't set them anyway.
+  const zoomIn = (canvas: ReturnType<typeof mountCanvas>['canvas']) =>
+    canvas.trigger('wheel', { deltaY: -100 })
+  const zoomOut = (canvas: ReturnType<typeof mountCanvas>['canvas']) =>
+    canvas.trigger('wheel', { deltaY: 100 })
+
+  it('starts at fit (no zoom, not pannable)', () => {
+    const { canvas } = mountCanvas()
+    expect(canvas.classes()).not.toContain('orb-canvas--pannable')
+    expect(canvas.attributes('style') ?? '').not.toContain('zoom')
+  })
+
+  it('zooms in on wheel-up and marks the canvas pannable', async () => {
+    const { canvas } = mountCanvas()
+    await zoomIn(canvas)
+    expect(canvas.classes()).toContain('orb-canvas--pannable')
+    expect(canvas.attributes('style')).toContain('zoom')
+  })
+
+  it('clamps zoom-in at 4×', async () => {
+    const { canvas } = mountCanvas()
+    for (let i = 0; i < 40; i++) await zoomIn(canvas)
+    expect(canvas.attributes('style')).toMatch(/zoom:\s*4\b/)
+  })
+
+  it('clamps zoom-out back to fit and clears the pannable cursor', async () => {
+    const { canvas } = mountCanvas()
+    for (let i = 0; i < 10; i++) await zoomIn(canvas)
+    for (let i = 0; i < 40; i++) await zoomOut(canvas)
+    expect(canvas.classes()).not.toContain('orb-canvas--pannable')
+    expect(canvas.attributes('style') ?? '').not.toContain('zoom')
+  })
+
+  it('does not zoom while editing', async () => {
+    const { canvas } = mountCanvas({ editMode: true })
+    await zoomIn(canvas)
+    expect(canvas.classes()).not.toContain('orb-canvas--pannable')
+    expect(canvas.attributes('style') ?? '').not.toContain('zoom')
+  })
+})

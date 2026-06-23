@@ -182,8 +182,8 @@
               />
             </div>
             <div v-if="needsMapName" class="roles-edit__field">
-              <label class="roles-edit__label">{{ _t('Board name') }}</label>
-              <CmkInput v-model="newPerm.obj" placeholder="my-board" field-size="FILL" />
+              <label class="roles-edit__label">{{ _t('Map name') }}</label>
+              <CmkInput v-model="newPerm.obj" placeholder="my-map" field-size="FILL" />
             </div>
             <p v-if="permError" class="roles-edit__form-error">
               {{ permError }}
@@ -261,10 +261,10 @@ const permPresetOptions = computed(() => ({
   type: 'fixed' as const,
   suggestions: [
     { name: '', title: _t('— choose a preset —') },
-    { name: 'map:view:*', title: _t('View all boards') },
-    { name: 'map:edit:*', title: _t('Edit all boards (settings & objects)') },
-    { name: 'map:view:custom', title: _t('View a specific board…') },
-    { name: 'map:edit:custom', title: _t('Edit a specific board…') },
+    { name: 'map:view:*', title: _t('View all maps') },
+    { name: 'map:edit:*', title: _t('Edit all maps (settings & objects)') },
+    { name: 'map:view:custom', title: _t('View a specific map…') },
+    { name: 'map:edit:custom', title: _t('Edit a specific map…') },
     { name: 'user:edit:*', title: _t("Change any user's password (user/edit/*)") }
   ]
 }))
@@ -343,10 +343,9 @@ function addDraftPerm() {
     obj = parts[2] ?? ''
   }
   if (!mod || !act || !obj) {
-    permError.value = _t('Board name')
+    permError.value = _t('Map name')
     return
   }
-  // Avoid duplicates in draft
   const exists = draftPerms.value.some((p) => p.mod === mod && p.act === act && p.obj === obj)
   if (exists) return
   draftPerms.value.push({ perm_id: draftCounter--, mod, act, obj })
@@ -368,7 +367,6 @@ async function savePermissions() {
   permSaveError.value = ''
   try {
     const roleId = editRole.value.role_id
-    // Remove permissions that were deleted in draft
     for (const permId of removedPermIds.value) {
       await rolesApi.removePermission(roleId, permId, auth.accessToken!)
     }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ApiError, authApi, boardsApi } from './client'
+import { ApiError, authApi, mapsApi } from './client'
 
 const originalFetch = globalThis.fetch
 
@@ -59,7 +59,7 @@ describe('api client request()', () => {
     const mock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>
     mock.mockResolvedValueOnce(new Response(null, { status: 204 }))
 
-    await boardsApi.delete('foo', 't')
+    await mapsApi.delete('foo', 't')
 
     const [, init] = mock.mock.calls[0] as [string, RequestInit]
     expect(init.method).toBe('POST')
@@ -71,7 +71,7 @@ describe('api client request()', () => {
     const mock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>
     mock.mockResolvedValueOnce(jsonResponse([]))
 
-    await boardsApi.list('t')
+    await mapsApi.list('t')
 
     const [, init] = mock.mock.calls[0] as [string, RequestInit]
     expect(init.method).toBe('GET')

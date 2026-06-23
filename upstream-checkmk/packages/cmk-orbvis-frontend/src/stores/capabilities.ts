@@ -16,12 +16,16 @@ import { capabilitiesApi } from '@/api/client'
 
 interface State {
   formSpecs: boolean
+  changelog: boolean
+  tour: boolean
   loaded: boolean
 }
 
 export const useCapabilitiesStore = defineStore('capabilities', {
   state: (): State => ({
     formSpecs: true,
+    changelog: true,
+    tour: true,
     loaded: false
   }),
   actions: {
@@ -30,6 +34,8 @@ export const useCapabilitiesStore = defineStore('capabilities', {
       try {
         const data = await capabilitiesApi.get()
         this.formSpecs = data.form_specs
+        this.changelog = data.changelog ?? true
+        this.tour = data.tour ?? true
         this.loaded = true
       } catch {
         // Best-effort — keep the optimistic default so the MKP/

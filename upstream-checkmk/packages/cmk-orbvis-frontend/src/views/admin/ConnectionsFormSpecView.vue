@@ -231,6 +231,7 @@ import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import { useConnectionsStore } from '@/stores/connections'
 import type { ConnectionConfig } from '@/types/api'
+import { asFormSpecSchema } from '@/utils/formSpec'
 import usei18n from '@cmk/lib/i18n'
 
 type Schema = NonNullable<VueFormspecComponents['components']>
@@ -286,7 +287,7 @@ async function ensureSchema() {
   if (formSchema.value) return
   try {
     const spec = await connectionsApiFormSpec.getSchema(auth.accessToken!)
-    formSchema.value = spec as unknown as Schema
+    formSchema.value = asFormSpecSchema(spec)
   } catch (e: unknown) {
     schemaError.value = e instanceof Error ? e.message : 'Schema load failed'
   }

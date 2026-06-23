@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import type { BoardObject } from '@/types/api'
+import type { MapObject } from '@/types/api'
 
 import { objectMatchesFilter } from './objectFilter'
 
-function obj(over: Partial<BoardObject>): BoardObject {
+function obj(over: Partial<MapObject>): MapObject {
   return {
     id: 'h1',
     type: 'host',
@@ -13,7 +13,7 @@ function obj(over: Partial<BoardObject>): BoardObject {
     z: 0,
     url_target: '_blank',
     ...over
-  } as BoardObject
+  } as MapObject
 }
 
 describe('objectMatchesFilter', () => {

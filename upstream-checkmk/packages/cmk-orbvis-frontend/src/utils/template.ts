@@ -1,5 +1,5 @@
-import type { BoardObject as MapObject, ObjectState } from '@/types/api'
-import { getBoardObjectName } from '@/utils/naming'
+import type { MapObject as MapObject, ObjectState } from '@/types/api'
+import { getMapObjectName } from '@/utils/naming'
 import { parsePerfData } from '@/utils/perf'
 import { formatRelativeDuration, formatRelativeFuture, formatTimestamp } from '@/utils/time'
 
@@ -38,7 +38,7 @@ export function interpolateTemplate(
   object: MapObject,
   state: ObjectState | undefined
 ): string {
-  const displayName = getBoardObjectName(object)
+  const displayName = getMapObjectName(object)
 
   const perfRaw = state?.perf_data ?? ''
   const metrics = parsePerfData(perfRaw)

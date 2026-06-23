@@ -11,7 +11,7 @@ interface RadarLikeForm {
   radar_filter_value: string
 }
 
-// Fetches the host- / service-group choices for a Radar board's filter field
+// Fetches the host- / service-group choices for a Radar map's filter field
 // and resets the picked value when the operator switches the filter type so
 // stale values can't survive the type swap.
 export function useRadarGroups(form: Ref<RadarLikeForm>, getAccessToken: () => string | null) {

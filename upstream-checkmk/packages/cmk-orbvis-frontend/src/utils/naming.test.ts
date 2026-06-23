@@ -1,32 +1,32 @@
 import { describe, expect, it } from 'vitest'
 
-import { sanitizeBoardName, slugToTitleCase } from './naming'
+import { sanitizeMapName, slugToTitleCase } from './naming'
 
-describe('sanitizeBoardName', () => {
+describe('sanitizeMapName', () => {
   it('replaces spaces with hyphens', () => {
-    expect(sanitizeBoardName('hello world')).toBe('hello-world')
+    expect(sanitizeMapName('hello world')).toBe('hello-world')
   })
 
   it('strips special characters', () => {
-    expect(sanitizeBoardName('my-board!')).toBe('my-board')
+    expect(sanitizeMapName('my-map!')).toBe('my-map')
   })
 
   it('keeps alphanumeric, hyphens, underscores', () => {
-    expect(sanitizeBoardName('my_board-01')).toBe('my_board-01')
+    expect(sanitizeMapName('my_map-01')).toBe('my_map-01')
   })
 
   it('strips umlauts', () => {
-    expect(sanitizeBoardName('Übersicht')).toBe('bersicht')
+    expect(sanitizeMapName('Übersicht')).toBe('bersicht')
   })
 
   it('handles empty string', () => {
-    expect(sanitizeBoardName('')).toBe('')
+    expect(sanitizeMapName('')).toBe('')
   })
 })
 
 describe('slugToTitleCase', () => {
   it('converts hyphens to spaces and capitalizes', () => {
-    expect(slugToTitleCase('my-board')).toBe('My Board')
+    expect(slugToTitleCase('my-map')).toBe('My Map')
   })
 
   it('converts underscores to spaces', () => {

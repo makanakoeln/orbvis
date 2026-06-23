@@ -251,7 +251,7 @@ const PAD = 10
 const canvasRect = ref<DOMRect | null>(null)
 
 function measureCanvas() {
-  const el = document.querySelector('[data-tour="board-canvas"]')
+  const el = document.querySelector('[data-tour="map-canvas"]')
   canvasRect.value = el ? el.getBoundingClientRect() : null
 }
 
@@ -260,7 +260,7 @@ let resizeObserver: ResizeObserver | null = null
 onMounted(() => {
   measureCanvas()
   resizeObserver = new ResizeObserver(measureCanvas)
-  const el = document.querySelector('[data-tour="board-canvas"]')
+  const el = document.querySelector('[data-tour="map-canvas"]')
   if (el) resizeObserver.observe(el)
 })
 

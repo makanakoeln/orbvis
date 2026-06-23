@@ -28,10 +28,11 @@ const { mockPush, mockAuthApi, ApiError } = vi.hoisted(() => {
 })
 
 vi.mock('@/api/client', () => ({
+  ACCESS_TOKEN_KEY: 'orbvis_access_token',
   ApiError,
   authApi: mockAuthApi,
   settingsApi: { get: vi.fn().mockResolvedValue({}), update: vi.fn() },
-  boardsApi: { list: vi.fn(), get: vi.fn(), create: vi.fn(), delete: vi.fn() },
+  mapsApi: { list: vi.fn(), get: vi.fn(), create: vi.fn(), delete: vi.fn() },
   connectionsApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() }
 }))
 
@@ -58,7 +59,7 @@ const sampleUser: UserRead = {
   cmk_language: null,
   cmk_inline_help: false,
   can_configure: false,
-  can_create_boards: false,
+  can_create_maps: false,
   command_permissions: [],
   roles: [],
   permissions: []
@@ -112,27 +113,27 @@ describe('useAuthStore', () => {
     expect(store.isAdmin).toBe(true)
   })
 
-  it('canConfigure / canCreateBoards reflect the capability flags', async () => {
+  it('canConfigure / canCreateMaps reflect the capability flags', async () => {
     const { useAuthStore } = await import('./auth')
     const store = useAuthStore()
     store.user = sampleUser
     expect(store.canConfigure).toBe(false)
-    expect(store.canCreateBoards).toBe(false)
-    store.user = { ...sampleUser, can_configure: true, can_create_boards: true }
+    expect(store.canCreateMaps).toBe(false)
+    store.user = { ...sampleUser, can_configure: true, can_create_maps: true }
     expect(store.canConfigure).toBe(true)
-    expect(store.canCreateBoards).toBe(true)
+    expect(store.canCreateMaps).toBe(true)
   })
 
-  it('canConfigure / canCreateBoards fall back to is_admin for older backends', async () => {
+  it('canConfigure / canCreateMaps fall back to is_admin for older backends', async () => {
     const { useAuthStore } = await import('./auth')
     const store = useAuthStore()
     // Simulate a /me payload from a backend that predates the capability flags.
     const legacyAdmin = { ...adminUser } as Partial<UserRead>
     delete legacyAdmin.can_configure
-    delete legacyAdmin.can_create_boards
+    delete legacyAdmin.can_create_maps
     store.user = legacyAdmin as UserRead
     expect(store.canConfigure).toBe(true)
-    expect(store.canCreateBoards).toBe(true)
+    expect(store.canCreateMaps).toBe(true)
   })
 
   it('login() sets tokens and navigates home on success', async () => {
@@ -148,14 +149,17 @@ describe('useAuthStore', () => {
     expect(mockPush).toHaveBeenCalledWith({ name: 'home' })
   })
 
-  it('login() sets error and rethrows on failure', async () => {
+  it('login() surfaces failure via the error state without rejecting', async () => {
     const { useAuthStore } = await import('./auth')
     mockAuthApi.login.mockRejectedValue(new Error('Invalid credentials'))
 
     const store = useAuthStore()
-    await expect(store.login('bad', 'bad')).rejects.toThrow('Invalid credentials')
+    // Must not reject: the submit handler doesn't catch, so a re-throw would
+    // be an unhandled rejection on every failed login.
+    await store.login('bad', 'bad')
     expect(store.error).toBe('Invalid credentials')
     expect(store.loading).toBe(false)
+    expect(store.user).toBeNull()
   })
 
   it('logout() clears auth state and navigates to login', async () => {
@@ -227,7 +231,18 @@ describe('useAuthStore', () => {
       })
     }
 
+    // init() logs the failed SSO probe (401 / "No valid Checkmk session") on
+    // purpose; swallow those expected warnings for this block's error paths.
+    let warnSpy: ReturnType<typeof vi.spyOn>
+    let errorSpy: ReturnType<typeof vi.spyOn>
+    beforeEach(() => {
+      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    })
+
     afterEach(() => {
+      warnSpy.mockRestore()
+      errorSpy.mockRestore()
       Object.defineProperty(window, 'location', {
         configurable: true,
         value: originalLocation

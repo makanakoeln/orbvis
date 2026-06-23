@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useStatesStore } from './states'
 
 vi.mock('@/api/client', () => ({
-  boardsApi: { getStates: vi.fn().mockResolvedValue({ states: [], connection_ok: true }) },
+  authApi: {
+    streamTicket: vi.fn().mockResolvedValue({ ticket: 'short-lived-ticket', expires_in: 300 })
+  },
+  mapsApi: { getStates: vi.fn().mockResolvedValue({ states: [], connection_ok: true }) },
   connectionsApi: {}
 }))
 
@@ -42,67 +45,69 @@ describe('states store — SSE polling fallback + re-probe (T14)', () => {
 
   it('falls back to polling when the first SSE connect fails, then heals via re-probe', async () => {
     const store = useStatesStore()
-    await store.connectToMap('board1', 'token')
+    await store.connectToMap('map1', 'token')
 
     // _connect opened exactly one EventSource; nothing has failed yet.
     expect(FakeEventSource.instances).toHaveLength(1)
-    expect(store.wsAvailable).toBe(true)
+    expect(store.sseAvailable).toBe(true)
 
     // The connection errors before it ever opened → permanent-polling path.
     FakeEventSource.instances[0]!.onerror?.()
-    expect(store.wsAvailable).toBe(false)
+    expect(store.sseAvailable).toBe(false)
     expect(FakeEventSource.instances[0]!.closed).toBe(true)
 
     // After the re-probe interval, a probe EventSource is opened to test SSE.
-    vi.advanceTimersByTime(60_000)
+    await vi.advanceTimersByTimeAsync(60_000)
     expect(FakeEventSource.instances).toHaveLength(2)
     const probe = FakeEventSource.instances[1]!
 
     // Probe opens → SSE is back: probe discarded, live stream re-established.
     probe.onopen?.()
+    await vi.advanceTimersByTimeAsync(0)
     expect(probe.closed).toBe(true)
-    expect(store.wsAvailable).toBe(true)
+    expect(store.sseAvailable).toBe(true)
     expect(FakeEventSource.instances).toHaveLength(3)
   })
 
   it('keeps polling (and does not leak probes) while SSE stays unreachable', async () => {
     const store = useStatesStore()
-    await store.connectToMap('board1', 'token')
+    await store.connectToMap('map1', 'token')
     FakeEventSource.instances[0]!.onerror?.()
-    expect(store.wsAvailable).toBe(false)
+    expect(store.sseAvailable).toBe(false)
 
     // First re-probe fails before opening → discarded, still polling.
-    vi.advanceTimersByTime(60_000)
+    await vi.advanceTimersByTimeAsync(60_000)
     expect(FakeEventSource.instances).toHaveLength(2)
     FakeEventSource.instances[1]!.onerror?.()
     expect(FakeEventSource.instances[1]!.closed).toBe(true)
-    expect(store.wsAvailable).toBe(false)
+    expect(store.sseAvailable).toBe(false)
 
     // Next interval re-probes again (one probe per tick, no overlap leak).
-    vi.advanceTimersByTime(60_000)
+    await vi.advanceTimersByTimeAsync(60_000)
     expect(FakeEventSource.instances).toHaveLength(3)
 
     // Disconnect stops all timers — no further probes are created.
     store.disconnect()
-    vi.advanceTimersByTime(120_000)
+    await vi.advanceTimersByTimeAsync(120_000)
     expect(FakeEventSource.instances).toHaveLength(3)
   })
 
-  it('drops an in-flight probe on disconnect — no stream promoted for the wrong board', async () => {
+  it('drops an in-flight probe on disconnect — no stream promoted for the wrong map', async () => {
     const store = useStatesStore()
-    await store.connectToMap('board1', 'token')
+    await store.connectToMap('map1', 'token')
     FakeEventSource.instances[0]!.onerror?.() // → polling
-    vi.advanceTimersByTime(60_000) // → probe (instance[1])
+    await vi.advanceTimersByTimeAsync(60_000) // → probe (instance[1])
     const probe = FakeEventSource.instances[1]!
     expect(probe.onopen).toBeTypeOf('function')
 
-    // Board switch / unmount while the probe is still connecting.
+    // Map switch / unmount while the probe is still connecting.
     store.disconnect()
     expect(probe.closed).toBe(true)
     expect(probe.onopen).toBeNull()
 
     // A late open must not promote a stream (no instance[2] appears).
     probe.onopen?.()
+    await vi.advanceTimersByTimeAsync(0)
     expect(FakeEventSource.instances).toHaveLength(2)
   })
 })
@@ -245,5 +250,34 @@ describe('states store — folder-tree delta apply', () => {
       ]
     })
     expect(store.folderTree?.children.map((c) => c.path)).toEqual(['f/h2', 'f/h1'])
+  })
+})
+
+describe('states store — SSE auth credential', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    FakeEventSource.instances = []
+    vi.stubGlobal('EventSource', FakeEventSource)
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('connects with the short-lived stream ticket, not the access token', async () => {
+    const store = useStatesStore()
+    await store.connectToMap('b', 'long-lived-access-token')
+    const es = FakeEventSource.instances[0]!
+    expect(es.url).toContain('token=short-lived-ticket')
+    expect(es.url).not.toContain('long-lived-access-token')
+  })
+
+  it('falls back to the access token when the ticket endpoint is unavailable', async () => {
+    const { authApi } = await import('@/api/client')
+    vi.mocked(authApi.streamTicket).mockRejectedValueOnce(new Error('404'))
+    const store = useStatesStore()
+    await store.connectToMap('b', 'fallback-token')
+    const es = FakeEventSource.instances[0]!
+    expect(es.url).toContain('token=fallback-token')
   })
 })

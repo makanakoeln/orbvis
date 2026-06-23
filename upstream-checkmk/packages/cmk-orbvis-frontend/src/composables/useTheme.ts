@@ -27,7 +27,7 @@ export function applyTheme(theme: string, _ssoActive: boolean, cmkTheme?: string
 
 // Reactive dark-mode flag tracking the `dark` class applyTheme() toggles on
 // <html> — for components that re-render canvas/chart colors on theme switch.
-// Module-level singleton: boards render one BoardObject per object, so a
+// Module-level singleton: maps render one MapObject per object, so a
 // per-instance observer would multiply by the object count for a global flag.
 let _isDark: Ref<boolean> | null = null
 
