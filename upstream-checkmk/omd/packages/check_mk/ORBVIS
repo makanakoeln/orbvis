@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Alias: Start OrbVis (Checkmk Maps) backend daemon
+# Menu: Addons
+# Description:
+#  This option enables the OrbVis (Checkmk Maps) backend - the
+#  FastAPI daemon that serves the Maps REST API and the live
+#  Server-Sent-Events state stream. The site Apache reverse-proxies
+#  /<site>/orbvis/api to it on the loopback interface.
