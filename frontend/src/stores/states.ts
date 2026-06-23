@@ -14,6 +14,7 @@ import type {
   WebSocketStateUpdate,
   WebSocketTopologyUpdate
 } from '@/types/api'
+import { resolveDeploymentBase } from '@/utils/deploymentBase'
 import { parsePerfData, utilPercent } from '@/utils/perf'
 
 export interface MetricSnapshot {
@@ -27,11 +28,9 @@ export interface MetricPoint {
 }
 const HISTORY_MAX = 10080 // up to 7d at 1min resolution
 
-// Base path without trailing slash, e.g. '/heute/orbvis' or ''.
-// When built with --base=./ (relative), fall back to window.location.pathname.
-const _base = import.meta.env.BASE_URL.startsWith('.')
-  ? window.location.pathname.replace(/\/+$/, '')
-  : import.meta.env.BASE_URL.replace(/\/$/, '')
+// Base path without trailing slash, e.g. '/heute/orbvis' or ''. Built-in
+// Checkmk injects it at runtime; standalone uses the Vite build-time base.
+const _base = resolveDeploymentBase()
 
 const _BAD_STATES = new Set(['DOWN', 'UNREACHABLE', 'CRITICAL', 'WARNING', 'UNKNOWN'])
 const _SEVERITY: Record<string, number> = {

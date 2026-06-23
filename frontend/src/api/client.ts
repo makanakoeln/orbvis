@@ -35,9 +35,11 @@ import type {
   UserRead
 } from '@/types/api'
 import { stripCheckmkBase } from '@/utils/boardNavigation'
+import { resolveDeploymentBase } from '@/utils/deploymentBase'
 
-// import.meta.env.BASE_URL is '/' in dev and '/heute/orbvis/' when built with --base
-const BASE_URL = `${import.meta.env.BASE_URL}api/v1`
+// Built-in Checkmk injects the base at runtime (one shared bundle per site);
+// standalone falls back to the Vite build-time --base. See resolveDeploymentBase.
+const BASE_URL = `${resolveDeploymentBase()}/api/v1`
 
 // sessionStorage key for the access token. Lives here (not in stores/auth)
 // because both the auth store and the direct CMK-origin command path read
