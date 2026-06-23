@@ -4,8 +4,8 @@
 # conditions defined in the file COPYING, which is part of this source code package.
 
 # Start/stop the OrbVis (Checkmk Maps) backend daemon. It serves the Maps
-# REST API plus the live WebSocket/SSE state push, bound to the loopback
-# interface; the site Apache reverse-proxies /<site>/orbvis to it.
+# REST API plus the live Server-Sent-Events (SSE) state push, bound to the
+# loopback interface; the site Apache reverse-proxies /<site>/orbvis to it.
 
 PIDFILE="$OMD_ROOT/tmp/run/orbvis-backend.pid"
 PID=$(cat "$PIDFILE" 2>/dev/null)
@@ -18,7 +18,7 @@ fi
 
 # Backend configuration. The FastAPI app reads these from the environment
 # (app.core.config). Auth runs exclusively through the Checkmk session; the
-# secret signs the short-lived WebSocket/SSE stream tickets and is provisioned
+# secret signs the short-lived SSE stream tickets and is provisioned
 # per site under etc/orbvis.
 export CHECKMK_OMD_ROOT="$OMD_ROOT"
 export CHECKMK_SITE="$OMD_SITE"

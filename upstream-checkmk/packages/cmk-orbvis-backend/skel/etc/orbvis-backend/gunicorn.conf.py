@@ -4,11 +4,11 @@
 # conditions defined in the file COPYING, which is part of this source code package.
 """Gunicorn configuration for the OrbVis (Checkmk Maps) backend daemon.
 
-The OrbVis backend keeps live state in-process (the WebSocket/SSE state push
-runs from a single background task and a shared connection registry), so it
-MUST run as a single worker. We use the uvicorn ASGI worker; the long-lived
-WebSocket/SSE connections need a generous (effectively disabled) request
-timeout so the worker is not recycled mid-stream.
+The OrbVis backend keeps live state in-process (the SSE state push runs from a
+single background task and a shared connection registry), so it MUST run as a
+single worker. We use the uvicorn ASGI worker; the long-lived SSE connections
+need a generous (effectively disabled) request timeout so the worker is not
+recycled mid-stream.
 """
 
 import os
@@ -17,7 +17,7 @@ workers = 1
 worker_class = "uvicorn.workers.UvicornWorker"
 
 # 0 disables the silence-timeout watchdog -- async workers heartbeat, and our
-# SSE/WebSocket responses stay open for minutes.
+# SSE responses stay open for minutes.
 timeout = 0
 graceful_timeout = 30
 
