@@ -4,7 +4,7 @@
     <div class="orb-app__content">
       <router-view />
     </div>
-    <ChangelogModal v-if="showChangelog" @close="dismissChangelog" />
+    <ChangelogModal v-if="showChangelog && capabilities.changelog" @close="dismissChangelog" />
   </div>
   <div v-else class="orb-app-bare">
     <router-view />
@@ -31,7 +31,8 @@ const auth = useAuthStore()
 // Fetch backend capability flags as early as possible so the Login screen
 // and admin views see the correct form_specs flag on first paint. Errors
 // fall back to the optimistic FormSpec-available default (see store).
-useCapabilitiesStore().ensureLoaded()
+const capabilities = useCapabilitiesStore()
+capabilities.ensureLoaded()
 
 const showShell = computed(
   () =>

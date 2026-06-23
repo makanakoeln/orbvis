@@ -108,12 +108,12 @@
       </div>
 
       <!-- Version footer -->
-      <div class="orb-login__footer">
+      <div v-if="capabilities.changelog" class="orb-login__footer">
         <button class="orb-login__version" @click="showChangelog = true">v{{ appVersion }}</button>
       </div>
     </div>
 
-    <ChangelogModal v-if="showChangelog" @close="showChangelog = false" />
+    <ChangelogModal v-if="showChangelog && capabilities.changelog" @close="showChangelog = false" />
   </div>
 </template>
 
@@ -126,10 +126,12 @@ import CmkButton from '@/components/cmk/CmkButton'
 import CmkInput from '@/components/cmk/user-input/CmkInput'
 
 import { useAuthStore } from '@/stores/auth'
+import { useCapabilitiesStore } from '@/stores/capabilities'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 const { _t } = usei18n()
 const authStore = useAuthStore()
+const capabilities = useCapabilitiesStore()
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)

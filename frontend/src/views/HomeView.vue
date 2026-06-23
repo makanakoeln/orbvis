@@ -1202,7 +1202,7 @@
 
   <CreateBoardModal v-if="showCreate" @close="showCreate = false" @created="onCreated" />
   <OnboardingTour
-    v-if="showOnboarding && auth.user"
+    v-if="showOnboarding && auth.user && capabilities.tour"
     :steps="tourSteps"
     :storage-key="`orbvis_onboarded_${auth.user.user_id}`"
     :show-create-board="auth.canCreateBoards"
@@ -1433,6 +1433,7 @@ function worldmapZoom(map: BoardRead) {
 onMounted(async () => {
   await Promise.all([boardsStore.fetchBoards(), settingsStore.load()])
   if (!auth.user) return
+  if (!capabilities.tour) return
   const storageKey = `orbvis_onboarded_${auth.user.user_id}`
   if (localStorage.getItem(storageKey)) return
   // Existing operators who already have boards have outgrown the

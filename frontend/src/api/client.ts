@@ -135,6 +135,8 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
 export interface Capabilities {
   form_specs: boolean
+  changelog: boolean
+  tour: boolean
 }
 
 export const capabilitiesApi = {

@@ -340,7 +340,14 @@ async def health_check() -> dict[str, str]:
 
 @app.get("/api/v1/capabilities")
 async def get_capabilities() -> dict[str, bool]:
-    return {"form_specs": FORM_SPECS_AVAILABLE}
+    # In a Checkmk deployment the changelog and onboarding tour are dropped —
+    # release notes live in Checkmk werks and the product is not self-branded.
+    standalone = not settings.checkmk_omd_root
+    return {
+        "form_specs": FORM_SPECS_AVAILABLE,
+        "changelog": standalone,
+        "tour": standalone,
+    }
 
 
 @app.get("/api/changelog")

@@ -187,7 +187,11 @@
       </button>
 
       <!-- Version -->
-      <button v-if="!sidebarCollapsed" class="orb-sidebar__version" @click="showChangelog = true">
+      <button
+        v-if="!sidebarCollapsed && capabilities.changelog"
+        class="orb-sidebar__version"
+        @click="showChangelog = true"
+      >
         v{{ appVersion }}
       </button>
     </div>
@@ -201,7 +205,7 @@
       @close="showSettings = false"
     />
 
-    <ChangelogModal v-if="showChangelog" @close="showChangelog = false" />
+    <ChangelogModal v-if="showChangelog && capabilities.changelog" @close="showChangelog = false" />
   </aside>
 </template>
 
@@ -213,10 +217,12 @@ import ChangelogModal from '@/components/ChangelogModal.vue'
 import UserSettingsPanel from '@/components/UserSettingsPanel.vue'
 
 import { useAuthStore } from '@/stores/auth'
+import { useCapabilitiesStore } from '@/stores/capabilities'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 const { _t } = usei18n()
 const auth = useAuthStore()
+const capabilities = useCapabilitiesStore()
 const showSettings = ref(false)
 const showChangelog = ref(false)
 const appVersion = __APP_VERSION__

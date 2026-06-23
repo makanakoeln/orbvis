@@ -1276,7 +1276,7 @@
     />
 
     <OnboardingTour
-      v-if="showBoardTour && auth.user"
+      v-if="showBoardTour && auth.user && capabilities.tour"
       :steps="boardTourSteps"
       :storage-key="`orbvis_board_toured_${auth.user.user_id}`"
       @close="showBoardTour = false"
@@ -1331,6 +1331,7 @@ import { useToast } from '@/composables/useToast'
 import { useWorldmapMenus } from '@/composables/useWorldmapMenus'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardsStore } from '@/stores/boards'
+import { useCapabilitiesStore } from '@/stores/capabilities'
 import { useConnectionsStore } from '@/stores/connections'
 import { useSettingsStore } from '@/stores/settings'
 import { useStatesStore } from '@/stores/states'
@@ -1350,6 +1351,7 @@ const toast = useToast()
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const capabilities = useCapabilitiesStore()
 const canBulkCommand = computed(
   () => auth.mayCommand('acknowledge') || auth.mayCommand('schedule_downtime')
 )
@@ -2184,6 +2186,7 @@ watchEffect(async () => {
 
   const cfg = boardsStore.currentBoard
   if (
+    capabilities.tour &&
     auth.user &&
     cfg &&
     !cfg.readonly &&
