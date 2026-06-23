@@ -6,7 +6,7 @@
 
 Checkmk has no plugin hook to add a topic to the existing Monitor menu, so at
 registration time the ``view_menu_topics`` callback is composed: the default
-topics plus the ones returned here (see this package's register() and MERGE.md).
+topics plus the ones returned here.
 """
 
 from cmk.gui.i18n import _

@@ -11,8 +11,8 @@ from . import _orbvis_auth, _pages, _setup
 from ._monitor_menu import orbvis_monitor_topics
 
 # Re-exported so community_registration can compose it into the Monitor menu's
-# view_menu_topics callback (Checkmk has no plugin hook to add a topic to the
-# existing Monitor mega-menu). See MERGE.md.
+# view_menu_topics callback at merge time (Checkmk has no plugin hook to add a
+# topic to the existing Monitor mega-menu).
 __all__ = ["orbvis_monitor_topics", "register"]
 
 
