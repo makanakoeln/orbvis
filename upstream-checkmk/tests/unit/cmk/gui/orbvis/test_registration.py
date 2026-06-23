@@ -13,7 +13,7 @@ from cmk.gui.watolib.main_menu import MainModuleRegistry, MainModuleTopicRegistr
 
 
 def test_register(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(_orbvis_auth, "declare_dynamic_permissions", lambda func: None)
+    monkeypatch.setattr(_orbvis_auth, "declare_dynamic_permissions", lambda _func: None)
     permission_section_registry = PermissionSectionRegistry()
     permission_registry = PermissionRegistry()
     page_registry = PageRegistry()
@@ -32,3 +32,7 @@ def test_register(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "orbvis.use" in permission_registry
     assert "orbvis.configure" in permission_registry
     assert "orbvis" in page_registry
+    # MainModuleTopicRegistry keys on the topic name, MainModuleRegistry on the
+    # module's mode_or_url (cmk/gui/watolib/main_menu.py).
+    assert "maps" in main_module_topic_registry
+    assert "orbvis.py#/admin" in main_module_registry
