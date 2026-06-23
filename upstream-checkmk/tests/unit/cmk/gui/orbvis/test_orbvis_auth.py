@@ -23,7 +23,7 @@ def test_register(monkeypatch: pytest.MonkeyPatch) -> None:
 
     _orbvis_auth.register(section_registry, registry)
 
-    assert section_registry["orbvis"].title == "OrbVis"
+    assert section_registry["orbvis"].title == "Maps"
     assert sorted(registry.keys()) == [
         "orbvis.configure",
         "orbvis.edit_all",
@@ -58,9 +58,7 @@ def fixture_maps_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return directory
 
 
-def test_declare_map_permissions(
-    permission_registry: PermissionRegistry, maps_dir: Path
-) -> None:
+def test_declare_map_permissions(permission_registry: PermissionRegistry, maps_dir: Path) -> None:
     (maps_dir / "network.json").write_text(
         json.dumps({"name": "network", "alias": "Network overview"})
     )
