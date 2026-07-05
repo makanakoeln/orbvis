@@ -82,7 +82,7 @@
     "stylelint-config-standard": "^40.0.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.61.1",
-    "vite": "^8.0.16",
+    "vite": "^8.1.0",
     "vitest": "^4.1.9",
     "vitest-fail-on-console": "^0.7.1",
     "vue-tsc": "^3.3.2"
