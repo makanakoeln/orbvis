@@ -62,7 +62,7 @@
     "@typescript-eslint/parser": "^8.61.1",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vitest/coverage-v8": "^4.1.6",
-    "@vitest/ui": "^4.1.8",
+    "@vitest/ui": "^4.1.10",
     "@vue/test-utils": "^2.4.11",
     "autoprefixer": "^10.4.27",
     "eslint": "^10.5.0",
