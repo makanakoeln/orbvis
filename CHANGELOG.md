@@ -4,6 +4,12 @@ All notable changes to OrbVis are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Lines with "Show label" and an empty label text now fall back to the bound object (service, host or group name) like icons do, instead of rendering no label at all; the line label field shows the "(auto from object)" placeholder for bound lines
+
 ## [0.6.0] - 2026-06-12
 
 Iterative release on top of 0.5.0. A new design-first **Presentation board**

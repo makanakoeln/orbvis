@@ -227,6 +227,45 @@ describe('BoardLine – styling regressions', () => {
   })
 })
 
+describe('BoardLine – midpoint label', () => {
+  const shownLabel = { show: true, x: 0, y: 0, size: 11, color: '#fff', background: 'transparent' }
+
+  function labelTexts(overrides: Partial<BoardObject>): string[] {
+    const wrapper = mount(BoardLine, {
+      props: { object: makeLineObject(overrides), state: noState, editMode: false }
+    })
+    return wrapper.findAll('text').map((t) => t.text())
+  }
+
+  it('renders an explicit label text', () => {
+    expect(labelTexts({ host_name: 'h', label: { ...shownLabel, text: 'Uplink' } })).toEqual([
+      'Uplink'
+    ])
+  })
+
+  it('falls back to the service description when no text is set', () => {
+    expect(
+      labelTexts({ host_name: 'h', service_description: 'Interface 1', label: shownLabel })
+    ).toEqual(['Interface 1'])
+  })
+
+  it('falls back to the host name for host-bound lines', () => {
+    expect(labelTexts({ host_name: 'router1', label: { ...shownLabel, text: '' } })).toEqual([
+      'router1'
+    ])
+  })
+
+  it('renders no label for an unbound line without text', () => {
+    expect(labelTexts({ label: shownLabel })).toEqual([])
+  })
+
+  it('renders no label when show is off', () => {
+    expect(
+      labelTexts({ host_name: 'h', label: { ...shownLabel, show: false, text: 'Uplink' } })
+    ).toEqual([])
+  })
+})
+
 describe('BoardLine – bend (explicit midpoint)', () => {
   it('routes the stroke through the bend point when mid_x/mid_y are set', () => {
     const wrapper = mount(BoardLine, {

@@ -183,7 +183,7 @@
 
     <!-- label text at midpoint -->
     <text
-      v-if="props.object.label?.show && props.object.label?.text"
+      v-if="labelText"
       :x="midX"
       :y="midY - 10"
       text-anchor="middle"
@@ -197,7 +197,7 @@
         stroke-width: 3px;
         stroke-linejoin: round;
       "
-      >{{ props.object.label?.text }}</text
+      >{{ labelText }}</text
     >
 
     <!-- Edit handles. A bound endpoint's handle is nudged inward along the line
@@ -664,5 +664,14 @@ const wmLabelSingle = computed(() => {
   if (!showsPerfdataLabels.value) return ''
   if (wmLabelIn.value || wmLabelOut.value) return ''
   return ''
+})
+
+// Midpoint label: an explicit text wins, otherwise fall back to the bound
+// object ("auto from object" in the properties dialog), like icons do.
+// No fallback to the object id — an unbound line would show a random id.
+const labelText = computed(() => {
+  const o = props.object
+  if (!o.label?.show) return ''
+  return o.label.text || o.service_description || o.host_name || o.group_name || ''
 })
 </script>

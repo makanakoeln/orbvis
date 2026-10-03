@@ -637,7 +637,12 @@
               </div>
               <div v-if="form.label.show" class="field-row">
                 <label class="field-label">{{ _t('Line label') }}</label>
-                <CmkInput v-model="form.label.text" field-size="FILL" class="orb-props__grow" />
+                <CmkInput
+                  v-model="form.label.text"
+                  :placeholder="lineLabelPlaceholder"
+                  field-size="FILL"
+                  class="orb-props__grow"
+                />
               </div>
             </div>
           </section>
@@ -1298,6 +1303,11 @@ const showTemplates = ref(
   !!(props.object.hover_template || props.object.context_template || props.object.hover_url)
 )
 const showFilter = ref(!!(props.object.exclude_members || props.object.exclude_member_states))
+
+// Lines only fall back to a bound object, so only hint at it when bound.
+const lineLabelPlaceholder = computed(() =>
+  form.service_description || form.host_name || form.group_name ? '(auto from object)' : ''
+)
 
 const templateHelpHint = computed(() =>
   _t(
