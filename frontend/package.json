@@ -73,7 +73,7 @@
     "msw": "^3.0.3",
     "openapi-typescript": "^7.13.0",
     "postcss": "^8.5.14",
-    "postcss-html": "^1.8.1",
+    "postcss-html": "^2.0.0",
     "prettier": "^3.9.10",
     "sass-embedded": "^1.106.0",
     "stylelint": "^17.14.0",
