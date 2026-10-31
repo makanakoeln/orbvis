@@ -269,10 +269,43 @@ async def test_map_link_to_radar_board_aggregates_radar_members(mock_connection,
     mock_connection.get_all_hosts_states = AsyncMock(
         return_value={"h1": _host_state("h1", "UP"), "h2": _host_state("h2", "DOWN")}
     )
+    mock_connection.get_services_summary = AsyncMock(return_value={})
 
     result = await get_board_states(outer)
     by_id = {s.object_id: s for s in result.states}
     assert by_id["link"].state == "DOWN"
+    mock_connection.get_services_summary.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_nested_map_link_respects_board_view_permission(mock_connection, monkeypatch):
+    """outer → middle → hidden: the hidden board must not leak into the roll-up."""
+    from app.services import board_service
+
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+    hidden = _board([_obj("h_down", "host", host_name="srv-down")])
+    hidden.name = "hidden"
+    middle = _board(
+        [
+            _obj("h_up", "host", host_name="srv-up"),
+            _obj("to_hidden", "map", map_name="hidden"),
+        ]
+    )
+    middle.name = "middle"
+    outer = _board([_obj("to_middle", "map", map_name="middle")])
+    outer.name = "outer"
+    boards = {"hidden": hidden, "middle": middle, "outer": outer}
+    monkeypatch.setattr(board_service, "get_board", boards.get)
+
+    async def _hosts(names: list[str], only_hard: bool = False) -> dict[str, ObjectState]:
+        known = {"srv-up": "UP", "srv-down": "DOWN"}
+        return {n: _host_state(n, known[n]) for n in names if n in known}
+
+    mock_connection.get_hosts_states = AsyncMock(side_effect=_hosts)
+
+    result = await get_board_states(outer, can_view_board=lambda name: name != "hidden")
+    by_id = {s.object_id: s for s in result.states}
+    assert by_id["to_middle"].state == "UP"
 
 
 @pytest.mark.asyncio

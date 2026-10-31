@@ -673,6 +673,7 @@ async def _resolve_map_link_states(
                 ref_cfg,
                 ref_backend,
                 auth_user=auth_user,
+                can_view_board=can_view_board,
                 board_cfg_cache=board_cfg_cache,
                 visited_maps=visited_maps | {map_name},
             )
@@ -705,6 +706,7 @@ async def _linked_board_states(
     ref_backend: ConnectionBase,
     *,
     auth_user: str | None,
+    can_view_board: Callable[[str], bool] | None,
     board_cfg_cache: dict[str, BoardConfig | None],
     visited_maps: frozenset[str],
 ) -> dict[str, ObjectState]:
@@ -715,7 +717,9 @@ async def _linked_board_states(
     ``objects`` would leave the link PENDING forever.
     """
     if ref_cfg.view.type == "radar":
-        radar = await _get_radar_states(ref_cfg, ref_backend)
+        # The roll-up reads only the member states; the per-host service
+        # summaries are for the radar drawer and cost a query over every host.
+        radar = await _get_radar_states(ref_cfg, ref_backend, with_summaries=False)
         return {s.object_id: s for s in radar.states}
     objects = (
         _presentation_objects(ref_cfg) if ref_cfg.view.type == "presentation" else ref_cfg.objects
@@ -731,6 +735,7 @@ async def _linked_board_states(
         default_connection=ref_backend,
         default_connection_id=ref_cfg.connection_id,
         auth_user=auth_user,
+        can_view_board=can_view_board,
         board_cfg_cache=board_cfg_cache,
         visited_maps=visited_maps,
     )
@@ -927,7 +932,9 @@ def _presentation_objects(cfg: BoardConfig) -> list[BoardObject]:
     ]
 
 
-async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> MapStates:
+async def _get_radar_states(
+    cfg: BoardConfig, connection: ConnectionBase, *, with_summaries: bool = True
+) -> MapStates:
     """Fetch states for all dynamically resolved radar map members."""
     rv = cfg.view if isinstance(cfg.view, RadarView) else RadarView()
     states: list[ObjectState] = []
@@ -944,7 +951,7 @@ async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> Map
         # Operators expect to see the service-state breakdown when clicking a host
         # in the radar drawer — without this the chip row stays empty for radar
         # boards even though the data is one cheap query away.
-        if host_batch:
+        if host_batch and with_summaries:
             try:
                 summaries = await connection.get_services_summary(list(host_batch.keys()))
             except Exception:
@@ -985,10 +992,12 @@ async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> Map
                 batch = await connection.get_hosts_states(host_members)
             except Exception:
                 batch = {}
-            try:
-                summaries = await connection.get_services_summary(host_members)
-            except Exception:
-                summaries = {}
+            summaries = {}
+            if with_summaries:
+                try:
+                    summaries = await connection.get_services_summary(host_members)
+                except Exception:
+                    summaries = {}
             for h in host_members:
                 s = batch.get(h) or ObjectState(
                     object_id=h, type="host", state="PENDING", stale=True
