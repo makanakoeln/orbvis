@@ -44,7 +44,7 @@ import {
   resolveLabelText,
   resolveLabelVisible
 } from '@/utils/objectLabel'
-import { stateColor as stateColorFromName } from '@/utils/stateColors'
+import { isLightState, stateColor as stateColorFromName, stateTextColor } from '@/utils/stateColors'
 import { escapeHtml } from '@/vendor/cmk/lib/utils'
 
 const props = defineProps<{
@@ -224,7 +224,8 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
   const selected = isSelected(obj.id)
   if (obj.type === 'textbox') return makeTextboxIcon(obj, selected)
 
-  const color = stateColor(obj.id)
+  const objState = props.states[obj.id]?.state
+  const color = stateColorFromName(objState)
   const size = obj.display?.image_size ?? props.config.icon_size ?? settingsStore.settings.icon_size
   const escapedName = escapeHtml(getBoardObjectName(obj))
   // Worldmap markers show their caption unless the object turned it off.
@@ -249,7 +250,7 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
   let iconHtml: string
   if (textOnly) {
     const stateBg = !!obj.display?.state_background
-    const txtColor = obj.display?.text_color || (stateBg ? '#ffffff' : color)
+    const txtColor = obj.display?.text_color || (stateBg ? stateTextColor(objState) : color)
     const txtSize = obj.label?.size ?? Math.max(12, Math.round(size * 0.5))
     const selRing = selected ? 'outline:2px solid #4ade80;outline-offset:2px;' : ''
     const stateBorder = obj.display?.state_border ? `border: 2px solid ${color};` : ''
@@ -258,7 +259,7 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
         font-size: ${txtSize}px;
         font-weight: 600;
         white-space: nowrap;
-        text-shadow: -1px -1px 0 rgba(0,0,0,0.85), 1px -1px 0 rgba(0,0,0,0.85), -1px 1px 0 rgba(0,0,0,0.85), 1px 1px 0 rgba(0,0,0,0.85);
+        text-shadow: ${stateBg && isLightState(objState) ? 'none' : '-1px -1px 0 rgba(0,0,0,0.85), 1px -1px 0 rgba(0,0,0,0.85), -1px 1px 0 rgba(0,0,0,0.85), 1px 1px 0 rgba(0,0,0,0.85)'};
         padding: 1px 6px;
         border-radius: 4px;
         background: ${stateBg ? color : 'rgba(0,0,0,0.55)'};

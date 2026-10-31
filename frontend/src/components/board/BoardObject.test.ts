@@ -97,6 +97,10 @@ describe('BoardObject – text only', () => {
     const filled = textPillStyle('OK', { state_background: true })
     expect(filled.background).toBe('rgb(34, 197, 94)')
     expect(filled.color).toBe('rgb(255, 255, 255)')
+    expect(filled.textShadow).not.toBe('none')
+    const warning = textPillStyle('WARNING', { state_background: true })
+    expect(warning.color).toBe('rgb(26, 26, 26)')
+    expect(warning.textShadow).toBe('none')
     expect(textPillStyle('OK', { state_background: true, text_color: '#000000' }).color).toBe(
       'rgb(0, 0, 0)'
     )

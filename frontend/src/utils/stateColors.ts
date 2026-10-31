@@ -77,6 +77,15 @@ const SEVERITY_ORDER: Record<string, number> = {
 // States whose colour is light enough to need dark text on a filled badge.
 const LIGHT_STATES = new Set(['WARNING'])
 
+export function isLightState(state: string | undefined): boolean {
+  return LIGHT_STATES.has(state ?? '')
+}
+
+/** Readable text color on a fill in the given state's color. */
+export function stateTextColor(state: string | undefined): string {
+  return isLightState(state) ? '#1a1a1a' : '#ffffff'
+}
+
 export interface SeverityPill {
   state: string
   count: number
@@ -95,6 +104,6 @@ export function severityPills(counts: Record<string, number> | undefined): Sever
       state,
       count,
       bg: stateColorVar(state),
-      fg: LIGHT_STATES.has(state) ? '#1a1a1a' : '#ffffff'
+      fg: stateTextColor(state)
     }))
 }

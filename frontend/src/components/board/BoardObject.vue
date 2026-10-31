@@ -487,6 +487,7 @@ import { imageAssetUrl } from '@/utils/assetUrl'
 import { renderMetricValue } from '@/utils/metricFormat'
 import { type BoardLabelOptions, resolveLabelText, resolveLabelVisible } from '@/utils/objectLabel'
 import { utilColor as _utilColor, getMetric, parsePerfData, utilPercent } from '@/utils/perf'
+import { isLightState, stateTextColor } from '@/utils/stateColors'
 import usei18n from '@/vendor/cmk/lib/i18n'
 
 import AggregationSubtree from './AggregationSubtree.vue'
@@ -1075,15 +1076,20 @@ const textOnlyStyle = computed(() => {
   const size = props.object.label?.size ?? Math.max(12, Math.round(props.iconSize * 0.4))
   return {
     fontSize: `${size}px`,
-    // State text on a state background would vanish — fall back to white then.
-    color: display?.text_color || (display?.state_background ? '#ffffff' : stateColorRgb.value),
+    color:
+      display?.text_color ||
+      (display?.state_background ? stateTextColor(props.state?.state) : stateColorRgb.value),
     background: display?.state_background
       ? stateColorRgb.value
       : bg && bg !== 'transparent'
         ? bg
         : 'rgba(0,0,0,0.65)',
     backdropFilter: 'blur(4px)',
-    textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+    // White text keeps its shadow; dark text on a light state fill would smudge.
+    textShadow:
+      display?.state_background && isLightState(props.state?.state)
+        ? 'none'
+        : '0 1px 3px rgba(0,0,0,0.9)',
     outline: display?.state_border
       ? `2px solid ${stateColorRgb.value}`
       : props.object.label_border
