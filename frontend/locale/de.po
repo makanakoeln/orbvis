@@ -1893,7 +1893,7 @@ msgid "Built-in icons"
 msgstr "Mitgelieferte Icons"
 
 msgid "Search images…"
-msgstr "Bilder suchen…"
+msgstr "Bilder durchsuchen…"
 
 msgid "No matches for \"%{q}\""
 msgstr "Keine Treffer für „%{q}\""
@@ -2649,9 +2649,6 @@ msgstr "Wird hochgeladen…"
 
 msgid "Upload failed"
 msgstr "Upload fehlgeschlagen"
-
-msgid "Search images…"
-msgstr "Bilder durchsuchen…"
 
 msgid "Upload image"
 msgstr "Bild hochladen"
