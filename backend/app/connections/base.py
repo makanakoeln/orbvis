@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import NotRequired, TypedDict
 
 from app.schemas.board import AggregationInfo, AggregationNode
 from app.schemas.state import ObjectDetails, ObjectState, ServicesSummary
+
+logger = logging.getLogger(__name__)
 
 # Checkmk BI integer state → OrbVis monitoring-state string. Shared by the
 # livestatus backend (aggregation states) and state_service (badge state from
@@ -394,25 +397,36 @@ class ConnectionBase(ABC):
             )
         return results
 
-    async def get_all_hosts_states(self, only_hard: bool = False) -> dict[str, ObjectState]:
+    async def get_all_hosts_states(
+        self, only_hard: bool = False, object_filter: str | None = None
+    ) -> dict[str, ObjectState]:
         """Return states for ALL hosts on the connection.
 
         Default falls back to ``get_group_members`` + ``get_hosts_states``, which
         produces an O(n) Livestatus filter list for large setups. Connections with
         direct support (Livestatus) override this with a single unfiltered query.
+        ``object_filter`` (Livestatus filter lines) needs such an override; the
+        fallback returns nothing rather than silently showing every host.
         """
+        if object_filter:
+            logger.warning("%s does not support radar object filters", type(self).__name__)
+            return {}
         hosts = await self.get_group_members("all_hosts", "")
         return await self.get_hosts_states(hosts, only_hard=only_hard)
 
     async def get_all_services_states(
-        self, only_hard: bool = False
+        self, only_hard: bool = False, object_filter: str | None = None
     ) -> dict[tuple[str, str], ObjectState]:
         """Return states for ALL services on the connection.
 
         Default falls back to ``get_group_members`` + ``get_services_states``;
         Livestatus overrides this with a single unfiltered query to avoid an
         O(n) filter explosion at large scale (e.g. >10k services).
+        ``object_filter`` is unsupported here, see ``get_all_hosts_states``.
         """
+        if object_filter:
+            logger.warning("%s does not support radar object filters", type(self).__name__)
+            return {}
         members = await self.get_group_members("all_services", "")
         pairs: list[tuple[str, str]] = []
         for m in members:

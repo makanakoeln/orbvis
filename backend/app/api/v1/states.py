@@ -11,6 +11,7 @@ from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 from starlette.types import Receive, Scope, Send
 
 from app.api.v1.connections import auth_user_scope, build_topology_response
@@ -272,6 +273,7 @@ async def get_board_states(
     current_user: User = Depends(get_current_user),
     radar_filter: str | None = None,
     radar_filter_value: str | None = None,
+    radar_object_filter: str | None = None,
     ft_override: bool = False,
     ft_root_folder: str = "",
     ft_show_empty_folders: bool = True,
@@ -291,17 +293,21 @@ async def get_board_states(
         and radar_filter_value is not None
         and radar_filter in _RADAR_FILTERS
     ):
-        cfg = cfg.model_copy(
-            update={
-                "view": RadarView(
-                    filter=cast(
-                        Literal["hostgroup", "servicegroup", "all_hosts", "all_services"],
-                        radar_filter,
-                    ),
-                    filter_value=radar_filter_value,
-                )
-            }
-        )
+        try:
+            radar_view = RadarView(
+                filter=cast(
+                    Literal["hostgroup", "servicegroup", "all_hosts", "all_services"],
+                    radar_filter,
+                ),
+                filter_value=radar_filter_value,
+                object_filter=radar_object_filter,
+            )
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="radar_object_filter must be one or more 'Filter: …' lines",
+            ) from exc
+        cfg = cfg.model_copy(update={"view": radar_view})
     # Settings-preview override for foldertree boards: only the server-side view
     # fields (the others are mirrored client-side and need no requery). Gated on
     # an explicit flag so an empty root_folder reads as "(all)" not "unset".

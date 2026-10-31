@@ -65,7 +65,9 @@ them — point it at the map and it locates `etc/worldmap.db` /
 Board** button only sees the `.cfg` text, so it produces a correctly-framed but
 **empty** geo board; copy the sidecar file and re-run the CLI to fill in the
 markers. `sources=dynmap` is a dynamic-filter map (not geographic) and has no
-geo equivalent — rebuild it as a dynamic-group or radar board by hand.
+geo equivalent — rebuild it by hand as a radar board (*All hosts* / *All
+services* with the map's `dynmap_object_filter` as Livestatus filter) or as a
+dynamic-group object.
 
 ## What does **not** carry over automatically
 

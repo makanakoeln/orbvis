@@ -257,6 +257,11 @@
                     />
                   </div>
                 </div>
+                <RadarObjectFilterField
+                  v-if="form.radar_filter === 'all_hosts' || form.radar_filter === 'all_services'"
+                  v-model="form.radar_object_filter"
+                  :object-types="form.radar_filter === 'all_services' ? 'service' : 'host'"
+                />
               </div>
 
               <!-- Folder tree settings -->
@@ -582,6 +587,7 @@ import ColorInput from '@/components/ColorInput.vue'
 import NumberInput from '@/components/NumberInput.vue'
 import OrbConfirmDialog from '@/components/OrbConfirmDialog.vue'
 import OrbUnsavedChangesDialog from '@/components/OrbUnsavedChangesDialog.vue'
+import RadarObjectFilterField from '@/components/board/RadarObjectFilterField.vue'
 import CmkButton from '@/components/cmk/CmkButton'
 import CmkDropdown from '@/components/cmk/CmkDropdown/CmkDropdown'
 import CmkLabel from '@/components/cmk/CmkLabel'
@@ -613,6 +619,7 @@ import type {
 import { openUrl } from '@/utils/boardNavigation'
 import { asFormSpecSchema } from '@/utils/formSpec'
 import { toFormValidation } from '@/utils/formValidation'
+import { isValidLqlFilter } from '@/utils/lqlFilter'
 import { labelShowFromChoice, labelShowToChoice } from '@/utils/objectLabel'
 import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge'
 import { interpolateTemplate } from '@/utils/template'
@@ -742,6 +749,7 @@ const form = ref({
   worldmap_tile_saturate: wmv?.tile_saturate ?? (null as number | null),
   radar_filter: rv?.filter ?? 'hostgroup',
   radar_filter_value: rv?.filter_value ?? '',
+  radar_object_filter: rv?.object_filter ?? '',
   ft_root_folder: ftv?.root_folder ?? '',
   ft_default_view: (ftv?.default_view ?? 'list') as 'list' | 'map',
   ft_default_expand_depth: ftv?.default_expand_depth ?? 1,
@@ -935,6 +943,13 @@ const radarGroupOptions = computed(() => ({
 }))
 
 const saveAttempted = ref(false)
+// Only all_hosts / all_services carry a filter; the field is hidden otherwise.
+const radarObjectFilterValid = computed(
+  () =>
+    !(form.value.radar_filter === 'all_hosts' || form.value.radar_filter === 'all_services') ||
+    form.value.radar_object_filter.trim() === '' ||
+    isValidLqlFilter(form.value.radar_object_filter)
+)
 const formBackendValidation = ref<ValidationMessage[]>([])
 
 const customMissingFields = computed<string[]>(() => {
@@ -945,6 +960,9 @@ const customMissingFields = computed<string[]>(() => {
     !form.value.radar_filter_value
   ) {
     missing.push(_t('Group name'))
+  }
+  if (form.value.map_type === 'radar' && !radarObjectFilterValid.value) {
+    missing.push(_t('Valid Livestatus filter'))
   }
   if (
     form.value.map_type === 'worldmap' &&
@@ -1229,7 +1247,8 @@ function buildViewFromForm(): Record<string, unknown> {
     return {
       type: 'radar',
       filter: form.value.radar_filter,
-      filter_value: form.value.radar_filter_value
+      filter_value: form.value.radar_filter_value,
+      object_filter: form.value.radar_object_filter.trim() || null
     }
   }
   if (form.value.map_type === 'flow') {

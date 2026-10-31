@@ -1281,3 +1281,58 @@ def test_presentation_shape_data_slot_roundtrip():
     assert isinstance(el, ShapeElement)
     assert el.data_slot is True
     assert el.flow_metric_back == "if_out_bps"
+
+
+# ---------------------------------------------------------------------------
+# Radar boards — Livestatus object filter
+# ---------------------------------------------------------------------------
+
+
+def _radar_board(**view_kwargs) -> BoardConfig:
+    return BoardConfig(
+        name="radar", alias="Radar", connection_id="mock", view=RadarView(**view_kwargs)
+    )
+
+
+@pytest.mark.asyncio
+async def test_radar_all_hosts_passes_object_filter(mock_connection, monkeypatch):
+    mock_connection.get_all_hosts_states = AsyncMock(
+        return_value={"fw-1": ObjectState(object_id="fw-1", type="host", state="UP")}
+    )
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    result = await get_board_states(
+        _radar_board(filter="all_hosts", object_filter="Filter: host_name ~ ^fw-")
+    )
+
+    mock_connection.get_all_hosts_states.assert_awaited_once_with(
+        object_filter="Filter: host_name ~ ^fw-\n"
+    )
+    assert [s.object_id for s in result.states] == ["fw-1"]
+    assert result.connection_ok is True
+
+
+@pytest.mark.asyncio
+async def test_radar_filter_without_matches_is_not_a_connection_error(mock_connection, monkeypatch):
+    mock_connection.get_all_services_states = AsyncMock(return_value={})
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    result = await get_board_states(
+        _radar_board(filter="all_services", object_filter="Filter: description = nope")
+    )
+
+    assert result.states == []
+    assert result.connection_ok is True
+
+
+@pytest.mark.asyncio
+async def test_radar_filter_query_error_marks_connection_not_ok(mock_connection, monkeypatch):
+    mock_connection.get_all_hosts_states = AsyncMock(side_effect=Exception("invalid column"))
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+
+    result = await get_board_states(
+        _radar_board(filter="all_hosts", object_filter="Filter: no_such_column = 1")
+    )
+
+    assert result.states == []
+    assert result.connection_ok is False

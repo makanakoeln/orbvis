@@ -572,3 +572,26 @@ async def test_cfg_import_sanitizes_filename_to_board_name(
     )
     assert resp.status_code == 201
     assert resp.json()["name"] == "Mein_Netz__alt_"
+
+
+# ---- Radar preview override ----
+
+
+@pytest.mark.asyncio
+async def test_radar_preview_rejects_unsafe_object_filter(client, admin_token, monkeypatch):
+    from app.schemas.board import BoardConfig, RadarView
+
+    cfg = BoardConfig(name="radar", alias="Radar", view=RadarView(filter="all_hosts"))
+    monkeypatch.setattr("app.api.v1.states.board_service.get_board", lambda _name: cfg)
+
+    response = await client.get(
+        "/api/v1/boards/radar/states",
+        params={
+            "radar_filter": "all_hosts",
+            "radar_filter_value": "",
+            "radar_object_filter": "Filter: a\nColumns: name",
+        },
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+
+    assert response.status_code == 422

@@ -219,7 +219,24 @@ class RadarView(BaseModel):
     type: Literal["radar"] = "radar"
     filter: Literal["hostgroup", "servicegroup", "all_hosts", "all_services"] = "hostgroup"
     filter_value: str = ""
+    # Optional Livestatus filter narrowing all_hosts / all_services (NagVis
+    # ``dynmap_object_filter``). Group filters ignore it, so it is dropped there
+    # instead of lingering invisibly in the board file.
+    object_filter: str | None = None
     problems_only: bool = False
+
+    @field_validator("object_filter")
+    @classmethod
+    def _validate_object_filter(cls, v: str | None) -> str | None:
+        if v is None or not v.strip():
+            return None
+        return normalize_object_filter(v)
+
+    @model_validator(mode="after")
+    def _drop_filter_for_groups(self) -> RadarView:
+        if self.filter not in ("all_hosts", "all_services"):
+            self.object_filter = None
+        return self
 
 
 class FlowNodePosition(BaseModel):

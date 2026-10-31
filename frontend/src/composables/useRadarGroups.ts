@@ -9,10 +9,12 @@ interface RadarLikeForm {
   radar_filter: string
   connection_id: string
   radar_filter_value: string
+  radar_object_filter: string
 }
 
 // Fetches the host- / service-group choices for a Radar board's filter field
-// and resets the picked value when the operator switches the filter type so
+// and resets the picked value (and the Livestatus filter, whose columns differ
+// between hosts and services) when the operator switches the filter type so
 // stale values can't survive the type swap.
 export function useRadarGroups(form: Ref<RadarLikeForm>, getAccessToken: () => string | null) {
   const names = ref<string[]>([])
@@ -44,6 +46,7 @@ export function useRadarGroups(form: Ref<RadarLikeForm>, getAccessToken: () => s
       }
       if (old && old[1] !== filter) {
         form.value.radar_filter_value = ''
+        form.value.radar_object_filter = ''
       }
     },
     { immediate: true }

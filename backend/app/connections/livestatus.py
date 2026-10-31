@@ -163,6 +163,19 @@ def _ls_escape(value: str) -> str:
     return value.replace("\r", "").replace("\n", "")
 
 
+def _object_filter_lines(object_filter: str | None) -> str:
+    """Render a schema-validated object filter as LQL header lines ("" if unset).
+
+    ``normalize_object_filter`` has already restricted it to Filter:/And:/Or:/
+    Negate: lines; this only restores NagVis-style literal ``\\n`` separators
+    and the trailing newline, like the dyngroup queries do.
+    """
+    if not object_filter:
+        return ""
+    lines = object_filter.replace("\\n", "\n")
+    return lines if lines.endswith("\n") else lines + "\n"
+
+
 # ---------------------------------------------------------------------------
 # Typed Livestatus row helpers
 # ---------------------------------------------------------------------------
@@ -2131,12 +2144,15 @@ class LivestatusConnection(ConnectionBase):
             for sid, r in tagged
         )
 
-    async def get_all_hosts_states(self, only_hard: bool = False) -> dict[str, ObjectState]:
+    async def get_all_hosts_states(
+        self, only_hard: bool = False, object_filter: str | None = None
+    ) -> dict[str, ObjectState]:
         state_col = "last_hard_state" if only_hard else "state"
         tagged = await self._query_with_site(
             f"GET hosts\n"
             f"Columns: name {state_col} plugin_output perf_data acknowledged "
             f"scheduled_downtime_depth {_HOST_EXTRA_COLS}\n"
+            f"{_object_filter_lines(object_filter)}"
         )
         return dict(_parse_host_state_row(r, site_id=_default_site_id(sid)) for sid, r in tagged)
 
@@ -2232,13 +2248,14 @@ class LivestatusConnection(ConnectionBase):
         return FolderTreeData(folders=scoped, hosts=hosts, dead_sites=replayed_dead)
 
     async def get_all_services_states(
-        self, only_hard: bool = False
+        self, only_hard: bool = False, object_filter: str | None = None
     ) -> dict[tuple[str, str], ObjectState]:
         state_col = "last_hard_state" if only_hard else "state"
         tagged = await self._query_with_site(
             f"GET services\n"
             f"Columns: host_name description {state_col} plugin_output perf_data "
             f"acknowledged scheduled_downtime_depth {_SVC_EXTRA_COLS}\n"
+            f"{_object_filter_lines(object_filter)}"
         )
         return dict(_parse_service_state_row(r, site_id=_default_site_id(sid)) for sid, r in tagged)
 

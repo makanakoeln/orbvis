@@ -257,7 +257,7 @@ export const boardsApi = {
   getStates: (
     name: string,
     token: string,
-    radarOverride?: { filter: string; filterValue: string } | null,
+    radarOverride?: { filter: string; filterValue: string; objectFilter?: string } | null,
     folderOverride?: FolderTreeOverride | null
   ): Promise<MapStates> => {
     let path = `/boards/${name}/states`
@@ -265,6 +265,7 @@ export const boardsApi = {
     if (radarOverride) {
       qs.set('radar_filter', radarOverride.filter)
       qs.set('radar_filter_value', radarOverride.filterValue)
+      if (radarOverride.objectFilter) qs.set('radar_object_filter', radarOverride.objectFilter)
     }
     if (folderOverride) {
       qs.set('ft_override', 'true')

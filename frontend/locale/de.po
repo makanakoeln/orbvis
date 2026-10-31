@@ -2674,3 +2674,15 @@ msgstr "Einige Elemente ragen jetzt über die Folie hinaus — verschieben oder 
 
 msgid "Got it"
 msgstr "Verstanden"
+
+msgid "Livestatus filter"
+msgstr "Livestatus-Filter"
+
+msgid "Optional. Narrows the radar to the hosts or services matching these Livestatus lines (Filter:, And:, Or:, Negate:), like a NagVis dynamic map. Leave empty to show everything."
+msgstr "Optional. Beschränkt das Radar auf die Hosts oder Services, die diese Livestatus-Zeilen (Filter:, And:, Or:, Negate:) erfüllen – wie eine dynamische NagVis-Karte. Leer lassen, um alles anzuzeigen."
+
+msgid "Use one or more 'Filter:', 'And:', 'Or:' or 'Negate:' lines."
+msgstr "Eine oder mehrere Zeilen mit 'Filter:', 'And:', 'Or:' oder 'Negate:' verwenden."
+
+msgid "Valid Livestatus filter"
+msgstr "Gültiger Livestatus-Filter"

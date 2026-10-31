@@ -374,6 +374,28 @@ async def test_state_queries_request_labels_only_for_targeted_lookups(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_all_states_queries_append_radar_object_filter(monkeypatch):
+    """Radar object filters land after the Columns header; unset adds nothing."""
+    connection = _make_livestatus_connection()
+    queries: list[str] = []
+
+    async def _fake_query(query: str) -> list[tuple[str | None, list[object]]]:
+        queries.append(query)
+        return []
+
+    monkeypatch.setattr(connection, "_query_with_site", _fake_query)
+
+    await connection.get_all_hosts_states(object_filter="Filter: host_name ~ ^fw-\n")
+    assert queries.pop().splitlines()[2:] == ["Filter: host_name ~ ^fw-"]
+    await connection.get_all_services_states(
+        object_filter="Filter: description ~ ^CPU\\nFilter: state > 0"
+    )
+    assert queries.pop().splitlines()[2:] == ["Filter: description ~ ^CPU", "Filter: state > 0"]
+    await connection.get_all_hosts_states()
+    assert len(queries.pop().splitlines()) == 2
+
+
+@pytest.mark.asyncio
 async def test_targeted_service_states_parse_labels(monkeypatch):
     connection = _make_livestatus_connection()
     row: list[object] = ["h1", "s1", 0, "ok", "", 0, 0, 1700.0, 1760.0, 1, 1, 3, 1500.0, 1, 1]

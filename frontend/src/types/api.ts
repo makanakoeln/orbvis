@@ -90,6 +90,7 @@ export interface RadarView {
   type: 'radar'
   filter: string
   filter_value: string
+  object_filter?: string | null
   problems_only?: boolean
 }
 export interface FlowNodePosition {

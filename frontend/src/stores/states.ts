@@ -258,7 +258,9 @@ export const useStatesStore = defineStore('states', () => {
   // Settings-preview override: when the radar filter is live-edited in the
   // Settings modal, the preview iframe sets this so the next fetch carries
   // the unsaved filter as query params instead of using the disk-cfg filter.
-  const radarOverride = ref<{ filter: string; filterValue: string } | null>(null)
+  const radarOverride = ref<{ filter: string; filterValue: string; objectFilter?: string } | null>(
+    null
+  )
   // Same idea for foldertree's server-side view fields. While set, SSE deltas
   // (built from disk-cfg) are ignored so this override snapshot isn't clobbered.
   const folderOverride = ref<FolderTreeOverride | null>(null)
@@ -640,9 +642,11 @@ export const useStatesStore = defineStore('states', () => {
     toggleNotifications,
     prefillMetricHistory,
     clearMetricValues,
-    setRadarOverride(filter: string | null, filterValue?: string): void {
+    setRadarOverride(filter: string | null, filterValue?: string, objectFilter?: string): void {
       radarOverride.value =
-        filter && typeof filterValue === 'string' ? { filter, filterValue } : null
+        filter && typeof filterValue === 'string'
+          ? { filter, filterValue, ...(objectFilter ? { objectFilter } : {}) }
+          : null
       void _fetchStates()
     },
     // Refetch only when a server-side field actually changed: client-side

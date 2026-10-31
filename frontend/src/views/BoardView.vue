@@ -1337,6 +1337,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useStatesStore } from '@/stores/states'
 import type { BoardObject, BulkAckTarget, ObjectState, ServiceLayout } from '@/types/api'
 import { buildCheckmkUrl, openUrl } from '@/utils/boardNavigation'
+import { isValidLqlFilter } from '@/utils/lqlFilter'
 import { getBoardObjectIdentifier, getBoardObjectName, getObjectTypeLabel } from '@/utils/naming'
 import { PREVIEW_EDIT, PREVIEW_READY } from '@/utils/previewBridge'
 import { resolveTemplate } from '@/utils/template'
@@ -2230,6 +2231,7 @@ function onPreviewMessage(ev: MessageEvent) {
         type?: string
         filter?: string
         filter_value?: string
+        object_filter?: string | null
         root_folder?: string
         show_empty_folders?: boolean
         only_hard_states?: boolean
@@ -2238,7 +2240,14 @@ function onPreviewMessage(ev: MessageEvent) {
     }
   ).view
   if (view?.type === 'radar') {
-    statesStore.setRadarOverride(view.filter ?? null, view.filter_value ?? '')
+    // A half-typed Livestatus filter would only earn a 422; keep the last
+    // valid preview until the filter parses again.
+    if (view.object_filter && !isValidLqlFilter(view.object_filter)) return
+    statesStore.setRadarOverride(
+      view.filter ?? null,
+      view.filter_value ?? '',
+      view.object_filter ?? undefined
+    )
     statesStore.setFolderTreeOverride(null)
   } else if (view?.type === 'foldertree') {
     statesStore.setRadarOverride(null)

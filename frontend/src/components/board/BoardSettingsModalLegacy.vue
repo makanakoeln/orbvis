@@ -356,6 +356,11 @@
                     />
                   </div>
                 </div>
+                <RadarObjectFilterField
+                  v-if="form.radar_filter === 'all_hosts' || form.radar_filter === 'all_services'"
+                  v-model="form.radar_object_filter"
+                  :object-types="form.radar_filter === 'all_services' ? 'service' : 'host'"
+                />
               </template>
 
               <template v-if="form.map_type === 'foldertree'">
@@ -795,6 +800,7 @@ import usei18n from '@/vendor/cmk/lib/i18n'
 import AutocompleteInput from './AutocompleteInput.vue'
 import BackgroundImageUpload from './BackgroundImageUpload.vue'
 import FtSitesSelect from './FtSitesSelect.vue'
+import RadarObjectFilterField from './RadarObjectFilterField.vue'
 
 // Mirror of backend `Settings.flow_board_*` defaults — shown as placeholder so
 // the user knows which value applies when the field is left empty.
@@ -924,6 +930,7 @@ const form = ref({
   worldmap_tile_saturate: wmv?.tile_saturate ?? (null as number | null),
   radar_filter: rv?.filter ?? 'hostgroup',
   radar_filter_value: rv?.filter_value ?? '',
+  radar_object_filter: rv?.object_filter ?? '',
   flow_root: fv?.root ?? '',
   flow_child_layers: fv?.child_layers ?? (null as number | null),
   flow_parent_layers: fv?.parent_layers ?? (null as number | null),
@@ -1117,7 +1124,8 @@ async function save() {
       view = {
         type: 'radar',
         filter: form.value.radar_filter,
-        filter_value: form.value.radar_filter_value
+        filter_value: form.value.radar_filter_value,
+        object_filter: form.value.radar_object_filter.trim() || null
       }
     } else if (form.value.map_type === 'flow') {
       view = {
@@ -1221,7 +1229,8 @@ function buildPreviewView(): Record<string, unknown> {
     return {
       type: 'radar',
       filter: form.value.radar_filter,
-      filter_value: form.value.radar_filter_value
+      filter_value: form.value.radar_filter_value,
+      object_filter: form.value.radar_object_filter.trim() || null
     }
   }
   if (form.value.map_type === 'flow') {

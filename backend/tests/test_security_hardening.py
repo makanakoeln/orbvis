@@ -21,6 +21,7 @@ from app.schemas.board import (
     BoardObjectUpdate,
     BoardUpdate,
     DisplayConfig,
+    RadarView,
     normalize_object_filter,
 )
 from app.schemas.connection import REDACTED_SECRET, ConnectionConfig, _redact
@@ -496,6 +497,28 @@ class TestDyngroupFilterValidation:
     def test_board_object_update_normalises_filter(self) -> None:
         obj = BoardObjectUpdate(object_filter="Filter: host_name ~ ^web")
         assert obj.object_filter == "Filter: host_name ~ ^web\n"
+
+
+class TestRadarObjectFilter:
+    """Radar all_hosts / all_services boards reuse the dyngroup filter rules."""
+
+    def test_normalises_filter_for_all_hosts(self) -> None:
+        view = RadarView(filter="all_hosts", object_filter="Filter: host_name ~ ^fw-")
+        assert view.object_filter == "Filter: host_name ~ ^fw-\n"
+
+    def test_blank_filter_becomes_none(self) -> None:
+        assert RadarView(filter="all_services", object_filter="  \n ").object_filter is None
+
+    def test_rejects_injected_headers(self) -> None:
+        with pytest.raises(ValidationError):
+            RadarView(filter="all_hosts", object_filter="Filter: a\\nColumns: name address")
+
+    @pytest.mark.parametrize("group_filter", ["hostgroup", "servicegroup"])
+    def test_group_filters_drop_object_filter(self, group_filter: str) -> None:
+        view = RadarView(
+            filter=group_filter, filter_value="web", object_filter="Filter: host_name ~ ^fw-"
+        )
+        assert view.object_filter is None
 
 
 class TestCommandInjection:

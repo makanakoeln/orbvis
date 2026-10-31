@@ -931,12 +931,16 @@ async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> Map
     """Fetch states for all dynamically resolved radar map members."""
     rv = cfg.view if isinstance(cfg.view, RadarView) else RadarView()
     states: list[ObjectState] = []
+    query_failed = False
 
     if rv.filter == "all_hosts":
         try:
-            host_batch = await connection.get_all_hosts_states()
+            host_batch = await connection.get_all_hosts_states(object_filter=rv.object_filter)
         except Exception:
+            # A bad column in an operator-written object filter lands here too.
+            logger.warning("Radar board '%s': host query failed", cfg.name, exc_info=True)
             host_batch = {}
+            query_failed = True
         # Operators expect to see the service-state breakdown when clicking a host
         # in the radar drawer — without this the chip row stays empty for radar
         # boards even though the data is one cheap query away.
@@ -954,9 +958,11 @@ async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> Map
             states.append(s)
     elif rv.filter == "all_services":
         try:
-            svc_batch_all = await connection.get_all_services_states()
+            svc_batch_all = await connection.get_all_services_states(object_filter=rv.object_filter)
         except Exception:
+            logger.warning("Radar board '%s': service query failed", cfg.name, exc_info=True)
             svc_batch_all = {}
+            query_failed = True
         for (host, svc), s in svc_batch_all.items():
             member_id = f"{host};{svc}"
             s.object_id = member_id
@@ -1005,7 +1011,11 @@ async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> Map
                 s.object_id = member_id
                 states.append(s)
 
-    connection_ok = bool(states) and not all(s.stale for s in states)
+    if not states and rv.object_filter and not query_failed:
+        # A filter matching nothing is an empty board, not a dead connection.
+        connection_ok = True
+    else:
+        connection_ok = bool(states) and not all(s.stale for s in states)
     return MapStates(
         map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok
     )

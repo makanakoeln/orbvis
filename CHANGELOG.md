@@ -10,6 +10,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 - **Checkmk labels in templates**: hover and context templates take `{{label:KEY}}` for a single Checkmk host/service label and `{{labels}}` for all of them, so a board can show operational names (rack position, SSB designation, owner) that only live in labels. Service objects see their host's labels too; on a key both define, the service label wins. Label values are HTML-escaped like other monitoring values. Labels now ship with the object state instead of only with the on-demand detail drawer, except in the all-hosts / all-services queries behind radar boards
 - **Object labels per board and instance-wide**: boards and Global settings gain a label template that captions every object and line without a label text of its own, plus an `Inherit / Always show / Never show` override that flips the caption of every object, line and worldmap marker at once instead of object by object
+- **Radar Livestatus filter**: radar boards showing all hosts or all services take an optional Livestatus filter (`Filter:` / `And:` / `Or:` / `Negate:` lines, like NagVis `dynmap_object_filter`), so a radar can show e.g. only the firewalls or only the non-OK interfaces. The settings preview follows the filter live; group-based radars are unchanged
 
 ### Security
 
