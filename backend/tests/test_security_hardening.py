@@ -521,6 +521,28 @@ class TestRadarObjectFilter:
         assert view.object_filter is None
 
 
+class TestTextOnlyColor:
+    """display.text_color lands in a style attribute; unset means "by state"."""
+
+    def test_defaults_to_state_color(self) -> None:
+        assert DisplayConfig(mode="text").text_color is None
+
+    def test_blank_means_state_color(self) -> None:
+        assert DisplayConfig(mode="text", text_color="").text_color is None
+
+    def test_keeps_a_fixed_color(self) -> None:
+        assert DisplayConfig(mode="text", text_color=" #ffffff ").text_color == "#ffffff"
+
+    def test_rejects_css_injection(self) -> None:
+        with pytest.raises(ValidationError):
+            DisplayConfig(mode="text", text_color="red;background:url(x)")
+
+    def test_state_border_and_background_are_off_by_default(self) -> None:
+        display = DisplayConfig(mode="text")
+        assert display.state_border is False
+        assert display.state_background is False
+
+
 class TestCommandInjection:
     """Host/service names reach the livestatus command pipe via
     ``COMMAND [ts] <body>\\n``. A crafted name must not be able to inject a

@@ -1070,17 +1070,25 @@ const labelStyle = computed(() => {
 })
 
 const textOnlyStyle = computed(() => {
+  const display = props.object.display
   const bg = props.object.label?.background
   const size = props.object.label?.size ?? Math.max(12, Math.round(props.iconSize * 0.4))
   return {
     fontSize: `${size}px`,
-    color: props.object.label?.color ?? stateColorRgb.value,
-    background: bg && bg !== 'transparent' ? bg : 'rgba(0,0,0,0.65)',
+    // State text on a state background would vanish — fall back to white then.
+    color: display?.text_color || (display?.state_background ? '#ffffff' : stateColorRgb.value),
+    background: display?.state_background
+      ? stateColorRgb.value
+      : bg && bg !== 'transparent'
+        ? bg
+        : 'rgba(0,0,0,0.65)',
     backdropFilter: 'blur(4px)',
     textShadow: '0 1px 3px rgba(0,0,0,0.9)',
-    outline: props.object.label_border
-      ? `1px solid ${props.object.label_border}`
-      : '1px solid rgba(255,255,255,0.12)',
+    outline: display?.state_border
+      ? `2px solid ${stateColorRgb.value}`
+      : props.object.label_border
+        ? `1px solid ${props.object.label_border}`
+        : '1px solid rgba(255,255,255,0.12)',
     transform: labelTransform.value
   }
 })

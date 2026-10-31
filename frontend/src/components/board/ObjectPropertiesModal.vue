@@ -677,11 +677,14 @@
           <section v-if="object.type !== 'line'">
             <p class="orb-section-title">{{ _t('Label') }}</p>
             <div class="orb-props__fields">
-              <div class="field-row">
+              <div class="field-row" :class="isTextOnly ? 'orb-props__disabled' : ''">
                 <label class="field-label">{{ _t('Show label') }}</label>
                 <CmkCheckbox v-model="form.label.show" />
               </div>
-              <div :class="!form.label.show ? 'orb-props__disabled' : ''">
+              <p v-if="isTextOnly" class="orb-props__field-hint">
+                {{ _t('Text only always shows the text; greyed-out fields have no effect.') }}
+              </p>
+              <div :class="!form.label.show && !isTextOnly ? 'orb-props__disabled' : ''">
                 <div class="orb-props__fields">
                   <div v-if="object.type !== 'textbox'" class="field-row">
                     <label class="field-label">{{ _t('Label text') }}</label>
@@ -702,7 +705,10 @@
                         class="orb-props__grow"
                       />
                     </div>
-                    <div class="field-row orb-props__span-2">
+                    <div
+                      class="field-row orb-props__span-2"
+                      :class="isTextOnly ? 'orb-props__disabled' : ''"
+                    >
                       <label class="field-label">{{ _t('Color') }}</label>
                       <ColorInput v-model="form.label.color" default-color="#ffffff" />
                     </div>
@@ -740,7 +746,16 @@
                       </button>
                     </div>
                     <template v-if="showLabelAdvanced">
-                      <div class="field-row orb-props__span-2">
+                      <div v-if="isTextOnly" class="field-row orb-props__span-2">
+                        <label class="field-label">{{ _t('Background by state') }}</label>
+                        <CmkCheckbox v-model="form.display.state_background" />
+                      </div>
+                      <div
+                        class="field-row orb-props__span-2"
+                        :class="
+                          isTextOnly && form.display.state_background ? 'orb-props__disabled' : ''
+                        "
+                      >
                         <label class="field-label">{{ _t('Background') }}</label>
                         <ColorInput
                           v-model="form.label.background"
@@ -749,7 +764,16 @@
                           default-color="#000000"
                         />
                       </div>
-                      <div class="field-row orb-props__span-2">
+                      <div v-if="isTextOnly" class="field-row orb-props__span-2">
+                        <label class="field-label">{{ _t('Border by state') }}</label>
+                        <CmkCheckbox v-model="form.display.state_border" />
+                      </div>
+                      <div
+                        class="field-row orb-props__span-2"
+                        :class="
+                          isTextOnly && form.display.state_border ? 'orb-props__disabled' : ''
+                        "
+                      >
                         <label class="field-label">{{ _t('Border color') }}</label>
                         <ColorInput
                           v-model="form.label_border"
@@ -757,7 +781,10 @@
                           default-color="#e5e5e5"
                         />
                       </div>
-                      <div class="field-row orb-props__span-2">
+                      <div
+                        class="field-row orb-props__span-2"
+                        :class="isTextOnly ? 'orb-props__disabled' : ''"
+                      >
                         <label class="field-label">{{ _t('Max length') }}</label>
                         <NumberInput
                           v-model="form.label_maxlen"
@@ -791,7 +818,7 @@
                   "
                 />
               </div>
-              <div class="field-row">
+              <div class="field-row" :class="isTextOnly ? 'orb-props__disabled' : ''">
                 <label class="field-label">{{ _t('Size') }}</label>
                 <NumberInput
                   v-model="form.display.image_size"
@@ -830,7 +857,24 @@
                   />
                 </div>
               </template>
-              <div v-if="form.display.mode !== 'gadget'" class="field-row field-row--start">
+              <template v-if="form.display.mode === 'text'">
+                <div class="field-row">
+                  <label class="field-label">{{ _t('Text color') }}</label>
+                  <ColorInput
+                    v-model="form.display.text_color"
+                    :enable-label="_t('Fixed color')"
+                    default-color="#ffffff"
+                  />
+                </div>
+                <p v-if="!form.display.text_color" class="orb-props__field-hint">
+                  {{ _t('The text follows the object state.') }}
+                </p>
+              </template>
+              <div
+                v-if="form.display.mode !== 'gadget'"
+                class="field-row field-row--start"
+                :class="isTextOnly ? 'orb-props__disabled' : ''"
+              >
                 <label class="field-label" style="margin-top: 6px">{{ _t('Custom icon') }}</label>
                 <ImagePicker v-model="form.display.image" class="orb-props__grow" />
               </div>
@@ -1232,7 +1276,10 @@ const form = reactive({
     image: '',
     image_size: null as number | null,
     gadget_type: 'gauge' as string,
-    gadget_metric: ''
+    gadget_metric: '',
+    text_color: null as string | null,
+    state_border: false,
+    state_background: false
   },
   weathermap_metric: '',
   weathermap_metric_out: '',
@@ -1293,6 +1340,15 @@ const saveError = ref('')
 const confirmDelete = ref(false)
 const showLink = ref(!!props.object.url)
 const showLabelAdvanced = ref(false)
+// Text-only objects always show their text and style it from some label fields;
+// the dialog greys out "Show label" and every field without effect there.
+const isTextOnly = computed(
+  () =>
+    form.display.mode === 'text' &&
+    props.object.type !== 'line' &&
+    props.object.type !== 'textbox' &&
+    props.object.type !== 'graph'
+)
 const showTemplates = ref(
   !!(props.object.hover_template || props.object.context_template || props.object.hover_url)
 )
@@ -1351,6 +1407,9 @@ watch(
     form.display.image_size = obj.display?.image_size ?? null
     form.display.gadget_type = obj.display?.gadget_type ?? 'gauge'
     form.display.gadget_metric = obj.display?.gadget_metric ?? ''
+    form.display.text_color = obj.display?.text_color ?? null
+    form.display.state_border = obj.display?.state_border ?? false
+    form.display.state_background = obj.display?.state_background ?? false
     form.weathermap_metric = obj.weathermap_metric ?? ''
     form.weathermap_metric_out = obj.weathermap_metric_out ?? ''
     form.only_hard_states = obj.only_hard_states ?? false
@@ -1407,7 +1466,10 @@ async function save() {
               image_size: form.display.image_size ?? null,
               gadget_type: form.display.mode === 'gadget' ? form.display.gadget_type : null,
               gadget_metric:
-                form.display.mode === 'gadget' ? form.display.gadget_metric || null : null
+                form.display.mode === 'gadget' ? form.display.gadget_metric || null : null,
+              text_color: form.display.mode === 'text' ? form.display.text_color || null : null,
+              state_border: form.display.mode === 'text' && form.display.state_border,
+              state_background: form.display.mode === 'text' && form.display.state_background
             },
       label: {
         show: form.label.show,

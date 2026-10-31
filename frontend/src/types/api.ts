@@ -62,6 +62,12 @@ export interface DisplayConfig {
   image_size?: number | null
   gadget_type?: 'gauge' | 'bar' | 'trafficlight' | 'value' | null
   gadget_metric?: string | null
+  /** Text-only mode: fixed text color; unset → colored by state. */
+  text_color?: string | null
+  /** Text-only mode: frame in the state color instead of the label border. */
+  state_border?: boolean
+  /** Text-only mode: fill in the state color instead of the label background. */
+  state_background?: boolean
 }
 
 export type LineStyle =

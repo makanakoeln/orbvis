@@ -22,6 +22,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - The OrbVis main menu entry shows up again on later Checkmk 2.5 patch releases (e.g. 2.5.0p14), where `MainMenu` takes `action=RenderTopics(...)` instead of `topics=`; the registration error was silently swallowed
 - Image objects now honour an explicit image size that is larger than the image's natural size (e.g. 24 px SVG icons), scaling up while keeping the aspect ratio; previously the size only capped the image
 - Map links to radar and presentation boards show the linked board's worst state instead of staying PENDING; the roll-up only read the stored objects, which these board types don't use for their members
+- Text-only objects show their state again: the text was colored by state only without a label color, but the properties dialog always stores one (white by default, NagVis imports usually black), so the state never showed. Text-only objects now have their own *Text color* setting: by state (default, also for existing objects) or a fixed color, white included. In text-only mode the properties dialog greys out *Show label* and the other fields without effect there (label color, max length, icon size, custom icon) and keeps the label fields that do apply editable even with *Show label* off. New *Border by state* and *Background by state* options frame or fill text-only objects in their state color instead of the label border / background (both off by default; state-colored text on a state background turns white)
 
 ## [0.6.0] - 2026-06-12
 

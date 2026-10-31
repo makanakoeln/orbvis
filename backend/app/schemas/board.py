@@ -182,6 +182,21 @@ class DisplayConfig(BaseModel):
     image_size: int | None = None
     gadget_type: Literal["gauge", "bar", "trafficlight", "value"] | None = None
     gadget_metric: str | None = None
+    # Text-only mode: a fixed text color, or ``None`` to color the text by state
+    # (the default). Kept apart from ``label.color``, which the properties
+    # dialog always fills in and which would otherwise hide the state.
+    text_color: str | None = None
+    # Text-only mode: frame the text in the state color instead of the label
+    # border. Off by default so existing boards keep their look.
+    state_border: bool = False
+    # Text-only mode: fill the background with the state color instead of the
+    # label background. Off by default for the same reason.
+    state_background: bool = False
+
+    @field_validator("text_color")
+    @classmethod
+    def _validate_text_color(cls, v: str | None) -> str | None:
+        return _validate_color(v) or None
 
 
 class StaticView(BaseModel):

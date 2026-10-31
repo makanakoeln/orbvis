@@ -248,9 +248,11 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
   const textOnly = obj.display?.mode === 'text'
   let iconHtml: string
   if (textOnly) {
-    const txtColor = obj.label?.color || color
+    const stateBg = !!obj.display?.state_background
+    const txtColor = obj.display?.text_color || (stateBg ? '#ffffff' : color)
     const txtSize = obj.label?.size ?? Math.max(12, Math.round(size * 0.5))
     const selRing = selected ? 'outline:2px solid #4ade80;outline-offset:2px;' : ''
+    const stateBorder = obj.display?.state_border ? `border: 2px solid ${color};` : ''
     iconHtml = `<div style="
         color: ${txtColor};
         font-size: ${txtSize}px;
@@ -259,7 +261,8 @@ function makeDivIcon(obj: BoardObjectType): L.DivIcon {
         text-shadow: -1px -1px 0 rgba(0,0,0,0.85), 1px -1px 0 rgba(0,0,0,0.85), -1px 1px 0 rgba(0,0,0,0.85), 1px 1px 0 rgba(0,0,0,0.85);
         padding: 1px 6px;
         border-radius: 4px;
-        background: rgba(0,0,0,0.55);
+        background: ${stateBg ? color : 'rgba(0,0,0,0.55)'};
+        ${stateBorder}
         ${selRing}
       ">${escapedName}</div>`
   } else if (iconFile) {

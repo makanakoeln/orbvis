@@ -2686,3 +2686,21 @@ msgstr "Eine oder mehrere Zeilen mit 'Filter:', 'And:', 'Or:' oder 'Negate:' ver
 
 msgid "Valid Livestatus filter"
 msgstr "Gültiger Livestatus-Filter"
+
+msgid "Text color"
+msgstr "Textfarbe"
+
+msgid "Fixed color"
+msgstr "Feste Farbe"
+
+msgid "The text follows the object state."
+msgstr "Der Text folgt dem Zustand des Objekts."
+
+msgid "Text only always shows the text; greyed-out fields have no effect."
+msgstr "Bei „Nur Text“ wird der Text immer angezeigt; ausgegraute Felder haben keine Wirkung."
+
+msgid "Border by state"
+msgstr "Rahmen nach Zustand"
+
+msgid "Background by state"
+msgstr "Hintergrund nach Zustand"
