@@ -668,23 +668,13 @@ async def _resolve_map_link_states(
         ref_backend = get_connection(ref_cfg.connection_id)
         if ref_backend is None:
             continue
-        # Include nested map-objects in the recursion as long as they
-        # don't form a cycle — otherwise a board with only nested links
-        # would aggregate to PENDING even when its leaves have real states.
-        child_visited = visited_maps | {map_name}
-        included_objs = [
-            o
-            for o in ref_cfg.objects
-            if o.type != "map" or (o.map_name and o.map_name not in child_visited)
-        ]
         try:
-            board_states[map_name] = await _states_for_objects(
-                included_objs,
-                default_connection=ref_backend,
-                default_connection_id=ref_cfg.connection_id,
+            board_states[map_name] = await _linked_board_states(
+                ref_cfg,
+                ref_backend,
                 auth_user=auth_user,
                 board_cfg_cache=board_cfg_cache,
-                visited_maps=child_visited,
+                visited_maps=visited_maps | {map_name},
             )
         except Exception as exc:
             # A broken nested map-link shouldn't sink the parent board, but
@@ -708,6 +698,42 @@ async def _resolve_map_link_states(
                 results[obj.id] = ObjectState(object_id=obj.id, type="map", state=worst.state)
         else:
             results[obj.id] = ObjectState(object_id=obj.id, type="map", state="PENDING")
+
+
+async def _linked_board_states(
+    ref_cfg: BoardConfig,
+    ref_backend: ConnectionBase,
+    *,
+    auth_user: str | None,
+    board_cfg_cache: dict[str, BoardConfig | None],
+    visited_maps: frozenset[str],
+) -> dict[str, ObjectState]:
+    """States a map-link rolls up for the board it references.
+
+    Radar and presentation boards keep their members in the view, not in
+    ``objects``, so they are resolved the way the board itself is; reading only
+    ``objects`` would leave the link PENDING forever.
+    """
+    if ref_cfg.view.type == "radar":
+        radar = await _get_radar_states(ref_cfg, ref_backend)
+        return {s.object_id: s for s in radar.states}
+    objects = (
+        _presentation_objects(ref_cfg) if ref_cfg.view.type == "presentation" else ref_cfg.objects
+    )
+    # Include nested map-objects in the recursion as long as they
+    # don't form a cycle — otherwise a board with only nested links
+    # would aggregate to PENDING even when its leaves have real states.
+    included_objs = [
+        o for o in objects if o.type != "map" or (o.map_name and o.map_name not in visited_maps)
+    ]
+    return await _states_for_objects(
+        included_objs,
+        default_connection=ref_backend,
+        default_connection_id=ref_cfg.connection_id,
+        auth_user=auth_user,
+        board_cfg_cache=board_cfg_cache,
+        visited_maps=visited_maps,
+    )
 
 
 async def _get_board_states_batched(
@@ -848,6 +874,26 @@ async def _get_presentation_states(
     scoping and ``ObjectState`` shaping are reused. Results key by element id, so
     the frontend states store lights up the matching element with no extra wiring.
     """
+    state_map = await _states_for_objects(
+        _presentation_objects(cfg),
+        default_connection=connection,
+        default_connection_id=cfg.connection_id,
+        auth_user=auth_user,
+        can_view_board=can_view_board,
+        visited_maps=frozenset({cfg.name}),
+    )
+    states = list(state_map.values())
+
+    connection_ok = await _derive_connection_ok(states, connection)
+
+    return MapStates(
+        map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok
+    )
+
+
+def _presentation_objects(cfg: BoardConfig) -> list[BoardObject]:
+    """Adapt a presentation board's bound elements to transient ``BoardObject``s
+    (ids = element ids). Shared by the board itself and map-links pointing at it."""
     pv = cfg.view if isinstance(cfg.view, PresentationView) else PresentationView()
     bound = [
         el
@@ -866,7 +912,7 @@ async def _get_presentation_states(
             return "aggregation"
         return "service" if el.service_description else "host"
 
-    objects = [
+    return [
         BoardObject(
             id=el.id,
             type=_object_type(el),
@@ -879,22 +925,6 @@ async def _get_presentation_states(
         )
         for el in bound
     ]
-
-    state_map = await _states_for_objects(
-        objects,
-        default_connection=connection,
-        default_connection_id=cfg.connection_id,
-        auth_user=auth_user,
-        can_view_board=can_view_board,
-        visited_maps=frozenset({cfg.name}),
-    )
-    states = list(state_map.values())
-
-    connection_ok = await _derive_connection_ok(states, connection)
-
-    return MapStates(
-        map_name=cfg.name, states=states, generated_at=time.time(), connection_ok=connection_ok
-    )
 
 
 async def _get_radar_states(cfg: BoardConfig, connection: ConnectionBase) -> MapStates:

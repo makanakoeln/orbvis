@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.schemas.board import BoardConfig, BoardObject, StaticView
+from app.schemas.board import BoardConfig, BoardObject, RadarView, StaticView
 from app.schemas.presentation import DataElement, PresentationView, ShapeElement
 from app.schemas.state import FolderTreeNode, ObjectState
 from app.services import state_service
@@ -253,6 +253,51 @@ async def test_map_link_handles_cycle_without_recursion(mock_connection, monkeyp
     result = await get_board_states(a)
     by_id = {s.object_id: s for s in result.states}
     assert by_id["a_to_b"].state == "PENDING"
+
+
+@pytest.mark.asyncio
+async def test_map_link_to_radar_board_aggregates_radar_members(mock_connection, monkeypatch):
+    """A radar board has no stored objects; the link must roll up its members."""
+    from app.services import board_service
+
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+    radar = BoardConfig(
+        name="radar", alias="R", connection_id="mock", view=RadarView(filter="all_hosts")
+    )
+    outer = _board([_obj("link", "map", map_name="radar")])
+    monkeypatch.setattr(board_service, "get_board", {"radar": radar}.get)
+    mock_connection.get_all_hosts_states = AsyncMock(
+        return_value={"h1": _host_state("h1", "UP"), "h2": _host_state("h2", "DOWN")}
+    )
+
+    result = await get_board_states(outer)
+    by_id = {s.object_id: s for s in result.states}
+    assert by_id["link"].state == "DOWN"
+
+
+@pytest.mark.asyncio
+async def test_map_link_to_presentation_board_aggregates_bound_elements(
+    mock_connection, monkeypatch
+):
+    """Presentation boards keep their bound elements in the view, not in objects."""
+    from app.services import board_service
+
+    monkeypatch.setattr(state_service, "_connections", {"mock": mock_connection})
+    pres = BoardConfig(
+        name="pres",
+        alias="P",
+        connection_id="mock",
+        view=PresentationView(elements=[DataElement(id="d1", kind="data", host_name="web01")]),
+    )
+    outer = _board([_obj("link", "map", map_name="pres")])
+    monkeypatch.setattr(board_service, "get_board", {"pres": pres}.get)
+    mock_connection.get_hosts_states = AsyncMock(
+        return_value={"web01": _host_state("web01", "DOWN")}
+    )
+
+    result = await get_board_states(outer)
+    by_id = {s.object_id: s for s in result.states}
+    assert by_id["link"].state == "DOWN"
 
 
 @pytest.mark.asyncio

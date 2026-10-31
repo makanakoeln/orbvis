@@ -20,6 +20,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Template placeholders named like built-in object properties (e.g. `{{constructor}}`) render empty instead of JavaScript source text
 - The OrbVis main menu entry shows up again on later Checkmk 2.5 patch releases (e.g. 2.5.0p14), where `MainMenu` takes `action=RenderTopics(...)` instead of `topics=`; the registration error was silently swallowed
 - Image objects now honour an explicit image size that is larger than the image's natural size (e.g. 24 px SVG icons), scaling up while keeping the aspect ratio; previously the size only capped the image
+- Map links to radar and presentation boards show the linked board's worst state instead of staying PENDING; the roll-up only read the stored objects, which these board types don't use for their members
 
 ## [0.6.0] - 2026-06-12
 
